@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Grading Log - Henalytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <h1>{% if form.instance.pk %}Edit Grading Log{% else %}New Grading Log{% endif %}</h1>
+
+            <form method="post" class="form mt-4">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.flock.id_for_label }}">Flock *</label>
+                            {{ form.flock }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
+                            {{ form.log_date }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.age_weeks.id_for_label }}">Age (Weeks) *</label>
+                            {{ form.age_weeks }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_total.id_for_label }}">Total Eggs *</label>
+                            {{ form.eggs_total }}
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mt-4 mb-3">Egg Grades</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_aa.id_for_label }}">Grade AA</label>
+                            {{ form.eggs_aa }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_a.id_for_label }}">Grade A</label>
+                            {{ form.eggs_a }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_b.id_for_label }}">Grade B</label>
+                            {{ form.eggs_b }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_small.id_for_label }}">Small Eggs</label>
+                            {{ form.eggs_small }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_broken.id_for_label }}">Broken Eggs</label>
+                            {{ form.eggs_broken }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.eggs_decode.id_for_label }}">Decoded Eggs</label>
+                            {{ form.eggs_decode }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="{{ form.eggs_source.id_for_label }}">Egg Source</label>
+                    {{ form.eggs_source }}
+                </div>
+
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                    <a href="{% url 'eggproduction:grading-log-list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}

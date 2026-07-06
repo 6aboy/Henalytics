@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Confirmation - Henalytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    Delete Confirmation
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Are you sure?</h5>
+                    <p class="card-text">
+                        You are about to delete: <strong>{{ object }}</strong>
+                    </p>
+                    <p class="text-danger">
+                        <strong>Warning:</strong> This action cannot be undone.
+                    </p>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                    </form>
+                    <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

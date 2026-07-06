@@ -16,8 +16,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.contrib import auth
+
+try:
+    from rest_framework.documentation import include_docs_urls
+    docs_available = True
+except ImportError:
+    docs_available = False
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("EggProduction/", include("EggProduction.urls"))
+    path('', include('EggProduction.urls')),
+    path('', include('django.contrib.auth.urls')),
+    path('api-auth/', include('rest_framework.urls')),
 ]
+
+if docs_available:
+    urlpatterns.append(path('api/docs/', include_docs_urls(title='Henalytics API')))

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Flock - Henalytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1>{% if form.instance.pk %}Edit Flock{% else %}Create New Flock{% endif %}</h1>
+
+            <form method="post" class="form mt-4">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label for="{{ form.house_no.id_for_label }}">House Number</label>
+                    {{ form.house_no }}
+                    {% if form.house_no.errors %}
+                    <div class="text-danger">{{ form.house_no.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="{{ form.breed_strain.id_for_label }}">Breed/Strain</label>
+                    {{ form.breed_strain }}
+                    {% if form.breed_strain.errors %}
+                    <div class="text-danger">{{ form.breed_strain.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="{{ form.date_started.id_for_label }}">Date Started</label>
+                    {{ form.date_started }}
+                    {% if form.date_started.errors %}
+                    <div class="text-danger">{{ form.date_started.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="{{ form.initial_hen_count.id_for_label }}">Initial Hen Count</label>
+                    {{ form.initial_hen_count }}
+                    {% if form.initial_hen_count.errors %}
+                    <div class="text-danger">{{ form.initial_hen_count.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="{{ form.status.id_for_label }}">Status</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                    <div class="text-danger">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="{{ form.notes.id_for_label }}">Notes</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <div class="text-danger">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                    <a href="{% url 'eggproduction:flock-list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Flock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+    }
+
+    textarea {
+        min-height: 100px;
+    }
+</style>
+{% endblock %}

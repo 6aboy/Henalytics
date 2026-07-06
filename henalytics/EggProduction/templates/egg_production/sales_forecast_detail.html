@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Forecast - Henalytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Sales Forecast - {{ forecast.forecast_date|date:"Y-m-d" }}</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">Forecast Details</div>
+                <div class="card-body">
+                    <p><strong>Forecast Date:</strong> {{ forecast.forecast_date }}</p>
+                    <p><strong>Grade:</strong> <span class="badge bg-info">{{ forecast.grade }}</span></p>
+                    <p><strong>Predicted Trays:</strong> {{ forecast.predicted_trays }}</p>
+                    <p><strong>Model Type:</strong> {{ forecast.model_version.get_model_type_display }}</p>
+                    <p><strong>Model R² Score:</strong> {{ forecast.model_version.r2_score|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Created</div>
+                <div class="card-body">
+                    <p>{{ forecast.created_at|date:"Y-m-d H:i" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'eggproduction:sales-forecast-list' %}" class="btn btn-secondary">Back to Forecasts</a>
+</div>
+{% endblock %}

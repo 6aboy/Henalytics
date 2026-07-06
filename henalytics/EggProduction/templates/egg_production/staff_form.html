@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card p-3">
+    <h4 class="mb-3">{% if form.instance.pk %}Edit Egg Production{% else %}Create Egg Production{% endif %}</h4>
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-4">{{ form.flock.label_tag }}{{ form.flock }}</div>
+            <div class="col-md-4">{{ form.record_date.label_tag }}{{ form.record_date }}</div>
+            <div class="col-md-4">{{ form.collection_time.label_tag }}{{ form.collection_time }}</div>
+            <div class="col-md-3">{{ form.eggs_collected.label_tag }}{{ form.eggs_collected }}</div>
+            <div class="col-md-3">{{ form.broken_eggs.label_tag }}{{ form.broken_eggs }}</div>
+            <div class="col-md-3">{{ form.defective_eggs.label_tag }}{{ form.defective_eggs }}</div>
+            <div class="col-md-3">{{ form.good_eggs.label_tag }}{{ form.good_eggs }}</div>
+            <div class="col-md-4">{{ form.eggs_per_hen.label_tag }}{{ form.eggs_per_hen }}</div>
+            <div class="col-md-4">{{ form.hen_day_production.label_tag }}{{ form.hen_day_production }}</div>
+            <div class="col-md-4">{{ form.hen_housed_production.label_tag }}{{ form.hen_housed_production }}</div>
+            <div class="col-12">{{ form.notes.label_tag }}{{ form.notes }}</div>
+        </div>
+
+        <div class="mt-3">
+            <button class="btn btn-primary" type="submit">Save</button>
+            <a href="{% url 'eggproduction:staff-egg-list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
