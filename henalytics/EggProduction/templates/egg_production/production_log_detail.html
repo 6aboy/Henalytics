@@ -24,36 +24,36 @@
                             <p><strong>Flock:</strong> <a
                                     href="{% url 'eggproduction:flock-detail' production_log.flock.pk %}">House {{
                                     production_log.flock.house_no }}</a></p>
-                            <p><strong>Log Date:</strong> {{ production_log.log_date }}</p>
+                            <p><strong>Production Date:</strong> {{ production_log.production_date }}</p>
                             <p><strong>Age:</strong> {{ production_log.age_weeks }} weeks / {{ production_log.age_days
                                 }} days</p>
-                            <p><strong>Hen Count:</strong> {{ production_log.hen_count }}</p>
+                            <p><strong>Live Hen Count:</strong> {{ production_log.live_hen_count }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Eggs Total:</strong> {{ production_log.eggs_total }}</p>
-                            <p><strong>% Hen Day:</strong> {{ production_log.pct_hen_day }}%</p>
-                            <p><strong>% Hen Housed:</strong> {{ production_log.pct_hen_housed }}%</p>
-                            <p><strong>FCR:</strong> {{ production_log.fcr|default:"N/A" }}</p>
+                            <p><strong>Eggs Collected:</strong> {{ production_log.eggs_collected }}</p>
+                            <p><strong>% Hen Day:</strong> {{ production_log.hen_day_production }}%</p>
+                            <p><strong>% Hen Housed:</strong> {{ production_log.hen_housed_production }}%</p>
+                            <p><strong>FCR:</strong> {{ production_log.feed_conversion_ratio|default:"N/A" }}</p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <p><strong>Dead Count:</strong> {{ production_log.dead_count }}</p>
+                            <p><strong>Daily Mortality:</strong> {{ production_log.daily_mortality }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Culled Count:</strong> {{ production_log.culled_count }}</p>
+                            <p><strong>Daily Culls:</strong> {{ production_log.daily_culls }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Feed Bags:</strong> {{ production_log.feed_bags }}</p>
+                            <p><strong>Feed Consumed (Bags):</strong> {{ production_log.feed_consumed_bags }}</p>
                         </div>
                     </div>
 
-                    {% if production_log.remarks %}
+                    {% if production_log.management_remarks %}
                     <div class="row">
                         <div class="col-12">
-                            <p><strong>Remarks:</strong></p>
-                            <p>{{ production_log.remarks }}</p>
+                            <p><strong>Management Remarks:</strong></p>
+                            <p>{{ production_log.management_remarks }}</p>
                         </div>
                     </div>
                     {% endif %}

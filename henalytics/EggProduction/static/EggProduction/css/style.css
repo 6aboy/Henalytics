@@ -5,6 +5,69 @@ body {
     min-height: 100vh;
 }
 
+.staff-page-shell {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 16px 40px rgba(39, 51, 89, 0.08);
+}
+
+.staff-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.staff-page-title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1f2a44;
+}
+
+.staff-page-subtitle {
+    margin: 4px 0 0;
+    color: #6b7280;
+}
+
+.staff-tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.staff-tab {
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: #f3f6ff;
+    color: #42527a;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.staff-tab:hover {
+    background: #e3ecff;
+    color: #1f47d3;
+}
+
+.staff-tab.active {
+    background: #1f47d3;
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(31, 71, 211, 0.18);
+}
+
+.staff-card {
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid #edf2ff;
+    padding: 18px;
+}
+
 .login-bg {
     min-height: 70vh;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Grading Log - {{ grading_log.log_date|date:"Y-m-d" }}</h1>
+        <h1>Grading Log - {{ grading_log.grading_date|date:"Y-m-d" }}</h1>
         <div>
             <a href="{% url 'eggproduction:grading-log-edit' grading_log.pk %}" class="btn btn-warning">Edit</a>
             <a href="{% url 'eggproduction:grading-log-delete' grading_log.pk %}" class="btn btn-danger">Delete</a>
@@ -22,40 +22,45 @@
                             <p><strong>Flock:</strong> <a
                                     href="{% url 'eggproduction:flock-detail' grading_log.flock.pk %}">House {{
                                     grading_log.flock.house_no }}</a></p>
-                            <p><strong>Log Date:</strong> {{ grading_log.log_date }}</p>
+                            <p><strong>Grading Date:</strong> {{ grading_log.grading_date }}</p>
                             <p><strong>Age (Weeks):</strong> {{ grading_log.age_weeks }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Total Eggs:</strong> {{ grading_log.eggs_total }}</p>
                         </div>
                     </div>
 
                     <h5>Egg Distribution</h5>
                     <div class="row">
                         <div class="col-md-4">
-                            <p><strong>Grade AA:</strong> {{ grading_log.eggs_aa }}</p>
+                            <p><strong>Jumbo:</strong> {{ grading_log.grade_jumbo }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Grade A:</strong> {{ grading_log.eggs_a }}</p>
+                            <p><strong>Extra Large:</strong> {{ grading_log.grade_extra_large }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Grade B:</strong> {{ grading_log.eggs_b }}</p>
+                            <p><strong>Large:</strong> {{ grading_log.grade_large }}</p>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
-                            <p><strong>Small:</strong> {{ grading_log.eggs_small }}</p>
+                            <p><strong>Medium:</strong> {{ grading_log.grade_medium }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Broken:</strong> {{ grading_log.eggs_broken }}</p>
+                            <p><strong>Small:</strong> {{ grading_log.grade_small }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Decoded:</strong> {{ grading_log.eggs_decode }}</p>
+                            <p><strong>Pullets:</strong> {{ grading_log.grade_pullets }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Peewee:</strong> {{ grading_log.grade_peewee }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Cracked Eggs:</strong> {{ grading_log.cracked_eggs }}</p>
                         </div>
                     </div>
 
-                    {% if grading_log.eggs_source %}
-                    <p><strong>Source:</strong> {{ grading_log.eggs_source }}</p>
+                    {% if grading_log.source %}
+                    <p><strong>Source:</strong> {{ grading_log.source }}</p>
                     {% endif %}
                 </div>
             </div>

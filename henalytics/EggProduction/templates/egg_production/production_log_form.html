@@ -20,8 +20,8 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
-                            {{ form.log_date }}
+                            <label for="{{ form.production_date.id_for_label }}">Production Date *</label>
+                            {{ form.production_date }}
                         </div>
                     </div>
                 </div>
@@ -41,8 +41,8 @@
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.hen_count.id_for_label }}">Hen Count *</label>
-                            {{ form.hen_count }}
+                            <label for="{{ form.live_hen_count.id_for_label }}">Live Hen Count *</label>
+                            {{ form.live_hen_count }}
                         </div>
                     </div>
                 </div>
@@ -50,41 +50,20 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.dead_count.id_for_label }}">Dead Count</label>
-                            {{ form.dead_count }}
+                            <label for="{{ form.daily_mortality.id_for_label }}">Daily Mortality</label>
+                            {{ form.daily_mortality }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.culled_count.id_for_label }}">Culled Count</label>
-                            {{ form.culled_count }}
+                            <label for="{{ form.daily_culls.id_for_label }}">Daily Culls</label>
+                            {{ form.daily_culls }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.feed_bags.id_for_label }}">Feed Bags</label>
-                            {{ form.feed_bags }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.eggs_total.id_for_label }}">Eggs Total *</label>
-                            {{ form.eggs_total }}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.pct_hen_day.id_for_label }}">% Hen Day *</label>
-                            {{ form.pct_hen_day }}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.pct_hen_housed.id_for_label }}">% Hen Housed *</label>
-                            {{ form.pct_hen_housed }}
+                            <label for="{{ form.feed_consumed_bags.id_for_label }}">Feed Consumed (Bags)</label>
+                            {{ form.feed_consumed_bags }}
                         </div>
                     </div>
                 </div>
@@ -92,15 +71,36 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.fcr.id_for_label }}">FCR</label>
-                            {{ form.fcr }}
+                            <label for="{{ form.eggs_collected.id_for_label }}">Eggs Collected *</label>
+                            {{ form.eggs_collected }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.hen_day_production.id_for_label }}">% Hen Day *</label>
+                            {{ form.hen_day_production }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.hen_housed_production.id_for_label }}">% Hen Housed *</label>
+                            {{ form.hen_housed_production }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.feed_conversion_ratio.id_for_label }}">FCR</label>
+                            {{ form.feed_conversion_ratio }}
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.remarks.id_for_label }}">Remarks</label>
-                    {{ form.remarks }}
+                    <label for="{{ form.management_remarks.id_for_label }}">Management Remarks</label>
+                    {{ form.management_remarks }}
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">

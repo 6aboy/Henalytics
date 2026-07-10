@@ -20,28 +20,32 @@
                     <th>Date</th>
                     <th>Flock</th>
                     <th>Age (wks)</th>
-                    <th>Total Eggs</th>
-                    <th>Grade AA</th>
-                    <th>Grade A</th>
-                    <th>Grade B</th>
+                    <th>Jumbo</th>
+                    <th>XL</th>
+                    <th>Large</th>
+                    <th>Medium</th>
                     <th>Small</th>
-                    <th>Broken</th>
+                    <th>Pullets</th>
+                    <th>Peewee</th>
+                    <th>Cracked</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in grading_logs %}
                 <tr>
-                    <td>{{ log.log_date|date:"Y-m-d" }}</td>
+                    <td>{{ log.grading_date|date:"Y-m-d" }}</td>
                     <td><a href="{% url 'eggproduction:flock-detail' log.flock.pk %}">House {{ log.flock.house_no }}</a>
                     </td>
                     <td>{{ log.age_weeks }}</td>
-                    <td><strong>{{ log.eggs_total }}</strong></td>
-                    <td>{{ log.eggs_aa }}</td>
-                    <td>{{ log.eggs_a }}</td>
-                    <td>{{ log.eggs_b }}</td>
-                    <td>{{ log.eggs_small }}</td>
-                    <td>{{ log.eggs_broken }}</td>
+                    <td>{{ log.grade_jumbo }}</td>
+                    <td>{{ log.grade_extra_large }}</td>
+                    <td>{{ log.grade_large }}</td>
+                    <td>{{ log.grade_medium }}</td>
+                    <td>{{ log.grade_small }}</td>
+                    <td>{{ log.grade_pullets }}</td>
+                    <td>{{ log.grade_peewee }}</td>
+                    <td>{{ log.cracked_eggs }}</td>
                     <td>
                         <a href="{% url 'eggproduction:grading-log-detail' log.pk %}"
                             class="btn btn-sm btn-info">View</a>

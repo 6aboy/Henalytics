@@ -20,8 +20,8 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
-                            {{ form.log_date }}
+                            <label for="{{ form.grading_date.id_for_label }}">Grading Date *</label>
+                            {{ form.grading_date }}
                         </div>
                     </div>
                 </div>
@@ -33,32 +33,26 @@
                             {{ form.age_weeks }}
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.eggs_total.id_for_label }}">Total Eggs *</label>
-                            {{ form.eggs_total }}
-                        </div>
-                    </div>
                 </div>
 
                 <h5 class="mt-4 mb-3">Egg Grades</h5>
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_aa.id_for_label }}">Grade AA</label>
-                            {{ form.eggs_aa }}
+                            <label for="{{ form.grade_jumbo.id_for_label }}">Jumbo</label>
+                            {{ form.grade_jumbo }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_a.id_for_label }}">Grade A</label>
-                            {{ form.eggs_a }}
+                            <label for="{{ form.grade_extra_large.id_for_label }}">Extra Large</label>
+                            {{ form.grade_extra_large }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_b.id_for_label }}">Grade B</label>
-                            {{ form.eggs_b }}
+                            <label for="{{ form.grade_large.id_for_label }}">Large</label>
+                            {{ form.grade_large }}
                         </div>
                     </div>
                 </div>
@@ -66,27 +60,43 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_small.id_for_label }}">Small Eggs</label>
-                            {{ form.eggs_small }}
+                            <label for="{{ form.grade_medium.id_for_label }}">Medium</label>
+                            {{ form.grade_medium }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_broken.id_for_label }}">Broken Eggs</label>
-                            {{ form.eggs_broken }}
+                            <label for="{{ form.grade_small.id_for_label }}">Small</label>
+                            {{ form.grade_small }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_decode.id_for_label }}">Decoded Eggs</label>
-                            {{ form.eggs_decode }}
+                            <label for="{{ form.grade_pullets.id_for_label }}">Pullets</label>
+                            {{ form.grade_pullets }}
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group mb-3">
-                    <label for="{{ form.eggs_source.id_for_label }}">Egg Source</label>
-                    {{ form.eggs_source }}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.grade_peewee.id_for_label }}">Peewee</label>
+                            {{ form.grade_peewee }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.cracked_eggs.id_for_label }}">Cracked Eggs</label>
+                            {{ form.cracked_eggs }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.source.id_for_label }}">Source</label>
+                            {{ form.source }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">

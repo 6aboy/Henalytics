@@ -19,14 +19,14 @@
 
         <div class="sidebar-group">
             <div class="sidebar-group-label">MANAGE</div>
-            <a href="{% url 'eggproduction:flock-list' %}" class="sidebar-link">
+            <a href="{% url 'eggproduction:production-log-list' %}" class="sidebar-link">
                 <span class="sidebar-icon">🥚</span> Egg Production
             </a>
-            <a href="{% url 'eggproduction:sales-transaction-list' %}" class="sidebar-link">
-                <span class="sidebar-icon">💰</span> Manage Sales
-            </a>
-            <a href="{% url 'eggproduction:production-log-list' %}" class="sidebar-link">
+            <a href="{% url 'eggproduction:flock-list' %}" class="sidebar-link">
                 <span class="sidebar-icon">🐔</span> Flock Management
+            </a>
+            <a href="{% url 'eggproduction:sales-transaction-list' %}" class="sidebar-link">
+                <span class="sidebar-icon">💰</span> Sales
             </a>
         </div>
 
@@ -76,6 +76,13 @@
                     <div class="metric-meta">Last 7 days</div>
                 </div>
             </div>
+        </div>
+
+        <div class="staff-tab-bar mt-3 mb-4">
+            <a class="staff-tab active" href="{% url 'eggproduction:dashboard' %}">Dashboard</a>
+            <a class="staff-tab" href="{% url 'eggproduction:production-log-list' %}">Egg Production</a>
+            <a class="staff-tab" href="{% url 'eggproduction:flock-list' %}">Flock Management</a>
+            <a class="staff-tab" href="{% url 'eggproduction:sales-transaction-list' %}">Sales</a>
         </div>
 
         <div class="row g-3">

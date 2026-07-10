@@ -14,6 +14,7 @@ class UserProfile(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
+    full_name = models.CharField(max_length=150, blank=True, null=True)
     assigned_house = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -62,6 +63,7 @@ class ModelVersion(models.Model):
     trained_at = models.DateTimeField(auto_now_add=True)
     triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     r2_score = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True)
+    mae = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
     rmse = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     aic_score = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     arima_order = models.CharField(max_length=20, null=True, blank=True, help_text="Format: (p,d,q)")
@@ -81,52 +83,205 @@ class ModelVersion(models.Model):
 # Production Logging (aligned with ERD - ProductionLog)
 class ProductionLog(models.Model):
     flock = models.ForeignKey(Flock, on_delete=models.CASCADE, related_name='production_logs')
-    log_date = models.DateField()
+    production_date = models.DateField()
     age_weeks = models.IntegerField(validators=[MinValueValidator(0)])
     age_days = models.IntegerField(validators=[MinValueValidator(0)])
-    hen_count = models.IntegerField(validators=[MinValueValidator(0)])
-    dead_count = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    culled_count = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    feed_bags = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_total = models.IntegerField(validators=[MinValueValidator(0)])
-    pct_hen_day = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    pct_hen_housed = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    fcr = models.DecimalField(max_digits=5, decimal_places=3, null=True, blank=True, help_text="Feed Conversion Ratio")
-    remarks = models.TextField(blank=True, null=True)
+    live_hen_count = models.IntegerField(validators=[MinValueValidator(0)])
+    daily_mortality = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    daily_culls = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    feed_consumed_bags = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    eggs_collected = models.IntegerField(validators=[MinValueValidator(0)])
+    hen_day_production = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    hen_housed_production = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    feed_conversion_ratio = models.DecimalField(max_digits=5, decimal_places=3, null=True, blank=True, help_text="Feed Conversion Ratio")
+    management_remarks = models.TextField(blank=True, null=True)
     entered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='production_logs')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def log_date(self):
+        return self.production_date
+
+    @log_date.setter
+    def log_date(self, value):
+        self.production_date = value
+
+    @property
+    def hen_count(self):
+        return self.live_hen_count
+
+    @hen_count.setter
+    def hen_count(self, value):
+        self.live_hen_count = value
+
+    @property
+    def dead_count(self):
+        return self.daily_mortality
+
+    @dead_count.setter
+    def dead_count(self, value):
+        self.daily_mortality = value
+
+    @property
+    def culled_count(self):
+        return self.daily_culls
+
+    @culled_count.setter
+    def culled_count(self, value):
+        self.daily_culls = value
+
+    @property
+    def feed_bags(self):
+        return self.feed_consumed_bags
+
+    @feed_bags.setter
+    def feed_bags(self, value):
+        self.feed_consumed_bags = value
+
+    @property
+    def eggs_total(self):
+        return self.eggs_collected
+
+    @eggs_total.setter
+    def eggs_total(self, value):
+        self.eggs_collected = value
+
+    @property
+    def pct_hen_day(self):
+        return self.hen_day_production
+
+    @pct_hen_day.setter
+    def pct_hen_day(self, value):
+        self.hen_day_production = value
+
+    @property
+    def pct_hen_housed(self):
+        return self.hen_housed_production
+
+    @pct_hen_housed.setter
+    def pct_hen_housed(self, value):
+        self.hen_housed_production = value
+
+    @property
+    def fcr(self):
+        return self.feed_conversion_ratio
+
+    @fcr.setter
+    def fcr(self, value):
+        self.feed_conversion_ratio = value
+
+    @property
+    def remarks(self):
+        return self.management_remarks
+
+    @remarks.setter
+    def remarks(self, value):
+        self.management_remarks = value
     
     def __str__(self):
-        return f"Production - Flock {self.flock.house_no} - {self.log_date}"
+        return f"Production - Flock {self.flock.house_no} - {self.production_date}"
     
     class Meta:
-        ordering = ['-log_date']
-        unique_together = ('flock', 'log_date')
+        ordering = ['-production_date']
+        unique_together = ('flock', 'production_date')
 
 
 # Grading Logging (aligned with ERD - GradingLog)
 class GradingLog(models.Model):
     flock = models.ForeignKey(Flock, on_delete=models.CASCADE, related_name='grading_logs')
-    log_date = models.DateField()
+    grading_date = models.DateField()
     age_weeks = models.IntegerField(validators=[MinValueValidator(0)])
-    eggs_total = models.IntegerField(validators=[MinValueValidator(0)])
-    eggs_aa = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_a = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_b = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_small = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_broken = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_decode = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    eggs_source = models.CharField(max_length=100, blank=True, null=True)
+    grade_jumbo = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    grade_extra_large = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    grade_large = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    grade_medium = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    grade_small = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    grade_pullets = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    grade_peewee = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    cracked_eggs = models.IntegerField(validators=[MinValueValidator(0)], default=0)
+    source = models.CharField(max_length=20, default='hardware')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def log_date(self):
+        return self.grading_date
+
+    @log_date.setter
+    def log_date(self, value):
+        self.grading_date = value
+
+    @property
+    def eggs_total(self):
+        return self.grade_jumbo + self.grade_extra_large + self.grade_large + self.grade_medium + self.grade_small + self.grade_pullets + self.grade_peewee
+
+    @eggs_total.setter
+    def eggs_total(self, value):
+        return None
+
+    @property
+    def eggs_aa(self):
+        return self.grade_jumbo
+
+    @eggs_aa.setter
+    def eggs_aa(self, value):
+        self.grade_jumbo = value
+
+    @property
+    def eggs_a(self):
+        return self.grade_extra_large
+
+    @eggs_a.setter
+    def eggs_a(self, value):
+        self.grade_extra_large = value
+
+    @property
+    def eggs_b(self):
+        return self.grade_large
+
+    @eggs_b.setter
+    def eggs_b(self, value):
+        self.grade_large = value
+
+    @property
+    def eggs_small(self):
+        return self.grade_small
+
+    @eggs_small.setter
+    def eggs_small(self, value):
+        self.grade_small = value
+
+    @property
+    def eggs_broken(self):
+        return self.cracked_eggs
+
+    @eggs_broken.setter
+    def eggs_broken(self, value):
+        self.cracked_eggs = value
+
+    @property
+    def eggs_decode(self):
+        return self.grade_pullets
+
+    @eggs_decode.setter
+    def eggs_decode(self, value):
+        self.grade_pullets = value
+
+    @property
+    def eggs_source(self):
+        return self.source
+
+    @eggs_source.setter
+    def eggs_source(self, value):
+        self.source = value
     
     def __str__(self):
-        return f"Grading - Flock {self.flock.house_no} - {self.log_date}"
+        return f"Grading - Flock {self.flock.house_no} - {self.grading_date}"
     
     class Meta:
-        ordering = ['-log_date']
-        unique_together = ('flock', 'log_date')
+        ordering = ['-grading_date']
+        unique_together = ('flock', 'grading_date')
 
 
 # Sales Models (aligned with ERD)

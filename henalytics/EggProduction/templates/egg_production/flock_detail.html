@@ -54,10 +54,10 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>Log Date</th>
+                            <th>Production Date</th>
                             <th>Age (weeks)</th>
-                            <th>Hen Count</th>
-                            <th>Eggs Total</th>
+                            <th>Live Hens</th>
+                            <th>Eggs Collected</th>
                             <th>% Hen Day</th>
                             <th>% Hen Housed</th>
                         </tr>
@@ -65,12 +65,12 @@
                     <tbody>
                         {% for log in production_logs %}
                         <tr>
-                            <td>{{ log.log_date|date:"Y-m-d" }}</td>
+                            <td>{{ log.production_date|date:"Y-m-d" }}</td>
                             <td>{{ log.age_weeks }}</td>
-                            <td>{{ log.hen_count }}</td>
-                            <td>{{ log.eggs_total }}</td>
-                            <td>{{ log.pct_hen_day }}%</td>
-                            <td>{{ log.pct_hen_housed }}%</td>
+                            <td>{{ log.live_hen_count }}</td>
+                            <td>{{ log.eggs_collected }}</td>
+                            <td>{{ log.hen_day_production }}%</td>
+                            <td>{{ log.hen_housed_production }}%</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -92,23 +92,23 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>Log Date</th>
-                            <th>Eggs Total</th>
-                            <th>Grade AA</th>
-                            <th>Grade A</th>
-                            <th>Grade B</th>
+                            <th>Grading Date</th>
+                            <th>Jumbo</th>
+                            <th>XL</th>
+                            <th>Large</th>
+                            <th>Medium</th>
                             <th>Small</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in grading_logs %}
                         <tr>
-                            <td>{{ log.log_date|date:"Y-m-d" }}</td>
-                            <td>{{ log.eggs_total }}</td>
-                            <td>{{ log.eggs_aa }}</td>
-                            <td>{{ log.eggs_a }}</td>
-                            <td>{{ log.eggs_b }}</td>
-                            <td>{{ log.eggs_small }}</td>
+                            <td>{{ log.grading_date|date:"Y-m-d" }}</td>
+                            <td>{{ log.grade_jumbo }}</td>
+                            <td>{{ log.grade_extra_large }}</td>
+                            <td>{{ log.grade_large }}</td>
+                            <td>{{ log.grade_medium }}</td>
+                            <td>{{ log.grade_small }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
