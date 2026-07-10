@@ -17,9 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.contrib import auth
+import importlib
 
 try:
-    from rest_framework.documentation import include_docs_urls
+    rest_framework_docs = importlib.import_module('rest_framework.documentation')
+    include_docs_urls = rest_framework_docs.include_docs_urls
     docs_available = True
 except ImportError:
     docs_available = False
