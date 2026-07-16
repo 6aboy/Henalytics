@@ -84,6 +84,68 @@ class ProductionAndGradingLogModelTest(TestCase):
 
         self.assertEqual(log.eggs_total, 1500)
         self.assertEqual(log.entered_by, self.user)
+        self.assertEqual(log.hen_count, 1799)
+        self.assertEqual(log.pct_hen_day, Decimal('83.38'))
+        self.assertEqual(log.pct_hen_housed, Decimal('83.33'))
+        self.assertEqual(log.fcr, Decimal('6.667'))
+
+    def test_production_log_recalculates_laying_percentages(self):
+        log = ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1500,
+            feed_bags=12,
+            eggs_total=1200,
+            pct_hen_day=Decimal('1.00'),
+            pct_hen_housed=Decimal('1.00'),
+            entered_by=self.user,
+        )
+
+        self.assertEqual(log.hen_count, 1800)
+        self.assertEqual(log.pct_hen_day, Decimal('66.67'))
+        self.assertEqual(log.pct_hen_housed, Decimal('66.67'))
+        self.assertEqual(log.fcr, Decimal('8.333'))
+
+    def test_production_log_recalculates_cumulative_live_hens(self):
+        today = timezone.now().date()
+        first = ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=today,
+            age_weeks=30,
+            age_days=210,
+            hen_count=0,
+            dead_count=10,
+            culled_count=5,
+            feed_bags=12,
+            eggs_total=1200,
+            pct_hen_day=Decimal('0.00'),
+            pct_hen_housed=Decimal('0.00'),
+            entered_by=self.user,
+        )
+        second = ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=today + timedelta(days=1),
+            age_weeks=30,
+            age_days=211,
+            hen_count=0,
+            dead_count=2,
+            culled_count=0,
+            feed_bags=12,
+            eggs_total=1000,
+            pct_hen_day=Decimal('0.00'),
+            pct_hen_housed=Decimal('0.00'),
+            entered_by=self.user,
+        )
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+
+        self.assertEqual(first.hen_count, 1785)
+        self.assertEqual(second.hen_count, 1783)
+        self.assertEqual(second.pct_hen_day, Decimal('56.09'))
+        self.assertEqual(second.fcr, Decimal('10.000'))
 
     def test_create_grading_log(self):
         log = GradingLog.objects.create(
@@ -202,6 +264,29 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Egg Production')
+
+    def test_production_log_create_auto_calculates_percentages(self):
+        response = self.client.post(reverse('eggproduction:production-log-create'), {
+            'flock': self.flock.id,
+            'log_date': timezone.now().date(),
+            'age_weeks': 30,
+            'age_days': 210,
+            'dead_count': 0,
+            'culled_count': 0,
+            'feed_bags': 12,
+            'eggs_total': 1200,
+            'pct_hen_day': '',
+            'pct_hen_housed': '',
+            'fcr': '',
+            'remarks': '',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        log = ProductionLog.objects.get(flock=self.flock, log_date=timezone.now().date())
+        self.assertEqual(log.hen_count, 1800)
+        self.assertEqual(log.pct_hen_day, Decimal('66.67'))
+        self.assertEqual(log.pct_hen_housed, Decimal('66.67'))
+        self.assertEqual(log.fcr, Decimal('8.333'))
 
     def test_sales_transaction_list_renders_total_amount(self):
         transaction = SalesTransaction.objects.create(

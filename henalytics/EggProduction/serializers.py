@@ -33,7 +33,10 @@ class ProductionLogSerializer(serializers.ModelSerializer):
                  'hen_count', 'dead_count', 'culled_count', 'feed_bags', 'eggs_total',
                  'pct_hen_day', 'pct_hen_housed', 'fcr', 'remarks', 'entered_by', 
                  'entered_by_username', 'created_at', 'updated_at']
-        read_only_fields = ['entered_by', 'created_at', 'updated_at']
+        read_only_fields = [
+            'hen_count', 'pct_hen_day', 'pct_hen_housed', 'fcr',
+            'entered_by', 'created_at', 'updated_at'
+        ]
 
 
 class GradingLogSerializer(serializers.ModelSerializer):

@@ -122,6 +122,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Production metric assumptions.
+# FCR = feed consumed kg / eggs produced kg.
+HENALYTICS_FEED_BAG_KG = 50
+HENALYTICS_AVG_EGG_KG = 0.06
+
 # Redirect users after login/logout
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'

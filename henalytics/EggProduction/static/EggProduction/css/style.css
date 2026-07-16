@@ -409,6 +409,31 @@ a {
     border-color: var(--hen-blue-dark);
 }
 
+.readonly-metric,
+input[readonly].readonly-metric {
+    color: var(--hen-blue);
+    font-weight: 800;
+    background: #eef4ff;
+}
+
+.form-help {
+    display: block;
+    margin-top: 5px;
+    color: #6f6f6f;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.auto-metric-note {
+    margin: 4px 0 18px;
+    padding: 10px 12px;
+    color: var(--hen-blue);
+    background: #eef4ff;
+    border-left: 4px solid var(--hen-blue);
+    font-size: 14px;
+    font-weight: 700;
+}
+
 .export-toolbar .btn,
 .prototype-export .btn {
     border-radius: 0;

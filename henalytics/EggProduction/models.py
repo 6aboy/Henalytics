@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.conf import settings
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timedelta
 
 
@@ -44,6 +46,20 @@ class Flock(models.Model):
     
     def __str__(self):
         return f"Flock House {self.house_no} - {self.breed_strain}"
+
+    def save(self, *args, **kwargs):
+        old_initial_hen_count = None
+        if self.pk:
+            old_initial_hen_count = (
+                Flock.objects.filter(pk=self.pk)
+                .values_list('initial_hen_count', flat=True)
+                .first()
+            )
+
+        super().save(*args, **kwargs)
+
+        if old_initial_hen_count is not None and old_initial_hen_count != self.initial_hen_count:
+            ProductionLog.recalculate_flock_snapshots(self.pk)
     
     class Meta:
         ordering = ['-date_started']
@@ -99,6 +115,101 @@ class ProductionLog(models.Model):
     
     def __str__(self):
         return f"Production - Flock {self.flock.house_no} - {self.log_date}"
+
+    def update_live_hen_count(self):
+        previous_losses = ProductionLog.objects.filter(
+            flock=self.flock,
+            log_date__lt=self.log_date,
+        )
+        if self.pk:
+            previous_losses = previous_losses.exclude(pk=self.pk)
+
+        totals = previous_losses.aggregate(
+            dead=models.Sum('dead_count'),
+            culled=models.Sum('culled_count'),
+        )
+        previous_dead = totals['dead'] or 0
+        previous_culled = totals['culled'] or 0
+        current_losses = (self.dead_count or 0) + (self.culled_count or 0)
+
+        self.hen_count = max(
+            (self.flock.initial_hen_count if self.flock_id and self.flock else 0)
+            - previous_dead
+            - previous_culled
+            - current_losses,
+            0,
+        )
+
+    def update_laying_percentages(self):
+        self.pct_hen_day = self._calculate_percentage(self.eggs_total, self.hen_count)
+        initial_hens = self.flock.initial_hen_count if self.flock_id and self.flock else 0
+        self.pct_hen_housed = self._calculate_percentage(self.eggs_total, initial_hens)
+
+    def update_fcr(self):
+        self.fcr = self._calculate_fcr(self.feed_bags, self.eggs_total)
+
+    def save(self, *args, **kwargs):
+        self.update_live_hen_count()
+        self.update_laying_percentages()
+        self.update_fcr()
+        super().save(*args, **kwargs)
+        self.recalculate_flock_snapshots(self.flock_id)
+
+    def delete(self, *args, **kwargs):
+        flock_id = self.flock_id
+        result = super().delete(*args, **kwargs)
+        self.recalculate_flock_snapshots(flock_id)
+        return result
+
+    @classmethod
+    def recalculate_flock_snapshots(cls, flock_id):
+        if not flock_id:
+            return
+
+        try:
+            flock = Flock.objects.get(pk=flock_id)
+        except Flock.DoesNotExist:
+            return
+
+        live_hens = flock.initial_hen_count
+        logs = cls.objects.filter(flock_id=flock_id).order_by('log_date', 'pk')
+        for log in logs:
+            live_hens = max(live_hens - (log.dead_count or 0) - (log.culled_count or 0), 0)
+            hen_day = cls._calculate_percentage(log.eggs_total, live_hens)
+            hen_housed = cls._calculate_percentage(log.eggs_total, flock.initial_hen_count)
+            fcr = cls._calculate_fcr(log.feed_bags, log.eggs_total)
+            if (
+                log.hen_count != live_hens
+                or log.pct_hen_day != hen_day
+                or log.pct_hen_housed != hen_housed
+                or log.fcr != fcr
+            ):
+                cls.objects.filter(pk=log.pk).update(
+                    hen_count=live_hens,
+                    pct_hen_day=hen_day,
+                    pct_hen_housed=hen_housed,
+                    fcr=fcr,
+                )
+
+    @staticmethod
+    def _calculate_percentage(eggs_total, hen_count):
+        if not eggs_total or not hen_count:
+            return Decimal('0.00')
+
+        percentage = (Decimal(eggs_total) / Decimal(hen_count)) * Decimal('100')
+        return percentage.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    @staticmethod
+    def _calculate_fcr(feed_bags, eggs_total):
+        if not feed_bags or not eggs_total:
+            return Decimal('0.000')
+
+        feed_kg = Decimal(feed_bags) * Decimal(str(getattr(settings, 'HENALYTICS_FEED_BAG_KG', 50)))
+        egg_kg = Decimal(eggs_total) * Decimal(str(getattr(settings, 'HENALYTICS_AVG_EGG_KG', 0.06)))
+        if egg_kg == 0:
+            return Decimal('0.000')
+
+        return (feed_kg / egg_kg).quantize(Decimal('0.001'), rounding=ROUND_HALF_UP)
     
     class Meta:
         ordering = ['-log_date']

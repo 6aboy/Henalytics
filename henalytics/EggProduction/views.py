@@ -6,6 +6,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.db import models, transaction
 from django.utils import timezone
+from django.conf import settings
 from datetime import timedelta
 import logging
 from rest_framework import viewsets, status, filters
@@ -201,10 +202,36 @@ class ProductionLogListView(StaffAccessMixin, ListView):
         return context
 
 
-class ProductionLogCreateView(StaffAccessMixin, CreateView):
+class ProductionLogFormMixin:
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        for field_name in ('pct_hen_day', 'pct_hen_housed', 'fcr'):
+            form.fields[field_name].required = False
+            form.fields[field_name].widget.attrs['readonly'] = True
+            form.fields[field_name].widget.attrs['class'] = (
+                form.fields[field_name].widget.attrs.get('class', '') + ' readonly-metric'
+            ).strip()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['flock_initial_counts'] = {
+            str(flock.id): flock.initial_hen_count
+            for flock in Flock.objects.only('id', 'initial_hen_count')
+        }
+        context['feed_bag_kg'] = getattr(settings, 'HENALYTICS_FEED_BAG_KG', 50)
+        context['avg_egg_kg'] = getattr(settings, 'HENALYTICS_AVG_EGG_KG', 0.06)
+        return context
+
+    def form_valid(self, form):
+        form.instance.update_laying_percentages()
+        return super().form_valid(form)
+
+
+class ProductionLogCreateView(StaffAccessMixin, ProductionLogFormMixin, CreateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'hen_count', 'dead_count',
+    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'dead_count',
               'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
               'fcr', 'remarks']
     success_url = reverse_lazy('eggproduction:production-log-list')
@@ -220,10 +247,10 @@ class ProductionLogDetailView(StaffAccessMixin, DetailView):
     context_object_name = 'production_log'
 
 
-class ProductionLogUpdateView(StaffAccessMixin, UpdateView):
+class ProductionLogUpdateView(StaffAccessMixin, ProductionLogFormMixin, UpdateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'hen_count', 'dead_count',
+    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'dead_count',
               'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
               'fcr', 'remarks']
     success_url = reverse_lazy('eggproduction:production-log-list')
