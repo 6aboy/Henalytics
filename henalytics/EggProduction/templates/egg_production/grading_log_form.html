@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Grading Log - Henalytics{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Grading Log{% else %}Create Grading Log{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -21,7 +22,10 @@
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
-                            {{ form.log_date }}
+                            <div class="date-input-action">
+                                {{ form.log_date }}
+                                <button type="button" class="btn btn-today" data-date-target="#{{ form.log_date.id_for_label }}">Today</button>
+                            </div>
                         </div>
                     </div>
                 </div>

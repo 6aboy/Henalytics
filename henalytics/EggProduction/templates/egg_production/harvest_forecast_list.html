@@ -2,10 +2,14 @@
 {% load static %}
 
 {% block title %}Harvest Forecasts - Henalytics{% endblock %}
+{% block page_title %}HEN Analytics{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Harvest Forecasts</h1>
+    <div class="dashboard-tabs">
+        <a href="{% url 'eggproduction:harvest-forecast-list' %}" class="active">Harvest Forecasts</a>
+        <a href="{% url 'eggproduction:sales-forecast-list' %}">Sales Forecasts</a>
+    </div>
 
     {% if forecasts %}
     <div class="table-responsive">

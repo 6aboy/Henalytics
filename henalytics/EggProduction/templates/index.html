@@ -1,124 +1,94 @@
-﻿{% extends 'base.html' %}
-{% load static %}
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Henalytics{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard-wrapper">
-    <aside class="dashboard-sidebar shadow-sm">
-        <div class="sidebar-brand text-center mb-4">
-            <img src="{% static 'EggProduction/img/logo.svg' %}" alt="Henalytics" class="logo-img mb-3">
-            <h4 class="mb-1">HENalytics</h4>
-            <p class="text-muted small mb-0">Staff Dashboard</p>
-        </div>
-
-        <div class="sidebar-group">
-            <div class="sidebar-group-label">MAIN</div>
-            <a href="{% url 'eggproduction:dashboard' %}" class="sidebar-link active">
-                <span class="sidebar-icon">🏠</span> Dashboard
-            </a>
-        </div>
-
-        <div class="sidebar-group">
-            <div class="sidebar-group-label">MANAGE</div>
-            <a href="{% url 'eggproduction:flock-list' %}" class="sidebar-link">
-                <span class="sidebar-icon">🥚</span> Egg Production
-            </a>
-            <a href="{% url 'eggproduction:sales-transaction-list' %}" class="sidebar-link">
-                <span class="sidebar-icon">💰</span> Manage Sales
-            </a>
-            <a href="{% url 'eggproduction:production-log-list' %}" class="sidebar-link">
-                <span class="sidebar-icon">🐔</span> Flock Management
-            </a>
-        </div>
-
-        <div class="sidebar-footer p-3 bg-white rounded shadow-sm">
-            <div class="small text-uppercase text-muted mb-2">Staff</div>
-            <div class="sidebar-user-info">House 1 | UBAP</div>
-            <a href="{% url 'logout' %}" class="sidebar-action mt-3">Logout</a>
-        </div>
-    </aside>
-
-    <section class="dashboard-main">
-        <div
-            class="dashboard-topbar d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 p-4 bg-white rounded shadow-sm">
-            <div>
-                <h2 class="mb-1">Dashboard</h2>
-                <p class="text-muted mb-0">Live production and sales metrics for your operations.</p>
-            </div>
-            <div class="text-muted small mt-3 mt-md-0">{{ today|date:"F j, Y" }}</div>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card shadow-sm p-4 bg-white rounded">
-                    <div class="metric-label">Total Eggs Today</div>
-                    <div class="metric-value">{{ today_production }}</div>
-                    <div class="metric-meta">{{ active_flocks }} active flocks</div>
-                </div>
-            </div>
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card shadow-sm p-4 bg-white rounded">
-                    <div class="metric-label">Hen-Day Production</div>
-                    <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
-                    <div class="metric-meta">30-day average</div>
-                </div>
-            </div>
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card shadow-sm p-4 bg-white rounded">
-                    <div class="metric-label">Total Live Hens</div>
-                    <div class="metric-value">{{ total_hens }}</div>
-                    <div class="metric-meta">Active inventory</div>
-                </div>
-            </div>
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="metric-card shadow-sm p-4 bg-white rounded">
-                    <div class="metric-label">Weekly Revenue</div>
-                    <div class="metric-value">₱{{ weekly_revenue|floatformat:0 }}</div>
-                    <div class="metric-meta">Last 7 days</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-3">
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="activity-card shadow-sm p-4 bg-white rounded">
-                    <h5 class="mb-3">Performance Overview</h5>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Avg FCR (30d)</span>
-                        <strong>{{ avg_fcr_30d }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Feed Consumed (30d)</span>
-                        <strong>{{ feed_consumed_30d }} bags</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Cracked Egg Loss</span>
-                        <strong>{{ cracked_egg_loss }}%</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Mortality Loss</span>
-                        <strong>{{ recent_losses_7d }}</strong>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="activity-card shadow-sm p-4 bg-white rounded">
-                    <h5 class="mb-3">Quick Actions</h5>
-                    <a href="{% url 'eggproduction:flock-list' %}" class="btn btn-outline-primary w-100 mb-2">View
-                        Flocks</a>
-                    <a href="{% url 'eggproduction:production-log-list' %}"
-                        class="btn btn-outline-secondary w-100 mb-2">Production Logs</a>
-                    <a href="{% url 'eggproduction:sales-transaction-list' %}"
-                        class="btn btn-outline-success w-100">Manage Sales</a>
-                </div>
-            </div>
-            <div class="col-12 col-lg-4">
-                <div class="activity-card shadow-sm p-4 bg-white rounded">
-                    <h5 class="mb-3">System Overview</h5>
-                    <p class="text-muted small">Navigate production, sales, and flock operations from the sidebar. This
-                        dashboard gives staff quick access to CRUD pages and key production metrics.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+<div class="dashboard-tabs">
+    <a href="{% url 'eggproduction:dashboard' %}" class="active">Overview</a>
+    <a href="{% url 'eggproduction:harvest-forecast-list' %}">HEN Analytics</a>
 </div>
+
+<section class="dashboard-grid">
+    <article class="metric-card featured">
+        <div class="metric-label">Total Eggs Today</div>
+        <div class="metric-value">{{ today_production }}</div>
+        <div class="metric-meta">▲ {{ active_flocks }} active flock{{ active_flocks|pluralize }}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label">Hen-Day Production</div>
+        <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
+        <div class="metric-meta"><span class="trend-up">▲</span> 30-day average</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label">Total Live Hens</div>
+        <div class="metric-value">{{ total_hens }}</div>
+        <div class="metric-meta"><span class="trend-down">▼</span> Current active inventory</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label">Weekly Revenue</div>
+        <div class="metric-value">PHP {{ weekly_revenue|floatformat:0 }}</div>
+        <div class="metric-meta"><span class="trend-up">▲</span> Last 7 days</div>
+    </article>
+</section>
+
+<section class="dashboard-grid-secondary">
+    <article class="metric-card">
+        <div class="metric-label">Avg FCR (30d)</div>
+        <div class="metric-value">{{ avg_fcr_30d }}</div>
+        <div class="metric-meta">Stable</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label">Avg Lay Rate</div>
+        <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
+        <div class="metric-meta"><span class="trend-up">▲</span> vs prior</div>
+    </article>
+    <article class="chart-card">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h3>Egg Size Distribution</h3>
+            <span class="metric-meta">30-day average</span>
+        </div>
+        <div class="donut-wrap">
+            <div class="donut" aria-label="Egg size distribution chart"></div>
+            <div class="legend">
+                <div class="legend-row"><span class="legend-swatch" style="background:#42ad86"></span><span>Large</span><strong>40%</strong></div>
+                <div class="legend-row"><span class="legend-swatch" style="background:#4bdd83"></span><span>Medium</span><strong>34%</strong></div>
+                <div class="legend-row"><span class="legend-swatch" style="background:#7db8f3"></span><span>XL</span><strong>9%</strong></div>
+                <div class="legend-row"><span class="legend-swatch" style="background:#175ec8"></span><span>Small</span><strong>11%</strong></div>
+                <div class="legend-row"><span class="legend-swatch" style="background:#36d2ba"></span><span>Other</span><strong>6%</strong></div>
+            </div>
+        </div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label">Feed Consumed (30d)</div>
+        <div class="metric-value">{{ feed_consumed_30d }} bags</div>
+        <div class="metric-meta">~8.2 bags/day</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-label">Cracked Egg Loss</div>
+        <div class="metric-value">{{ cracked_egg_loss }}%</div>
+        <div class="metric-meta">Loss rate</div>
+    </article>
+</section>
+
+<section class="mortality-section">
+    <div class="section-rule-title">Mortality Tracker</div>
+    <div class="mortality-cards">
+        <article class="mortality-card">
+            <div class="label">Last 7 Days</div>
+            <div class="value">{{ recent_losses_7d }}</div>
+            <div class="meta">hen/s lost</div>
+        </article>
+        <article class="mortality-card">
+            <div class="label">Last 30 Days</div>
+            <div class="value">{{ recent_losses_7d }}</div>
+            <div class="meta">hen/s lost</div>
+        </article>
+        <article class="mortality-card">
+            <div class="label">Last 60 Days</div>
+            <div class="value">{{ recent_losses_7d }}</div>
+            <div class="meta">hen/s lost</div>
+        </article>
+    </div>
+</section>
 {% endblock %}

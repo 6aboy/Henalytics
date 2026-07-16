@@ -125,8 +125,5 @@ STATIC_URL = 'static/'
 # Redirect users after login/logout
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
-# Redirect after login (send staff to admin by default)
-LOGIN_REDIRECT_URL = '/admin/'
 # Ensure redirects for unauthenticated users go to our login page
 LOGIN_URL = '/login/'
-LOGOUT_REDIRECT_URL = '/login/'

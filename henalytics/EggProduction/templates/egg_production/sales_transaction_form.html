@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Sales Transaction - Henalytics{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Sales{% else %}Create Sales{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -18,7 +19,10 @@
 
                 <div class="form-group mb-3">
                     <label for="{{ form.sale_date.id_for_label }}">Sale Date *</label>
-                    {{ form.sale_date }}
+                    <div class="date-input-action">
+                        {{ form.sale_date }}
+                        <button type="button" class="btn btn-today" data-date-target="#{{ form.sale_date.id_for_label }}">Today</button>
+                    </div>
                 </div>
 
                 <div class="form-group mb-3">

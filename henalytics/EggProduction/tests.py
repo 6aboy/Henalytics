@@ -1,400 +1,238 @@
-"""
-Test Suite for Henalytics Models, Serializers, and API Views
-"""
-from django.test import TestCase, Client
-from django.contrib.auth.models import User
-from django.utils import timezone
-from datetime import timedelta
 from decimal import Decimal
-from rest_framework.test import APITestCase
+from datetime import timedelta
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.test import APITestCase
 
 from .models import (
-    UserRole, Flock, HenPerformance, EggProduction, EggGrading,
-    SalesRecord, DailyRevenue, TimeSeriesData, Forecast, SystemLog
+    Flock,
+    GradingLog,
+    HarvestForecast,
+    ModelVersion,
+    ProductionLog,
+    SalesForecast,
+    SalesItem,
+    SalesTransaction,
+    UserProfile,
 )
-from .serializers import (
-    UserRoleSerializer, FlockSerializer, EggProductionSerializer,
-    SalesRecordSerializer, ForecastSerializer
-)
+from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
 
 
-class UserRoleModelTest(TestCase):
-    """Test UserRole model"""
-    
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
-        )
-    
-    def test_create_user_role_admin(self):
-        """Test creating admin user role"""
-        role = UserRole.objects.create(user=self.user, role='admin')
-        self.assertEqual(role.role, 'admin')
-        self.assertEqual(str(role), f'{self.user.username} - admin')
-    
-    def test_create_user_role_staff(self):
-        """Test creating staff user role"""
-        role = UserRole.objects.create(user=self.user, role='staff')
-        self.assertEqual(role.role, 'staff')
-    
-    def test_user_role_unique_constraint(self):
-        """Test that one user can only have one role"""
-        UserRole.objects.create(user=self.user, role='admin')
-        # Creating another role for same user should fail
-        with self.assertRaises(Exception):
-            UserRole.objects.create(user=self.user, role='staff')
+def create_flock(**overrides):
+    defaults = {
+        'house_no': 1,
+        'breed_strain': 'Lohmann Brown',
+        'date_started': timezone.now().date(),
+        'initial_hen_count': 1800,
+        'status': 'active',
+    }
+    defaults.update(overrides)
+    return Flock.objects.create(**defaults)
+
+
+class UserProfileModelTest(TestCase):
+    def test_create_user_profile(self):
+        user = User.objects.create_user(username='staff', password='pass12345')
+
+        profile = UserProfile.objects.create(user=user, role='staff', assigned_house='1')
+
+        self.assertEqual(profile.role, 'staff')
+        self.assertEqual(str(profile), 'staff - Staff')
 
 
 class FlockModelTest(TestCase):
-    """Test Flock model"""
-    
-    def setUp(self):
-        self.flock = Flock.objects.create(
-            flock_id='FL001',
-            breed='Leghorn',
-            initial_count=500,
-            current_count=480,
-            status='active',
-            date_started=timezone.now().date(),
-            housing_type='cage'
-        )
-    
     def test_create_flock(self):
-        """Test flock creation"""
-        self.assertEqual(self.flock.flock_id, 'FL001')
-        self.assertEqual(self.flock.breed, 'Leghorn')
-        self.assertEqual(self.flock.current_count, 480)
-    
-    def test_flock_status_choices(self):
-        """Test flock status choices"""
-        self.assertIn('active', dict(Flock._meta.get_field('status').choices))
-        self.assertIn('inactive', dict(Flock._meta.get_field('status').choices))
-        self.assertIn('culled', dict(Flock._meta.get_field('status').choices))
-    
-    def test_flock_unique_id(self):
-        """Test that flock ID must be unique"""
+        flock = create_flock()
+
+        self.assertEqual(flock.house_no, 1)
+        self.assertEqual(flock.breed_strain, 'Lohmann Brown')
+        self.assertEqual(str(flock), 'Flock House 1 - Lohmann Brown')
+
+    def test_house_and_start_date_are_unique_together(self):
+        started = timezone.now().date()
+        create_flock(date_started=started)
+
         with self.assertRaises(Exception):
-            Flock.objects.create(
-                flock_id='FL001',
-                breed='Rhode Island Red',
-                initial_count=300,
-                current_count=290,
-                status='active',
-                date_started=timezone.now().date()
-            )
+            create_flock(date_started=started)
 
 
-class EggProductionModelTest(TestCase):
-    """Test EggProduction model"""
-    
+class ProductionAndGradingLogModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='producer',
-            email='producer@example.com',
-            password='pass123'
-        )
-        self.flock = Flock.objects.create(
-            flock_id='FL002',
-            breed='Leghorn',
-            initial_count=1000,
-            current_count=950,
-            status='active',
-            date_started=timezone.now().date()
-        )
-    
-    def test_create_egg_production(self):
-        """Test creating egg production record"""
-        today = timezone.now().date()
-        prod = EggProduction.objects.create(
+        self.user = User.objects.create_user(username='encoder', password='pass12345')
+        self.flock = create_flock()
+
+    def test_create_production_log(self):
+        log = ProductionLog.objects.create(
             flock=self.flock,
-            record_date=today,
-            eggs_collected=850,
-            broken_eggs=10,
-            defective_eggs=15,
-            good_eggs=825,
-            hen_day_production=Decimal('89.5'),
-            hen_housed_production=Decimal('87.1'),
-            created_by=self.user
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            dead_count=1,
+            culled_count=0,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('84.27'),
+            pct_hen_housed=Decimal('83.33'),
+            fcr=Decimal('1.250'),
+            entered_by=self.user,
         )
-        self.assertEqual(prod.eggs_collected, 850)
-        self.assertEqual(prod.good_eggs, 825)
-    
-    def test_egg_production_unique_constraint(self):
-        """Test that one flock can only have one production record per day"""
-        today = timezone.now().date()
-        EggProduction.objects.create(
+
+        self.assertEqual(log.eggs_total, 1500)
+        self.assertEqual(log.entered_by, self.user)
+
+    def test_create_grading_log(self):
+        log = GradingLog.objects.create(
             flock=self.flock,
-            record_date=today,
-            eggs_collected=800,
-            created_by=self.user
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            eggs_total=1500,
+            eggs_aa=100,
+            eggs_a=800,
+            eggs_b=500,
+            eggs_small=80,
+            eggs_broken=20,
         )
-        # Creating another record for same flock/date should fail
-        with self.assertRaises(Exception):
-            EggProduction.objects.create(
-                flock=self.flock,
-                record_date=today,
-                eggs_collected=750,
-                created_by=self.user
-            )
-    
-    def test_egg_grading(self):
-        """Test egg grading inline model"""
-        today = timezone.now().date()
-        prod = EggProduction.objects.create(
-            flock=self.flock,
-            record_date=today,
-            eggs_collected=800,
-            created_by=self.user
-        )
-        grading = EggGrading.objects.create(
-            egg_production=prod,
-            grade='AA',
-            count=300,
-            average_weight=Decimal('60.5')
-        )
-        self.assertEqual(grading.grade, 'AA')
-        self.assertEqual(grading.count, 300)
+
+        self.assertEqual(log.eggs_a, 800)
+        self.assertEqual(log.eggs_broken, 20)
 
 
-class SalesRecordModelTest(TestCase):
-    """Test SalesRecord model"""
-    
+class SalesModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='salesman',
-            email='sales@example.com',
-            password='pass123'
-        )
-        self.flock = Flock.objects.create(
-            flock_id='FL003',
-            breed='Leghorn',
-            initial_count=500,
-            current_count=500,
-            status='active',
-            date_started=timezone.now().date()
-        )
-    
-    def test_create_sales_record(self):
-        """Test creating sales record"""
-        today = timezone.now().date()
-        sale = SalesRecord.objects.create(
+        self.user = User.objects.create_user(username='cashier', password='pass12345')
+        self.flock = create_flock()
+
+    def test_sales_item_computes_total_amount(self):
+        transaction = SalesTransaction.objects.create(
             flock=self.flock,
-            sale_date=today,
-            eggs_sold=500,
-            price_per_unit=Decimal('5.00'),
-            buyer_name='Local Market',
-            recorded_by=self.user
+            sale_date=timezone.now().date(),
+            recorded_by=self.user,
         )
-        self.assertEqual(sale.eggs_sold, 500)
-        self.assertEqual(sale.total_amount, Decimal('2500.00'))
-    
-    def test_sales_status_choices(self):
-        """Test sales record status choices"""
-        status_choices = dict(SalesRecord._meta.get_field('status').choices)
-        self.assertIn('pending', status_choices)
-        self.assertIn('completed', status_choices)
-        self.assertIn('cancelled', status_choices)
 
+        item = SalesItem.objects.create(
+            transaction=transaction,
+            grade='A',
+            quantity_trays=10,
+            price_per_tray=Decimal('220.00'),
+        )
 
-class APIAuthenticationTest(APITestCase):
-    """Test API authentication and permissions"""
-    
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(
-            username='apiuser',
-            email='api@example.com',
-            password='apipass123'
-        )
-    
-    def test_api_requires_authentication(self):
-        """Test that API endpoints require authentication"""
-        response = self.client.get('/api/flocks/')
-        self.assertEqual(response.status_code, 401)
-    
-    def test_authenticated_api_access(self):
-        """Test API access with authentication"""
-        self.client.login(username='apiuser', password='apipass123')
-        response = self.client.get('/api/flocks/')
-        self.assertIn(response.status_code, [200, 401])  # 401 if not properly configured
-
-
-class FlockViewSetTest(APITestCase):
-    """Test Flock API ViewSet"""
-    
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
-        )
-        self.flock1 = Flock.objects.create(
-            flock_id='FL001',
-            breed='Leghorn',
-            initial_count=1000,
-            current_count=950,
-            status='active',
-            date_started=timezone.now().date()
-        )
-        self.flock2 = Flock.objects.create(
-            flock_id='FL002',
-            breed='Rhode Island Red',
-            initial_count=500,
-            current_count=480,
-            status='inactive',
-            date_started=timezone.now().date()
-        )
-    
-    def test_list_flocks(self):
-        """Test listing all flocks"""
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/flocks/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 2)
-    
-    def test_filter_active_flocks(self):
-        """Test filtering active flocks"""
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/flocks/active_flocks/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-
-class EggProductionViewSetTest(APITestCase):
-    """Test EggProduction API ViewSet"""
-    
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='producer',
-            email='producer@example.com',
-            password='pass123'
-        )
-        self.flock = Flock.objects.create(
-            flock_id='FL001',
-            breed='Leghorn',
-            initial_count=1000,
-            current_count=950,
-            status='active',
-            date_started=timezone.now().date()
-        )
-    
-    def test_create_egg_production_via_api(self):
-        """Test creating egg production via API"""
-        self.client.force_authenticate(user=self.user)
-        today = timezone.now().date()
-        data = {
-            'flock': self.flock.id,
-            'record_date': str(today),
-            'eggs_collected': 850,
-            'broken_eggs': 10,
-            'defective_eggs': 15,
-            'good_eggs': 825,
-            'hen_day_production': '89.5',
-            'hen_housed_production': '87.1',
-        }
-        response = self.client.post('/api/egg-production/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    
-    def test_today_production_filter(self):
-        """Test getting today's production"""
-        today = timezone.now().date()
-        EggProduction.objects.create(
-            flock=self.flock,
-            record_date=today,
-            eggs_collected=850,
-            created_by=self.user
-        )
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/egg-production/today_production/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(item.total_amount, Decimal('2200.00'))
+        self.assertEqual(transaction.total_amount, Decimal('2200.00'))
 
 
 class ForecastModelTest(TestCase):
-    """Test Forecast model"""
-    
-    def setUp(self):
-        self.flock = Flock.objects.create(
-            flock_id='FL001',
-            breed='Leghorn',
-            initial_count=1000,
-            current_count=950,
-            status='active',
-            date_started=timezone.now().date()
-        )
-    
-    def test_create_forecast(self):
-        """Test creating forecast"""
+    def test_create_harvest_and_sales_forecasts(self):
+        flock = create_flock()
+        user = User.objects.create_user(username='admin', password='pass12345')
+        model_version = ModelVersion.objects.create(model_type='mlr', triggered_by=user, training_rows=30)
         forecast_date = timezone.now().date() + timedelta(days=1)
-        forecast = Forecast.objects.create(
-            flock=self.flock,
-            forecast_type='Egg Production',
-            model_type='hybrid',
+
+        harvest = HarvestForecast.objects.create(
+            flock=flock,
+            model_version=model_version,
             forecast_date=forecast_date,
-            forecasted_value=Decimal('850.00'),
-            upper_bound=Decimal('900.00'),
-            lower_bound=Decimal('800.00'),
-            mean_absolute_percentage_error=Decimal('5.25'),
-            r_squared=Decimal('0.92'),
-            is_active=True
+            grade='A',
+            predicted_qty=1500,
         )
-        self.assertEqual(forecast.forecasted_value, Decimal('850.00'))
-        self.assertTrue(forecast.is_active)
+        sales = SalesForecast.objects.create(
+            model_version=model_version,
+            forecast_date=forecast_date,
+            grade='A',
+            predicted_trays=50,
+        )
+
+        self.assertEqual(harvest.predicted_qty, 1500)
+        self.assertEqual(sales.predicted_trays, 50)
 
 
-class SystemLogModelTest(TestCase):
-    """Test SystemLog model"""
-    
+class APIAuthenticationTest(APITestCase):
+    def test_api_requires_authentication(self):
+        response = self.client.get(reverse('eggproduction:api-flock-list'))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_authenticated_user_can_list_flocks(self):
+        user = User.objects.create_user(username='apiuser', password='pass12345')
+        create_flock()
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(reverse('eggproduction:api-flock-list'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_active_flocks_action(self):
+        user = User.objects.create_user(username='apiuser', password='pass12345')
+        create_flock(status='active')
+        create_flock(house_no=2, status='inactive')
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(reverse('eggproduction:api-flock-active'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+
+class TemplateRenderTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='admin',
-            email='admin@example.com',
-            password='admin123'
+        self.user = User.objects.create_user(username='staffer', password='pass12345', is_staff=True)
+        self.flock = create_flock()
+        self.client.force_login(self.user)
+
+    def test_production_log_list_renders_with_filter(self):
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('84.27'),
+            pct_hen_housed=Decimal('83.33'),
+            entered_by=self.user,
         )
-    
-    def test_create_system_log(self):
-        """Test creating system log"""
-        log = SystemLog.objects.create(
-            log_type='data_entry',
-            message='Test data entry log',
-            user=self.user,
-            status='info'
+
+        response = self.client.get(reverse('eggproduction:production-log-list'), {'flock_id': self.flock.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Egg Production')
+
+    def test_sales_transaction_list_renders_total_amount(self):
+        transaction = SalesTransaction.objects.create(
+            flock=self.flock,
+            sale_date=timezone.now().date(),
+            recorded_by=self.user,
         )
-        self.assertEqual(log.log_type, 'data_entry')
-        self.assertEqual(log.status, 'info')
+        SalesItem.objects.create(
+            transaction=transaction,
+            grade='A',
+            quantity_trays=2,
+            price_per_tray=Decimal('200.00'),
+        )
+
+        response = self.client.get(reverse('eggproduction:sales-transaction-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'PHP 400.00')
 
 
 class SerializerTest(TestCase):
-    """Test Serializers"""
-    
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+    def test_current_serializers_match_current_models(self):
+        user = User.objects.create_user(username='serial', email='serial@example.com', password='pass12345')
+        profile = UserProfile.objects.create(user=user, role='admin')
+        flock = create_flock()
+        transaction = SalesTransaction.objects.create(
+            flock=flock,
+            sale_date=timezone.now().date(),
+            recorded_by=user,
         )
-        self.flock = Flock.objects.create(
-            flock_id='FL001',
-            breed='Leghorn',
-            initial_count=1000,
-            current_count=950,
-            status='active',
-            date_started=timezone.now().date()
-        )
-    
-    def test_flock_serializer(self):
-        """Test Flock serializer"""
-        serializer = FlockSerializer(self.flock)
-        data = serializer.data
-        self.assertEqual(data['flock_id'], 'FL001')
-        self.assertEqual(data['breed'], 'Leghorn')
-        self.assertEqual(data['current_count'], 950)
-    
-    def test_user_role_serializer(self):
-        """Test UserRole serializer"""
-        role = UserRole.objects.create(user=self.user, role='admin')
-        serializer = UserRoleSerializer(role)
-        data = serializer.data
-        self.assertEqual(data['role'], 'admin')
-        self.assertEqual(data['username'], 'testuser')
+
+        self.assertEqual(UserProfileSerializer(profile).data['username'], 'serial')
+        self.assertEqual(FlockSerializer(flock).data['breed_strain'], 'Lohmann Brown')
+        self.assertEqual(SalesTransactionSerializer(transaction).data['total_amount'], 0)

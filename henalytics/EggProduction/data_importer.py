@@ -1,248 +1,191 @@
 """
-Data Import Utility Module
-Handles importing data from Excel files into Henalytics system
+Excel import helpers for the current Henalytics schema.
 """
-import pandas as pd
 import logging
-from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
+import pandas as pd
 from django.contrib.auth.models import User
-from django.utils import timezone
 
-from .models import (
-    Flock, HenPerformance, EggProduction, EggGrading,
-    SalesRecord, DailyRevenue, TimeSeriesData, SystemLog
-)
+from .models import Flock, GradingLog, ProductionLog, SalesItem, SalesTransaction
 
 logger = logging.getLogger(__name__)
 
 
 class DataImporter:
-    """Import data from Excel files into the database"""
-    
+    """Import flock, production, grading, and sales sheets into the database."""
+
     def __init__(self, file_path, user=None):
-        """
-        Initialize data importer
-        
-        Args:
-            file_path: Path to Excel file
-            user: User instance for logging and attribution
-        """
         self.file_path = file_path
         self.user = user or User.objects.filter(is_staff=True).first()
         self.import_log = {
             'total_records': 0,
             'successful_imports': 0,
             'failed_imports': 0,
-            'errors': []
+            'errors': [],
         }
-    
+
     def import_flocks(self, sheet_name='Flocks'):
-        """Import flock data from Excel"""
-        try:
-            df = pd.read_excel(self.file_path, sheet_name=sheet_name)
-            
-            for idx, row in df.iterrows():
-                try:
-                    flock, created = Flock.objects.get_or_create(
-                        flock_id=str(row['flock_id']).strip(),
-                        defaults={
-                            'breed': str(row.get('breed', 'Unknown')).strip(),
-                            'initial_count': int(row.get('initial_count', 0)),
-                            'current_count': int(row.get('current_count', 0)),
-                            'status': str(row.get('status', 'active')).lower(),
-                            'date_started': pd.to_datetime(row.get('date_started')),
-                            'date_ended': pd.to_datetime(row.get('date_ended')) if pd.notna(row.get('date_ended')) else None,
-                            'housing_type': str(row.get('housing_type', 'cage')).strip(),
-                            'notes': str(row.get('notes', '')).strip(),
-                        }
-                    )
-                    self.import_log['successful_imports'] += 1
-                    self.import_log['total_records'] += 1
-                
-                except Exception as e:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"Flock row {idx}: {str(e)}")
-                    logger.error(f"Error importing flock at row {idx}: {str(e)}")
-            
-            self._log_import('flocks', sheet_name)
+        df = self._read_sheet(sheet_name)
+        if df is None:
             return self.import_log
-        
-        except Exception as e:
-            logger.error(f"Error importing flocks: {str(e)}")
-            self.import_log['errors'].append(f"Flocks import failed: {str(e)}")
-            return self.import_log
-    
-    def import_egg_production(self, sheet_name='EggProduction'):
-        """Import egg production data from Excel"""
-        try:
-            df = pd.read_excel(self.file_path, sheet_name=sheet_name)
-            
-            for idx, row in df.iterrows():
-                try:
-                    flock = Flock.objects.get(flock_id=str(row['flock_id']).strip())
-                    
-                    # Create or update egg production record
-                    egg_prod, created = EggProduction.objects.get_or_create(
-                        flock=flock,
-                        record_date=pd.to_datetime(row['record_date']).date(),
-                        defaults={
-                            'eggs_collected': int(row.get('eggs_collected', 0)),
-                            'broken_eggs': int(row.get('broken_eggs', 0)),
-                            'defective_eggs': int(row.get('defective_eggs', 0)),
-                            'good_eggs': int(row.get('good_eggs', 0)),
-                            'collection_time': row.get('collection_time', '08:00'),
-                            'eggs_per_hen': Decimal(str(row.get('eggs_per_hen', 0))),
-                            'hen_day_production': Decimal(str(row.get('hen_day_production', 0))),
-                            'hen_housed_production': Decimal(str(row.get('hen_housed_production', 0))),
-                            'notes': str(row.get('notes', '')).strip(),
-                            'created_by': self.user,
-                        }
-                    )
-                    
-                    # Add egg grading if provided
-                    if 'grade_aa' in row.columns and pd.notna(row['grade_aa']):
-                        for grade, count in [('AA', 'grade_aa'), ('A', 'grade_a'), 
-                                             ('B', 'grade_b'), ('C', 'grade_c')]:
-                            if count in row.columns and pd.notna(row[count]):
-                                EggGrading.objects.get_or_create(
-                                    egg_production=egg_prod,
-                                    grade=grade,
-                                    defaults={
-                                        'count': int(row[count]),
-                                        'average_weight': Decimal(str(row.get(f'avg_weight_{grade.lower()}', 0)))
-                                    }
-                                )
-                    
-                    self.import_log['successful_imports'] += 1
-                    self.import_log['total_records'] += 1
-                
-                except Flock.DoesNotExist:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"EggProduction row {idx}: Flock not found")
-                except Exception as e:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"EggProduction row {idx}: {str(e)}")
-                    logger.error(f"Error importing egg production at row {idx}: {str(e)}")
-            
-            self._log_import('egg_production', sheet_name)
-            return self.import_log
-        
-        except Exception as e:
-            logger.error(f"Error importing egg production: {str(e)}")
-            self.import_log['errors'].append(f"Egg production import failed: {str(e)}")
-            return self.import_log
-    
-    def import_sales(self, sheet_name='Sales'):
-        """Import sales data from Excel"""
-        try:
-            df = pd.read_excel(self.file_path, sheet_name=sheet_name)
-            
-            for idx, row in df.iterrows():
-                try:
-                    flock = Flock.objects.get(flock_id=str(row['flock_id']).strip())
-                    
-                    sale = SalesRecord.objects.create(
-                        flock=flock,
-                        sale_date=pd.to_datetime(row['sale_date']).date(),
-                        eggs_sold=int(row.get('eggs_sold', 0)),
-                        price_per_unit=Decimal(str(row.get('price_per_unit', 0))),
-                        buyer_name=str(row.get('buyer_name', 'Unknown')).strip(),
-                        buyer_contact=str(row.get('buyer_contact', '')).strip(),
-                        status=str(row.get('status', 'completed')).lower(),
-                        recorded_by=self.user,
-                    )
-                    
-                    self.import_log['successful_imports'] += 1
-                    self.import_log['total_records'] += 1
-                
-                except Flock.DoesNotExist:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"Sales row {idx}: Flock not found")
-                except Exception as e:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"Sales row {idx}: {str(e)}")
-                    logger.error(f"Error importing sales at row {idx}: {str(e)}")
-            
-            self._log_import('sales', sheet_name)
-            return self.import_log
-        
-        except Exception as e:
-            logger.error(f"Error importing sales: {str(e)}")
-            self.import_log['errors'].append(f"Sales import failed: {str(e)}")
-            return self.import_log
-    
-    def import_hen_performance(self, sheet_name='HenPerformance'):
-        """Import hen performance data from Excel"""
-        try:
-            df = pd.read_excel(self.file_path, sheet_name=sheet_name)
-            
-            for idx, row in df.iterrows():
-                try:
-                    flock = Flock.objects.get(flock_id=str(row['flock_id']).strip())
-                    
-                    perf = HenPerformance.objects.create(
-                        flock=flock,
-                        record_date=pd.to_datetime(row['record_date']).date(),
-                        average_weight=Decimal(str(row.get('average_weight', 0))),
-                        feed_consumption=Decimal(str(row.get('feed_consumption', 0))),
-                        water_consumption=Decimal(str(row.get('water_consumption', 0))),
-                        mortality_count=int(row.get('mortality_count', 0)),
-                        health_status=str(row.get('health_status', 'healthy')).lower(),
-                        temperature=Decimal(str(row.get('temperature', 0))),
-                        humidity=Decimal(str(row.get('humidity', 0))),
-                        notes=str(row.get('notes', '')).strip(),
-                        recorded_by=self.user,
-                    )
-                    
-                    self.import_log['successful_imports'] += 1
-                    self.import_log['total_records'] += 1
-                
-                except Flock.DoesNotExist:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"HenPerformance row {idx}: Flock not found")
-                except Exception as e:
-                    self.import_log['failed_imports'] += 1
-                    self.import_log['errors'].append(f"HenPerformance row {idx}: {str(e)}")
-                    logger.error(f"Error importing hen performance at row {idx}: {str(e)}")
-            
-            self._log_import('hen_performance', sheet_name)
-            return self.import_log
-        
-        except Exception as e:
-            logger.error(f"Error importing hen performance: {str(e)}")
-            self.import_log['errors'].append(f"Hen performance import failed: {str(e)}")
-            return self.import_log
-    
-    def import_all(self):
-        """Import all data from Excel file"""
-        sheets = {
-            'Flocks': self.import_flocks,
-            'EggProduction': self.import_egg_production,
-            'HenPerformance': self.import_hen_performance,
-            'Sales': self.import_sales,
-        }
-        
-        for sheet_name, import_func in sheets.items():
+
+        for idx, row in df.iterrows():
             try:
-                import_func(sheet_name)
-            except Exception as e:
-                logger.error(f"Error with sheet {sheet_name}: {str(e)}")
-                self.import_log['errors'].append(f"Sheet {sheet_name} failed: {str(e)}")
-        
-        # Log final import summary
-        SystemLog.objects.create(
-            log_type='data_import',
-            message=f'Data import completed. Total: {self.import_log["total_records"]}, '
-                   f'Successful: {self.import_log["successful_imports"]}, '
-                   f'Failed: {self.import_log["failed_imports"]}',
-            user=self.user,
-            status='info' if self.import_log['failed_imports'] == 0 else 'warning'
-        )
-        
+                house_no = int(row.get('house_no', row.get('flock_id', 1)))
+                date_started = pd.to_datetime(row.get('date_started')).date()
+                Flock.objects.update_or_create(
+                    house_no=house_no,
+                    date_started=date_started,
+                    defaults={
+                        'breed_strain': str(row.get('breed_strain', row.get('breed', 'Unknown'))).strip(),
+                        'initial_hen_count': int(row.get('initial_hen_count', row.get('initial_count', 1))),
+                        'status': str(row.get('status', 'active')).lower(),
+                        'notes': str(row.get('notes', '')).strip(),
+                    },
+                )
+                self._mark_success()
+            except Exception as exc:
+                self._mark_failure('Flocks', idx, exc)
+
         return self.import_log
-    
-    def _log_import(self, data_type, sheet_name):
-        """Log import activity"""
-        logger.info(f"Imported {data_type} from sheet '{sheet_name}'")
+
+    def import_production_logs(self, sheet_name='ProductionLogs'):
+        df = self._read_sheet(sheet_name)
+        if df is None:
+            return self.import_log
+
+        for idx, row in df.iterrows():
+            try:
+                flock = self._find_flock(row)
+                log_date = pd.to_datetime(row.get('log_date', row.get('record_date'))).date()
+                eggs_total = int(row.get('eggs_total', row.get('eggs_collected', 0)))
+                hen_count = int(row.get('hen_count', row.get('live_hen_count', flock.initial_hen_count)))
+                ProductionLog.objects.update_or_create(
+                    flock=flock,
+                    log_date=log_date,
+                    defaults={
+                        'age_weeks': int(row.get('age_weeks', 0)),
+                        'age_days': int(row.get('age_days', 0)),
+                        'hen_count': hen_count,
+                        'dead_count': int(row.get('dead_count', row.get('daily_mortality', 0))),
+                        'culled_count': int(row.get('culled_count', row.get('daily_culls', 0))),
+                        'feed_bags': int(row.get('feed_bags', row.get('feed_consumed_bags', 0))),
+                        'eggs_total': eggs_total,
+                        'pct_hen_day': Decimal(str(row.get('pct_hen_day', self._percent(eggs_total, hen_count)))),
+                        'pct_hen_housed': Decimal(
+                            str(row.get('pct_hen_housed', self._percent(eggs_total, flock.initial_hen_count)))
+                        ),
+                        'fcr': self._decimal_or_none(row.get('fcr')),
+                        'remarks': str(row.get('remarks', row.get('management_remarks', ''))).strip(),
+                        'entered_by': self.user,
+                    },
+                )
+                self._mark_success()
+            except Exception as exc:
+                self._mark_failure('ProductionLogs', idx, exc)
+
+        return self.import_log
+
+    def import_grading_logs(self, sheet_name='GradingLogs'):
+        df = self._read_sheet(sheet_name)
+        if df is None:
+            return self.import_log
+
+        for idx, row in df.iterrows():
+            try:
+                flock = self._find_flock(row)
+                log_date = pd.to_datetime(row.get('log_date', row.get('grading_date'))).date()
+                GradingLog.objects.update_or_create(
+                    flock=flock,
+                    log_date=log_date,
+                    defaults={
+                        'age_weeks': int(row.get('age_weeks', 0)),
+                        'eggs_total': int(row.get('eggs_total', 0)),
+                        'eggs_aa': int(row.get('eggs_aa', row.get('grade_jumbo', 0))),
+                        'eggs_a': int(row.get('eggs_a', row.get('grade_large', 0))),
+                        'eggs_b': int(row.get('eggs_b', row.get('grade_medium', 0))),
+                        'eggs_small': int(row.get('eggs_small', row.get('grade_small', 0))),
+                        'eggs_broken': int(row.get('eggs_broken', row.get('cracked_eggs', 0))),
+                        'eggs_decode': int(row.get('eggs_decode', 0)),
+                        'eggs_source': str(row.get('eggs_source', row.get('source', 'manual'))).strip(),
+                    },
+                )
+                self._mark_success()
+            except Exception as exc:
+                self._mark_failure('GradingLogs', idx, exc)
+
+        return self.import_log
+
+    def import_sales(self, sheet_name='Sales'):
+        df = self._read_sheet(sheet_name)
+        if df is None:
+            return self.import_log
+
+        for idx, row in df.iterrows():
+            try:
+                flock = self._find_flock(row)
+                transaction = SalesTransaction.objects.create(
+                    flock=flock,
+                    sale_date=pd.to_datetime(row.get('sale_date')).date(),
+                    recorded_by=self.user,
+                    notes=str(row.get('notes', row.get('buyer_name', ''))).strip(),
+                )
+                SalesItem.objects.create(
+                    transaction=transaction,
+                    grade=str(row.get('grade', 'A')).upper()[:2],
+                    quantity_trays=int(row.get('quantity_trays', row.get('trays', 0))),
+                    price_per_tray=Decimal(str(row.get('price_per_tray', 0))),
+                )
+                self._mark_success()
+            except Exception as exc:
+                self._mark_failure('Sales', idx, exc)
+
+        return self.import_log
+
+    def import_all(self):
+        for importer in (
+            self.import_flocks,
+            self.import_production_logs,
+            self.import_grading_logs,
+            self.import_sales,
+        ):
+            importer()
+        return self.import_log
+
+    def _read_sheet(self, sheet_name):
+        try:
+            return pd.read_excel(self.file_path, sheet_name=sheet_name)
+        except Exception as exc:
+            self.import_log['errors'].append(f'{sheet_name} import failed: {exc}')
+            logger.exception("Unable to read sheet %s", sheet_name)
+            return None
+
+    def _find_flock(self, row):
+        if pd.notna(row.get('flock_id')):
+            try:
+                return Flock.objects.get(id=int(row.get('flock_id')))
+            except (Flock.DoesNotExist, ValueError):
+                pass
+
+        house_no = int(row.get('house_no', 1))
+        return Flock.objects.filter(house_no=house_no, status='active').latest('date_started')
+
+    def _mark_success(self):
+        self.import_log['successful_imports'] += 1
+        self.import_log['total_records'] += 1
+
+    def _mark_failure(self, sheet_name, row_index, exc):
+        self.import_log['failed_imports'] += 1
+        self.import_log['errors'].append(f'{sheet_name} row {row_index}: {exc}')
+        logger.exception("Import error in %s row %s", sheet_name, row_index)
+
+    @staticmethod
+    def _percent(numerator, denominator):
+        return round((numerator / denominator) * 100, 2) if denominator else 0
+
+    @staticmethod
+    def _decimal_or_none(value):
+        if value is None or pd.isna(value) or value == '':
+            return None
+        return Decimal(str(value))

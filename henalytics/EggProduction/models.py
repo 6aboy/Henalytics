@@ -140,6 +140,10 @@ class SalesTransaction(models.Model):
     
     def __str__(self):
         return f"Sale Transaction - {self.sale_date} - Flock {self.flock.house_no}"
+
+    @property
+    def total_amount(self):
+        return sum(item.total_amount for item in self.items.all())
     
     class Meta:
         ordering = ['-sale_date']

@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Flock - Henalytics{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Flock{% else %}Create Flock{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -29,7 +30,10 @@
 
                 <div class="form-group mb-3">
                     <label for="{{ form.date_started.id_for_label }}">Date Started</label>
-                    {{ form.date_started }}
+                    <div class="date-input-action">
+                        {{ form.date_started }}
+                        <button type="button" class="btn btn-today" data-date-target="#{{ form.date_started.id_for_label }}">Today</button>
+                    </div>
                     {% if form.date_started.errors %}
                     <div class="text-danger">{{ form.date_started.errors }}</div>
                     {% endif %}

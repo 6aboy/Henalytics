@@ -194,6 +194,12 @@ class ProductionLogListView(StaffAccessMixin, ListView):
             qs = qs.filter(flock_id=flock_id)
         return qs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['flocks'] = Flock.objects.order_by('house_no', '-date_started')
+        context['selected_flock_id'] = self.request.GET.get('flock_id', '')
+        return context
+
 
 class ProductionLogCreateView(StaffAccessMixin, CreateView):
     model = ProductionLog

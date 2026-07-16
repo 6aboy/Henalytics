@@ -5,44 +5,103 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Henalytics</title>
+    <title>{% block title %}Henalytics{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'EggProduction/css/style.css' %}">
 </head>
 
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
-        <div class="container">
-            <a class="navbar-brand" href="/">Henalytics</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/api/">API</a></li>
-                    {% if request.user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="/admin/">Admin</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">{{ request.user.username }}</a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
-                        </ul>
-                    </li>
-                    {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
-                    {% endif %}
-                </ul>
+<body class="{% if request.user.is_authenticated %}app-body{% else %}auth-body{% endif %}">
+    {% if request.user.is_authenticated %}
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a href="{% url 'eggproduction:dashboard' %}" class="brand-lockup">
+                <img src="{% static 'EggProduction/img/logo.svg' %}" alt="Henalytics">
+            </a>
+
+            <nav class="side-nav" aria-label="Main navigation">
+                <div class="nav-section-label">MAIN</div>
+                <a href="{% url 'eggproduction:dashboard' %}"
+                    class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="side-icon icon-home"></span>
+                    <span>Dashboard</span>
+                </a>
+
+                <div class="nav-section-label">MANAGE</div>
+                <a href="{% url 'eggproduction:production-log-list' %}"
+                    class="side-link {% if 'production-log' in request.resolver_match.url_name or 'grading-log' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-eggs"></span>
+                    <span>Egg Production</span>
+                </a>
+                <a href="{% url 'eggproduction:sales-transaction-list' %}"
+                    class="side-link {% if 'sales-transaction' in request.resolver_match.url_name or 'sales-item' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-sales"></span>
+                    <span>Manage Sales</span>
+                </a>
+                <a href="{% url 'eggproduction:flock-list' %}"
+                    class="side-link {% if 'flock' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-flock"></span>
+                    <span>Flock Management</span>
+                </a>
+                <a href="{% url 'eggproduction:harvest-forecast-list' %}"
+                    class="side-link {% if 'forecast' in request.resolver_match.url_name or 'model-version' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-chart"></span>
+                    <span>HEN Analytics</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-account">
+                <div class="account-avatar"></div>
+                <div class="account-copy">
+                    <div class="account-role">{% if request.user.is_superuser %}ADMIN{% else %}STAFF{% endif %}</div>
+                    <div class="account-meta">House 1 | UBAP</div>
+                </div>
+                <form method="post" action="{% url 'logout' %}" class="account-menu">
+                    {% csrf_token %}
+                    <button type="submit" aria-label="Logout">...</button>
+                </form>
             </div>
-        </div>
-    </nav>
+        </aside>
 
-    <main class="container my-4">
-        {% block content %}{% endblock %}
+        <section class="app-panel">
+            <header class="app-topbar">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                <time>{% now "F j, Y" %}</time>
+            </header>
+            <main class="app-content">
+    {% else %}
+    <main>
+    {% endif %}
+                {% block content %}{% endblock %}
+    {% if request.user.is_authenticated %}
+            </main>
+        </section>
+    </div>
+    {% else %}
     </main>
-
-    <footer class="text-center text-muted py-4">
-        &copy; {{ year|default:2024 }} Henalytics
-    </footer>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-date-target]');
+            if (!button) {
+                return;
+            }
+
+            var field = document.querySelector(button.getAttribute('data-date-target'));
+            if (!field) {
+                return;
+            }
+
+            var today = new Date();
+            var month = String(today.getMonth() + 1).padStart(2, '0');
+            var day = String(today.getDate()).padStart(2, '0');
+            field.value = today.getFullYear() + '-' + month + '-' + day;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            field.focus();
+        });
+    </script>
 </body>
 
 </html>
