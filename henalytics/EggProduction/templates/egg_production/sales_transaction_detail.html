@@ -2,98 +2,75 @@
 {% load static %}
 
 {% block title %}Sales Transaction - Henalytics{% endblock %}
+{% block page_title %}Sales Details{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Sales Transaction - {{ sales_transaction.sale_date|date:"Y-m-d" }}</h1>
+<div class="action-panel detail-panel">
+    <div class="detail-header">
         <div>
-            <a href="{% url 'eggproduction:sales-transaction-edit' sales_transaction.pk %}"
-                class="btn btn-warning">Edit</a>
-            <a href="{% url 'eggproduction:sales-transaction-delete' sales_transaction.pk %}"
-                class="btn btn-danger">Delete</a>
+            <h2 class="detail-title">Sales Transaction</h2>
+            <div class="detail-subtitle">House {{ sales_transaction.flock.house_no }} | {{ sales_transaction.sale_date|date:"Y-m-d" }}</div>
+        </div>
+        <div class="detail-actions">
+            <a href="{% url 'eggproduction:sales-transaction-edit' sales_transaction.pk %}" class="btn btn-warning">Edit</a>
+            <a href="{% url 'eggproduction:sales-transaction-delete' sales_transaction.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
+            <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary">Back</a>
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header">Transaction Information</div>
-                <div class="card-body">
-                    <p><strong>Flock:</strong> <a
-                            href="{% url 'eggproduction:flock-detail' sales_transaction.flock.pk %}">House {{
-                            sales_transaction.flock.house_no }}</a></p>
-                    <p><strong>Sale Date:</strong> {{ sales_transaction.sale_date|date:"Y-m-d" }}</p>
-                    <p><strong>Recorded By:</strong> {{
-                        sales_transaction.recorded_by.get_full_name|default:sales_transaction.recorded_by.username }}
-                    </p>
-                    {% if sales_transaction.notes %}
-                    <p><strong>Notes:</strong> {{ sales_transaction.notes }}</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Sales Items</span>
-                    <a href="{% url 'eggproduction:sales-item-add' sales_transaction.pk %}"
-                        class="btn btn-sm btn-primary">Add Item</a>
-                </div>
-                <div class="card-body">
-                    {% if items %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Grade</th>
-                                    <th>Quantity (Trays)</th>
-                                    <th>Price/Tray</th>
-                                    <th>Total</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in items %}
-                                <tr>
-                                    <td>{{ item.grade }}</td>
-                                    <td>{{ item.quantity_trays }}</td>
-                                    <td>${{ item.price_per_tray|floatformat:2 }}</td>
-                                    <td><strong>${{ item.total_amount|floatformat:2 }}</strong></td>
-                                    <td>
-                                        <a href="{% url 'eggproduction:sales-item-edit' item.pk %}"
-                                            class="btn btn-sm btn-warning">Edit</a>
-                                        <a href="{% url 'eggproduction:sales-item-delete' item.pk %}"
-                                            class="btn btn-sm btn-danger">Delete</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                <tr class="table-active">
-                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                                    <td><strong>${{ total_amount|floatformat:2 }}</strong></td>
-                                    <td></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p>No items in this transaction. <a
-                            href="{% url 'eggproduction:sales-item-add' sales_transaction.pk %}">Add one</a></p>
-                    {% endif %}
-                </div>
-            </div>
+    <section class="detail-section">
+        <h3 class="detail-section-title">Transaction</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ sales_transaction.flock.house_no }}</span></div>
+            <div class="detail-item"><span class="detail-label">Sale Date</span><span class="detail-value">{{ sales_transaction.sale_date|date:"Y-m-d" }}</span></div>
+            <div class="detail-item"><span class="detail-label">Recorded By</span><span class="detail-value">{{ recorded_by_name }}</span></div>
+            <div class="detail-item"><span class="detail-label">Total Amount</span><span class="detail-value">PHP {{ total_amount|floatformat:2 }}</span></div>
         </div>
+    </section>
 
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Transaction Metadata</div>
-                <div class="card-body">
-                    <p><strong>Created:</strong> {{ sales_transaction.created_at|date:"Y-m-d H:i" }}</p>
-                    <p><strong>Updated:</strong> {{ sales_transaction.updated_at|date:"Y-m-d H:i" }}</p>
-                </div>
-            </div>
+    <section class="detail-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="detail-section-title mb-0">Sales Items</h3>
+            <a href="{% url 'eggproduction:sales-item-add' sales_transaction.pk %}" class="btn btn-sm btn-primary">Add Item</a>
         </div>
-    </div>
+        {% if items %}
+        <div class="table-responsive detail-mini-table">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Grade</th>
+                        <th>Trays</th>
+                        <th>Price/Tray</th>
+                        <th>Total</th>
+                        <th class="no-export">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.grade }}</td>
+                        <td>{{ item.quantity_trays }}</td>
+                        <td>PHP {{ item.price_per_tray|floatformat:2 }}</td>
+                        <td><strong>PHP {{ item.total_amount|floatformat:2 }}</strong></td>
+                        <td>
+                            <a href="{% url 'eggproduction:sales-item-edit' item.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                            <a href="{% url 'eggproduction:sales-item-delete' item.pk %}" class="btn btn-sm btn-danger" data-swal-delete-link>Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="detail-note">No sales items have been added to this transaction.</div>
+        {% endif %}
+    </section>
 
-    <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary">Back to Transactions</a>
+    {% if sales_transaction.notes %}
+    <section class="detail-section">
+        <h3 class="detail-section-title">Notes</h3>
+        <div class="detail-note">{{ sales_transaction.notes }}</div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

@@ -2,11 +2,13 @@
 {% load static %}
 
 {% block content %}
-<div class="card p-3">
+<div class="action-panel">
     <h4>Confirm Delete</h4>
-    <p>Are you sure you want to delete the egg production record for <strong>{{ object.flock.flock_id }}</strong> on
+    <p>Are you sure you want to delete the egg production record for <strong>House {{ object.flock.house_no }}</strong> on
         <strong>{{ object.record_date }}</strong>?</p>
-    <form method="post">
+    <form method="post" data-swal-delete
+        data-swal-title="Delete egg production record?"
+        data-swal-text="This staff egg production record will be permanently deleted.">
         {% csrf_token %}
         <button class="btn btn-danger" type="submit">Confirm Delete</button>
         <a href="{% url 'eggproduction:staff-egg-list' %}" class="btn btn-secondary">Cancel</a>

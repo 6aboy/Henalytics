@@ -29,8 +29,7 @@
                 {% for forecast in forecasts %}
                 <tr>
                     <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
-                    <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{
-                            forecast.flock.house_no }}</a></td>
+                    <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
                     <td><span class="badge bg-info">{{ forecast.grade }}</span></td>
                     <td><strong>{{ forecast.predicted_qty }}</strong></td>
                     <td>{{ forecast.model_version.get_model_type_display }}</td>

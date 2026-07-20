@@ -1,77 +1,51 @@
 {% extends 'base.html' %}
 
 {% block title %}Grading Log Details - Henalytics{% endblock %}
+{% block page_title %}Grading Log Details{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Grading Log - {{ grading_log.log_date|date:"Y-m-d" }}</h1>
+<div class="action-panel detail-panel">
+    <div class="detail-header">
         <div>
+            <h2 class="detail-title">Grading Log</h2>
+            <div class="detail-subtitle">House {{ grading_log.flock.house_no }} | {{ grading_log.log_date|date:"Y-m-d" }}</div>
+        </div>
+        <div class="detail-actions">
             <a href="{% url 'eggproduction:grading-log-edit' grading_log.pk %}" class="btn btn-warning">Edit</a>
-            <a href="{% url 'eggproduction:grading-log-delete' grading_log.pk %}" class="btn btn-danger">Delete</a>
+            <a href="{% url 'eggproduction:grading-log-delete' grading_log.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
+            <a href="{% url 'eggproduction:grading-log-list' %}" class="btn btn-secondary">Back</a>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header">Log Information</div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Flock:</strong> <a
-                                    href="{% url 'eggproduction:flock-detail' grading_log.flock.pk %}">House {{
-                                    grading_log.flock.house_no }}</a></p>
-                            <p><strong>Log Date:</strong> {{ grading_log.log_date }}</p>
-                            <p><strong>Age (Weeks):</strong> {{ grading_log.age_weeks }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Total Eggs:</strong> {{ grading_log.eggs_total }}</p>
-                        </div>
-                    </div>
-
-                    <h5>Egg Distribution</h5>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <p><strong>Grade AA:</strong> {{ grading_log.eggs_aa }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Grade A:</strong> {{ grading_log.eggs_a }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Grade B:</strong> {{ grading_log.eggs_b }}</p>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <p><strong>Small:</strong> {{ grading_log.eggs_small }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Broken:</strong> {{ grading_log.eggs_broken }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Decoded:</strong> {{ grading_log.eggs_decode }}</p>
-                        </div>
-                    </div>
-
-                    {% if grading_log.eggs_source %}
-                    <p><strong>Source:</strong> {{ grading_log.eggs_source }}</p>
-                    {% endif %}
-                </div>
-            </div>
+    <section class="detail-section">
+        <h3 class="detail-section-title">Summary</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ grading_log.flock.house_no }}</span></div>
+            <div class="detail-item"><span class="detail-label">Date</span><span class="detail-value">{{ grading_log.log_date|date:"Y-m-d" }}</span></div>
+            <div class="detail-item"><span class="detail-label">Age</span><span class="detail-value">{{ grading_log.age_weeks }} weeks</span></div>
+            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ grading_log.eggs_total }}</span></div>
         </div>
+    </section>
 
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Metadata</div>
-                <div class="card-body">
-                    <p><strong>Created:</strong> {{ grading_log.created_at|date:"Y-m-d H:i" }}</p>
-                    <p><strong>Updated:</strong> {{ grading_log.updated_at|date:"Y-m-d H:i" }}</p>
-                </div>
-            </div>
+    <section class="detail-section">
+        <h3 class="detail-section-title">Egg Distribution</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Grade AA</span><span class="detail-value">{{ grading_log.eggs_aa }}</span></div>
+            <div class="detail-item"><span class="detail-label">Grade A</span><span class="detail-value">{{ grading_log.eggs_a }}</span></div>
+            <div class="detail-item"><span class="detail-label">Grade B</span><span class="detail-value">{{ grading_log.eggs_b }}</span></div>
+            <div class="detail-item"><span class="detail-label">Small</span><span class="detail-value">{{ grading_log.eggs_small }}</span></div>
+            <div class="detail-item"><span class="detail-label">Broken</span><span class="detail-value">{{ grading_log.eggs_broken }}</span></div>
+            <div class="detail-item"><span class="detail-label">Decoded</span><span class="detail-value">{{ grading_log.eggs_decode }}</span></div>
+            <div class="detail-item"><span class="detail-label">Created</span><span class="detail-value">{{ grading_log.created_at|date:"Y-m-d H:i" }}</span></div>
+            <div class="detail-item"><span class="detail-label">Updated</span><span class="detail-value">{{ grading_log.updated_at|date:"Y-m-d H:i" }}</span></div>
         </div>
-    </div>
+    </section>
 
-    <a href="{% url 'eggproduction:grading-log-list' %}" class="btn btn-secondary mt-3">Back to Logs</a>
+    {% if grading_log.eggs_source %}
+    <section class="detail-section">
+        <h3 class="detail-section-title">Source</h3>
+        <div class="detail-note">{{ grading_log.eggs_source }}</div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

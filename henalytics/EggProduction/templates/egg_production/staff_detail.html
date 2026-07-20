@@ -2,22 +2,38 @@
 {% load static %}
 
 {% block content %}
-<div class="card p-3">
-    <h4>Egg Production - {{ production.flock.flock_id }} ({{ production.record_date }})</h4>
-    <div class="row mt-3">
-        <div class="col-md-4"><strong>Total Eggs Collected:</strong> {{ production.eggs_collected }}</div>
-        <div class="col-md-4"><strong>Good Eggs:</strong> {{ production.good_eggs }}</div>
-        <div class="col-md-4"><strong>Broken Eggs:</strong> {{ production.broken_eggs }}</div>
+<div class="action-panel detail-panel">
+    <div class="detail-header">
+        <div>
+            <h2 class="detail-title">Egg Production Record</h2>
+            <div class="detail-subtitle">House {{ production.flock.house_no }} | {{ production.record_date|date:"Y-m-d" }}</div>
+        </div>
+        <div class="detail-actions">
+            <a href="{% url 'eggproduction:staff-egg-edit' production.pk %}" class="btn btn-warning">Edit</a>
+            <a href="{% url 'eggproduction:staff-egg-delete' production.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
+            <a href="{% url 'eggproduction:staff-egg-list' %}" class="btn btn-secondary">Back</a>
+        </div>
     </div>
-    <div class="row mt-2">
-        <div class="col-md-4"><strong>% Hen-day:</strong> {{ production.hen_day_production }}</div>
-        <div class="col-md-4"><strong>% Hen-housed:</strong> {{ production.hen_housed_production }}</div>
-        <div class="col-md-4"><strong>Eggs per hen:</strong> {{ production.eggs_per_hen }}</div>
-    </div>
-    <div class="mt-3">
-        <a href="{% url 'eggproduction:staff-egg-edit' production.pk %}" class="btn btn-warning">Edit</a>
-        <a href="{% url 'eggproduction:staff-egg-delete' production.pk %}" class="btn btn-danger">Delete</a>
-        <a href="{% url 'eggproduction:staff-egg-list' %}" class="btn btn-secondary">Back</a>
-    </div>
+
+    <section class="detail-section">
+        <h3 class="detail-section-title">Production</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ production.eggs_collected }}</span></div>
+            <div class="detail-item"><span class="detail-label">Good Eggs</span><span class="detail-value">{{ production.good_eggs }}</span></div>
+            <div class="detail-item"><span class="detail-label">Broken Eggs</span><span class="detail-value">{{ production.broken_eggs }}</span></div>
+            <div class="detail-item"><span class="detail-label">Defective Eggs</span><span class="detail-value">{{ production.defective_eggs }}</span></div>
+            <div class="detail-item"><span class="detail-label">Hen Day</span><span class="detail-value">{{ production.hen_day_production }}</span></div>
+            <div class="detail-item"><span class="detail-label">Hen Housed</span><span class="detail-value">{{ production.hen_housed_production }}</span></div>
+            <div class="detail-item"><span class="detail-label">Eggs Per Hen</span><span class="detail-value">{{ production.eggs_per_hen }}</span></div>
+            <div class="detail-item"><span class="detail-label">Collection</span><span class="detail-value">{{ production.collection_time }}</span></div>
+        </div>
+    </section>
+
+    {% if production.notes %}
+    <section class="detail-section">
+        <h3 class="detail-section-title">Notes</h3>
+        <div class="detail-note">{{ production.notes }}</div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

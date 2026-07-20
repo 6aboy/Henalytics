@@ -9,26 +9,43 @@
     <a href="{% url 'eggproduction:harvest-forecast-list' %}">HEN Analytics</a>
 </div>
 
+<form method="get" class="filter-row dashboard-filter" data-swal-filter
+    data-swal-title="Filtering dashboard"
+    data-swal-text="Dashboard totals will update using your selected period.">
+    <label for="period">Summary:</label>
+    <select name="period" id="period" class="form-select">
+        <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
+        <option value="month" {% if dashboard_period == 'month' %}selected{% endif %}>This Month</option>
+        <option value="six_months" {% if dashboard_period == 'six_months' %}selected{% endif %}>Last 6 Months</option>
+        <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
+        <option value="all" {% if dashboard_period == 'all' %}selected{% endif %}>All Records</option>
+        <option value="custom" {% if dashboard_period == 'custom' %}selected{% endif %}>Custom</option>
+    </select>
+    <input type="date" name="date_from" class="form-control" value="{{ dashboard_date_from|date:'Y-m-d' }}">
+    <input type="date" name="date_to" class="form-control" value="{{ dashboard_date_to|date:'Y-m-d' }}">
+    <button type="submit" class="btn btn-info">Filter</button>
+</form>
+
 <section class="dashboard-grid">
     <article class="metric-card featured">
-        <div class="metric-label">Total Eggs Today</div>
-        <div class="metric-value">{{ today_production }}</div>
-        <div class="metric-meta">▲ {{ active_flocks }} active flock{{ active_flocks|pluralize }}</div>
+        <div class="metric-label">Total Eggs</div>
+        <div class="metric-value">{{ period_egg_total }}</div>
+        <div class="metric-meta">{{ dashboard_period_label }} | {{ active_flocks }} active flock{{ active_flocks|pluralize }}</div>
     </article>
     <article class="metric-card">
-        <div class="metric-label">Hen-Day Production</div>
-        <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
-        <div class="metric-meta"><span class="trend-up">▲</span> 30-day average</div>
+        <div class="metric-label">Revenue</div>
+        <div class="metric-value">PHP {{ period_revenue|floatformat:0 }}</div>
+        <div class="metric-meta">{{ dashboard_period_label }}</div>
     </article>
     <article class="metric-card">
-        <div class="metric-label">Total Live Hens</div>
-        <div class="metric-value">{{ total_hens }}</div>
-        <div class="metric-meta"><span class="trend-down">▼</span> Current active inventory</div>
+        <div class="metric-label">Feed Consumed</div>
+        <div class="metric-value">{{ period_feed_total }} bags</div>
+        <div class="metric-meta">{{ dashboard_period_label }}</div>
     </article>
     <article class="metric-card">
-        <div class="metric-label">Weekly Revenue</div>
-        <div class="metric-value">PHP {{ weekly_revenue|floatformat:0 }}</div>
-        <div class="metric-meta"><span class="trend-up">▲</span> Last 7 days</div>
+        <div class="metric-label">Mortality + Cull</div>
+        <div class="metric-value">{{ period_losses }}</div>
+        <div class="metric-meta">{{ dashboard_period_label }}</div>
     </article>
 </section>
 
@@ -41,7 +58,7 @@
     <article class="metric-card">
         <div class="metric-label">Avg Lay Rate</div>
         <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
-        <div class="metric-meta"><span class="trend-up">▲</span> vs prior</div>
+        <div class="metric-meta">30-day average</div>
     </article>
     <article class="chart-card">
         <div class="d-flex justify-content-between align-items-start mb-3">
@@ -62,7 +79,7 @@
     <article class="metric-card">
         <div class="metric-label">Feed Consumed (30d)</div>
         <div class="metric-value">{{ feed_consumed_30d }} bags</div>
-        <div class="metric-meta">~8.2 bags/day</div>
+        <div class="metric-meta">Last 30 days</div>
     </article>
     <article class="metric-card">
         <div class="metric-label">Cracked Egg Loss</div>

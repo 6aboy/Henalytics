@@ -13,8 +13,7 @@
                 <div class="card-body">
                     <p><strong>Model Type:</strong> {{ model.get_model_type_display }}</p>
                     <p><strong>Trained At:</strong> {{ model.trained_at|date:"Y-m-d H:i" }}</p>
-                    <p><strong>Trained By:</strong> {{
-                        model.triggered_by.get_full_name|default:model.triggered_by.username }}</p>
+                    <p><strong>Trained By:</strong> {{ model.triggered_by.get_full_name|default:model.triggered_by.username }}</p>
                     <p><strong>Status:</strong>
                         {% if model.is_active %}<span class="badge bg-success">Active</span>
                         {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}

@@ -22,6 +22,10 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.get_role_display()}"
+
+    @property
+    def display_role(self):
+        return self.get_role_display()
     
     class Meta:
         verbose_name_plural = "User Profiles"

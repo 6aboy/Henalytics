@@ -247,6 +247,7 @@ class TemplateRenderTest(TestCase):
         self.client.force_login(self.user)
 
     def test_production_log_list_renders_with_filter(self):
+        other_flock = create_flock(house_no=2, date_started=timezone.now().date() - timedelta(days=1))
         ProductionLog.objects.create(
             flock=self.flock,
             log_date=timezone.now().date(),
@@ -259,11 +260,105 @@ class TemplateRenderTest(TestCase):
             pct_hen_housed=Decimal('83.33'),
             entered_by=self.user,
         )
+        ProductionLog.objects.create(
+            flock=other_flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1700,
+            feed_bags=10,
+            eggs_total=900,
+            pct_hen_day=Decimal('52.94'),
+            pct_hen_housed=Decimal('50.00'),
+            entered_by=self.user,
+        )
 
         response = self.client.get(reverse('eggproduction:production-log-list'), {'flock_id': self.flock.id})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Egg Production')
+        self.assertContains(response, 'class="table table-striped table-hover prototype-table js-data-table"')
+        self.assertContains(response, 'data-export-enabled="false"')
+        self.assertContains(response, 'data-total-column="1"')
+        self.assertContains(response, 'data-swal-filter')
+        self.assertContains(response, 'data-swal-delete-link')
+        self.assertEqual(list(response.context['production_logs'])[0].flock_id, self.flock.id)
+
+    def test_dashboard_period_cards_total_eggs(self):
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=1234,
+            pct_hen_day=Decimal('69.33'),
+            pct_hen_housed=Decimal('68.56'),
+            entered_by=self.user,
+        )
+
+        response = self.client.get(reverse('eggproduction:dashboard'), {'period': 'all'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['period_egg_total'], 1234)
+        self.assertContains(response, 'Total Eggs')
+
+    def test_primary_detail_pages_render_real_values(self):
+        log = ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('84.27'),
+            pct_hen_housed=Decimal('83.33'),
+            entered_by=self.user,
+        )
+        grading = GradingLog.objects.create(
+            flock=self.flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            eggs_total=1500,
+            eggs_aa=100,
+            eggs_a=900,
+            eggs_b=400,
+            eggs_small=100,
+        )
+        transaction = SalesTransaction.objects.create(
+            flock=self.flock,
+            sale_date=timezone.now().date(),
+            recorded_by=self.user,
+        )
+
+        urls = [
+            reverse('eggproduction:production-log-detail', args=[log.pk]),
+            reverse('eggproduction:grading-log-detail', args=[grading.pk]),
+            reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]),
+            reverse('eggproduction:flock-detail', args=[self.flock.pk]),
+        ]
+        for url in urls:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'detail-panel')
+            self.assertNotContains(response, 'flock_id')
+            self.assertNotContains(response, '{{')
+
+    def test_admin_tables_enable_datatable_exports(self):
+        admin = User.objects.create_superuser(
+            username='adminuser',
+            email='admin@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('eggproduction:production-log-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-export-enabled="true"')
+        self.assertContains(response, 'class="no-export">Actions</th>')
 
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {
@@ -305,6 +400,25 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'PHP 400.00')
+
+    def test_sales_transaction_create_saves_item_rows(self):
+        response = self.client.post(reverse('eggproduction:sales-transaction-create'), {
+            'flock': self.flock.id,
+            'sale_date': timezone.now().date(),
+            'notes': 'Counter sale',
+            'items-TOTAL_FORMS': '1',
+            'items-INITIAL_FORMS': '0',
+            'items-MIN_NUM_FORMS': '1',
+            'items-MAX_NUM_FORMS': '1000',
+            'items-0-grade': 'A',
+            'items-0-quantity_trays': '3',
+            'items-0-price_per_tray': '210.00',
+        })
+
+        transaction = SalesTransaction.objects.get(notes='Counter sale')
+        self.assertRedirects(response, reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]))
+        self.assertEqual(transaction.items.count(), 1)
+        self.assertEqual(transaction.total_amount, Decimal('630.00'))
 
 
 class SerializerTest(TestCase):

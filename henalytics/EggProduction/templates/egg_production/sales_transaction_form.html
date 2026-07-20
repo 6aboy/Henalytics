@@ -5,29 +5,120 @@
 {% block page_title %}{% if form.instance.pk %}Edit Sales{% else %}Create Sales{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 action-page">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-md-10 action-panel">
             <h1>{% if form.instance.pk %}Edit Sales Transaction{% else %}New Sales Transaction{% endif %}</h1>
 
-            <form method="post" class="form mt-4">
+            <form method="post" class="form mt-4" id="sales-transaction-form">
                 {% csrf_token %}
-                <div class="form-group mb-3">
-                    <label for="{{ form.flock.id_for_label }}">Flock *</label>
-                    {{ form.flock }}
-                </div>
 
-                <div class="form-group mb-3">
-                    <label for="{{ form.sale_date.id_for_label }}">Sale Date *</label>
-                    <div class="date-input-action">
-                        {{ form.sale_date }}
-                        <button type="button" class="btn btn-today" data-date-target="#{{ form.sale_date.id_for_label }}">Today</button>
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.flock.id_for_label }}">Flock *</label>
+                            {{ form.flock }}
+                            {{ form.flock.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.sale_date.id_for_label }}">Sale Date *</label>
+                            <div class="date-input-action">
+                                {{ form.sale_date }}
+                                <button type="button" class="btn btn-today" data-date-target="#{{ form.sale_date.id_for_label }}">Today</button>
+                            </div>
+                            {{ form.sale_date.errors }}
+                        </div>
                     </div>
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="{{ form.notes.id_for_label }}">Notes</label>
                     {{ form.notes }}
+                    {{ form.notes.errors }}
+                </div>
+
+                <div class="sales-items-header">
+                    <h2>Sales Items</h2>
+                    <button type="button" class="btn btn-info" id="add-sales-item">Add Item</button>
+                </div>
+
+                {{ sales_item_formset.management_form }}
+                {% if sales_item_formset.non_form_errors %}
+                <div class="alert alert-danger">{{ sales_item_formset.non_form_errors }}</div>
+                {% endif %}
+
+                <div id="sales-item-rows">
+                    {% for item_form in sales_item_formset.forms %}
+                    <div class="sales-item-row">
+                        {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        <div class="sales-item-field">
+                            <label for="{{ item_form.grade.id_for_label }}">Grade</label>
+                            {{ item_form.grade }}
+                            {{ item_form.grade.errors }}
+                        </div>
+                        <div class="sales-item-field">
+                            <label for="{{ item_form.quantity_trays.id_for_label }}">Quantity (Trays)</label>
+                            {{ item_form.quantity_trays }}
+                            {{ item_form.quantity_trays.errors }}
+                        </div>
+                        <div class="sales-item-field">
+                            <label for="{{ item_form.price_per_tray.id_for_label }}">Price / Tray</label>
+                            {{ item_form.price_per_tray }}
+                            {{ item_form.price_per_tray.errors }}
+                        </div>
+                        <div class="sales-item-total">
+                            <span>Total</span>
+                            <strong data-row-total>PHP 0.00</strong>
+                        </div>
+                        {% if item_form.DELETE %}
+                        <label class="sales-item-delete">
+                            {{ item_form.DELETE }}
+                            <span>Remove</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <template id="sales-item-empty-form">
+                    <div class="sales-item-row">
+                        {% with item_form=sales_item_formset.empty_form %}
+                        {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        <div class="sales-item-field">
+                            <label for="{{ item_form.grade.id_for_label }}">Grade</label>
+                            {{ item_form.grade }}
+                        </div>
+                        <div class="sales-item-field">
+                            <label for="{{ item_form.quantity_trays.id_for_label }}">Quantity (Trays)</label>
+                            {{ item_form.quantity_trays }}
+                        </div>
+                        <div class="sales-item-field">
+                            <label for="{{ item_form.price_per_tray.id_for_label }}">Price / Tray</label>
+                            {{ item_form.price_per_tray }}
+                        </div>
+                        <div class="sales-item-total">
+                            <span>Total</span>
+                            <strong data-row-total>PHP 0.00</strong>
+                        </div>
+                        {% if item_form.DELETE %}
+                        <label class="sales-item-delete">
+                            {{ item_form.DELETE }}
+                            <span>Remove</span>
+                        </label>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </template>
+
+                <div class="sales-grand-total">
+                    <span>Transaction Total</span>
+                    <strong id="sales-grand-total">PHP 0.00</strong>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -39,19 +130,59 @@
     </div>
 </div>
 
-<style>
-    input[type="date"],
-    select,
-    textarea {
-        width: 100%;
-        padding: 0.375rem 0.75rem;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
-        font-size: 1rem;
-    }
+<script>
+    (function () {
+        var rows = document.getElementById('sales-item-rows');
+        var addButton = document.getElementById('add-sales-item');
+        var emptyTemplate = document.getElementById('sales-item-empty-form');
+        var totalForms = document.getElementById('id_items-TOTAL_FORMS');
+        var grandTotal = document.getElementById('sales-grand-total');
 
-    textarea {
-        min-height: 100px;
-    }
-</style>
+        function money(value) {
+            return 'PHP ' + Number(value || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function updateTotals() {
+            var sum = 0;
+            rows.querySelectorAll('.sales-item-row').forEach(function (row) {
+                var quantity = Number((row.querySelector('[name$="-quantity_trays"]') || {}).value || 0);
+                var price = Number((row.querySelector('[name$="-price_per_tray"]') || {}).value || 0);
+                var deleteBox = row.querySelector('[name$="-DELETE"]');
+                var total = deleteBox && deleteBox.checked ? 0 : quantity * price;
+                var totalTarget = row.querySelector('[data-row-total]');
+                if (totalTarget) {
+                    totalTarget.textContent = money(total);
+                }
+                sum += total;
+            });
+            if (grandTotal) {
+                grandTotal.textContent = money(sum);
+            }
+        }
+
+        function bindRow(row) {
+            row.querySelectorAll('input, select').forEach(function (field) {
+                field.addEventListener('input', updateTotals);
+                field.addEventListener('change', updateTotals);
+            });
+        }
+
+        if (addButton && emptyTemplate && totalForms) {
+            addButton.addEventListener('click', function () {
+                var index = Number(totalForms.value);
+                var html = emptyTemplate.innerHTML.replace(/__prefix__/g, index);
+                rows.insertAdjacentHTML('beforeend', html);
+                totalForms.value = index + 1;
+                bindRow(rows.lastElementChild);
+                updateTotals();
+            });
+        }
+
+        rows.querySelectorAll('.sales-item-row').forEach(bindRow);
+        updateTotals();
+    })();
+</script>
 {% endblock %}

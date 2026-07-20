@@ -5,9 +5,9 @@
 {% block page_title %}{% if form.instance.pk %}Edit Flock{% else %}Create Flock{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 action-page">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-md-8 action-panel">
             <h1>{% if form.instance.pk %}Edit Flock{% else %}Create New Flock{% endif %}</h1>
 
             <form method="post" class="form mt-4">

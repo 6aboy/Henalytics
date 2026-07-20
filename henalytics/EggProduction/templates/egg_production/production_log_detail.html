@@ -2,78 +2,51 @@
 {% load static %}
 
 {% block title %}Production Log - Henalytics{% endblock %}
+{% block page_title %}Egg Production Details{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Production Log Details</h1>
+<div class="action-panel detail-panel">
+    <div class="detail-header">
         <div>
+            <h2 class="detail-title">Production Log</h2>
+            <div class="detail-subtitle">House {{ production_log.flock.house_no }} | {{ production_log.log_date|date:"Y-m-d" }}</div>
+        </div>
+        <div class="detail-actions">
             <a href="{% url 'eggproduction:production-log-edit' production_log.pk %}" class="btn btn-warning">Edit</a>
-            <a href="{% url 'eggproduction:production-log-delete' production_log.pk %}"
-                class="btn btn-danger">Delete</a>
+            <a href="{% url 'eggproduction:production-log-delete' production_log.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
+            <a href="{% url 'eggproduction:production-log-list' %}" class="btn btn-secondary">Back</a>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header">Log Information</div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Flock:</strong> <a
-                                    href="{% url 'eggproduction:flock-detail' production_log.flock.pk %}">House {{
-                                    production_log.flock.house_no }}</a></p>
-                            <p><strong>Log Date:</strong> {{ production_log.log_date }}</p>
-                            <p><strong>Age:</strong> {{ production_log.age_weeks }} weeks / {{ production_log.age_days
-                                }} days</p>
-                            <p><strong>Hen Count:</strong> {{ production_log.hen_count }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Eggs Total:</strong> {{ production_log.eggs_total }}</p>
-                            <p><strong>% Hen Day:</strong> {{ production_log.pct_hen_day }}%</p>
-                            <p><strong>% Hen Housed:</strong> {{ production_log.pct_hen_housed }}%</p>
-                            <p><strong>FCR:</strong> {{ production_log.fcr|default:"N/A" }}</p>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <p><strong>Dead Count:</strong> {{ production_log.dead_count }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Culled Count:</strong> {{ production_log.culled_count }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Feed Bags:</strong> {{ production_log.feed_bags }}</p>
-                        </div>
-                    </div>
-
-                    {% if production_log.remarks %}
-                    <div class="row">
-                        <div class="col-12">
-                            <p><strong>Remarks:</strong></p>
-                            <p>{{ production_log.remarks }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+    <section class="detail-section">
+        <h3 class="detail-section-title">Production</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ production_log.eggs_total }}</span></div>
+            <div class="detail-item"><span class="detail-label">Hen Day</span><span class="detail-value">{{ production_log.pct_hen_day }}%</span></div>
+            <div class="detail-item"><span class="detail-label">Hen Housed</span><span class="detail-value">{{ production_log.pct_hen_housed }}%</span></div>
+            <div class="detail-item"><span class="detail-label">FCR</span><span class="detail-value">{{ production_log.fcr|default:"N/A" }}</span></div>
         </div>
+    </section>
 
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Log Metadata</div>
-                <div class="card-body">
-                    <p><strong>Entered By:</strong> {{
-                        production_log.entered_by.get_full_name|default:production_log.entered_by.username }}</p>
-                    <p><strong>Created:</strong> {{ production_log.created_at|date:"Y-m-d H:i" }}</p>
-                    <p><strong>Updated:</strong> {{ production_log.updated_at|date:"Y-m-d H:i" }}</p>
-                </div>
-            </div>
+    <section class="detail-section">
+        <h3 class="detail-section-title">Flock Snapshot</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ production_log.flock.house_no }}</span></div>
+            <div class="detail-item"><span class="detail-label">Age</span><span class="detail-value">{{ production_log.age_weeks }} weeks / {{ production_log.age_days }} days</span></div>
+            <div class="detail-item"><span class="detail-label">Live Hens</span><span class="detail-value">{{ production_log.hen_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Feed Bags</span><span class="detail-value">{{ production_log.feed_bags }}</span></div>
+            <div class="detail-item"><span class="detail-label">Dead</span><span class="detail-value">{{ production_log.dead_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Culled</span><span class="detail-value">{{ production_log.culled_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Entered By</span><span class="detail-value">{{ entered_by_name }}</span></div>
+            <div class="detail-item"><span class="detail-label">Updated</span><span class="detail-value">{{ production_log.updated_at|date:"Y-m-d H:i" }}</span></div>
         </div>
-    </div>
+    </section>
 
-    <a href="{% url 'eggproduction:production-log-list' %}" class="btn btn-secondary mt-3">Back to Logs</a>
+    {% if production_log.remarks %}
+    <section class="detail-section">
+        <h3 class="detail-section-title">Remarks</h3>
+        <div class="detail-note">{{ production_log.remarks }}</div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
