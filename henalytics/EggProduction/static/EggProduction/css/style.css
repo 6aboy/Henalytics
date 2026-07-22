@@ -244,6 +244,29 @@ a {
     transform: skewY(-28deg);
 }
 
+.icon-heart::before,
+.icon-heart::after {
+    top: 8px;
+    width: 14px;
+    height: 22px;
+    border: 2px solid currentColor;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+    background: transparent;
+}
+
+.icon-heart::before {
+    left: 6px;
+    transform: rotate(-45deg);
+    transform-origin: 0 100%;
+}
+
+.icon-heart::after {
+    left: 10px;
+    transform: rotate(45deg);
+    transform-origin: 100% 100%;
+}
+
 .sidebar-account {
     margin-top: auto;
     min-height: 74px;

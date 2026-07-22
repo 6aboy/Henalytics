@@ -49,6 +49,11 @@
                     <span class="side-icon icon-chart"></span>
                     <span>Analytics</span>
                 </a>
+                <a href="{% url 'index' %}"
+                    class="side-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                    <span class="side-icon icon-heart"></span>
+                    <span>iMissYou</span>
+                </a>
             </nav>
 
             <div class="sidebar-account">
