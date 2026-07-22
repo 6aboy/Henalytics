@@ -128,14 +128,15 @@ class DataImporter:
                 transaction = SalesTransaction.objects.create(
                     flock=flock,
                     sale_date=pd.to_datetime(row.get('sale_date')).date(),
+                    or_number=str(row.get('or_number', row.get('OR', row.get('or', '')))).strip(),
                     recorded_by=self.user,
                     notes=str(row.get('notes', row.get('buyer_name', ''))).strip(),
                 )
                 SalesItem.objects.create(
                     transaction=transaction,
-                    grade=str(row.get('grade', 'A')).upper()[:2],
-                    quantity_trays=int(row.get('quantity_trays', row.get('trays', 0))),
-                    price_per_tray=Decimal(str(row.get('price_per_tray', 0))),
+                    grade=self._egg_size(row.get('grade', row.get('size', row.get('egg_size', 'large')))),
+                    quantity_pieces=int(row.get('quantity_pieces', row.get('pcs', row.get('quantity_trays', row.get('trays', 0))))),
+                    amount=Decimal(str(row.get('amount', row.get('total_amount', 0)))),
                 )
                 self._mark_success()
             except Exception as exc:
@@ -189,3 +190,27 @@ class DataImporter:
         if value is None or pd.isna(value) or value == '':
             return None
         return Decimal(str(value))
+
+    @staticmethod
+    def _egg_size(value):
+        normalized = str(value or 'large').strip().lower().replace('-', ' ').replace('_', ' ')
+        mapping = {
+            'jumbo': 'jumbo',
+            'xl': 'xl',
+            'extra large': 'xl',
+            'extra-large': 'xl',
+            'large': 'large',
+            'medium': 'medium',
+            'small': 'small',
+            'pullets': 'pullets',
+            'pullet': 'pullets',
+            'pewee': 'pewee',
+            'peewee': 'pewee',
+            'broken': 'broken',
+            'cracked': 'broken',
+            'a': 'large',
+            'aa': 'jumbo',
+            'b': 'medium',
+            'c': 'small',
+        }
+        return mapping.get(normalized, 'large')

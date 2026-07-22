@@ -40,7 +40,7 @@
                         {% for forecast in harvest_forecasts %}
                         <li class="list-group-item">
                             <strong>{{ forecast.forecast_date|date:"Y-m-d" }}</strong> -
-                            Grade {{ forecast.grade }}: {{ forecast.predicted_qty }} eggs
+                            {{ forecast.get_grade_display }}: {{ forecast.predicted_qty }} eggs
                         </li>
                         {% endfor %}
                     </ul>
@@ -56,7 +56,7 @@
                         {% for forecast in sales_forecasts %}
                         <li class="list-group-item">
                             <strong>{{ forecast.forecast_date|date:"Y-m-d" }}</strong> -
-                            Grade {{ forecast.grade }}: {{ forecast.predicted_trays }} trays
+                            {{ forecast.get_grade_display }}: {{ forecast.predicted_trays }} trays
                         </li>
                         {% endfor %}
                     </ul>

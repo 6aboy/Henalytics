@@ -178,11 +178,12 @@ class SalesModelTest(TestCase):
 
         item = SalesItem.objects.create(
             transaction=transaction,
-            grade='A',
-            quantity_trays=10,
-            price_per_tray=Decimal('220.00'),
+            grade='large',
+            quantity_pieces=10,
+            amount=Decimal('2200.00'),
         )
 
+        self.assertEqual(item.unit_price, Decimal('220.00'))
         self.assertEqual(item.total_amount, Decimal('2200.00'))
         self.assertEqual(transaction.total_amount, Decimal('2200.00'))
 
@@ -198,13 +199,13 @@ class ForecastModelTest(TestCase):
             flock=flock,
             model_version=model_version,
             forecast_date=forecast_date,
-            grade='A',
+            grade='large',
             predicted_qty=1500,
         )
         sales = SalesForecast.objects.create(
             model_version=model_version,
             forecast_date=forecast_date,
-            grade='A',
+            grade='large',
             predicted_trays=50,
         )
 
@@ -391,9 +392,9 @@ class TemplateRenderTest(TestCase):
         )
         SalesItem.objects.create(
             transaction=transaction,
-            grade='A',
-            quantity_trays=2,
-            price_per_tray=Decimal('200.00'),
+            grade='large',
+            quantity_pieces=60,
+            amount=Decimal('400.00'),
         )
 
         response = self.client.get(reverse('eggproduction:sales-transaction-list'))
@@ -410,15 +411,16 @@ class TemplateRenderTest(TestCase):
             'items-INITIAL_FORMS': '0',
             'items-MIN_NUM_FORMS': '1',
             'items-MAX_NUM_FORMS': '1000',
-            'items-0-grade': 'A',
-            'items-0-quantity_trays': '3',
-            'items-0-price_per_tray': '210.00',
+            'items-0-grade': 'large',
+            'items-0-quantity_pieces': '90',
+            'items-0-amount': '630.00',
         })
 
         transaction = SalesTransaction.objects.get(notes='Counter sale')
         self.assertRedirects(response, reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]))
         self.assertEqual(transaction.items.count(), 1)
         self.assertEqual(transaction.total_amount, Decimal('630.00'))
+        self.assertEqual(transaction.total_pieces, 90)
 
 
 class SerializerTest(TestCase):

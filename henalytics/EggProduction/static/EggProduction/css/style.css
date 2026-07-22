@@ -733,6 +733,16 @@ input[readonly].readonly-metric {
     border-left: 4px solid var(--hen-blue);
 }
 
+.sales-notes {
+    margin: 0 0 18px;
+}
+
+.sales-notes textarea {
+    min-height: 58px;
+    max-height: 92px;
+    resize: vertical;
+}
+
 .table {
     width: 100%;
     margin-bottom: 0;
@@ -901,32 +911,82 @@ input[readonly].readonly-metric {
 .dt-buttons {
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .dt-buttons .dt-button {
-    min-width: 58px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 86px;
     margin: 0 !important;
-    padding: 6px 12px !important;
-    border: 0 !important;
-    border-radius: 0 !important;
+    padding: 8px 14px !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
     color: #fff !important;
-    font-weight: 800;
-    box-shadow: var(--hen-shadow);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0;
+    box-shadow: 0 6px 14px rgba(17, 24, 39, 0.12);
     background-image: none !important;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.dt-buttons .dt-button:hover,
+.dt-buttons .dt-button:focus {
+    color: #fff !important;
+    filter: brightness(0.94);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
+}
+
+.dt-buttons .dt-button:active {
+    transform: translateY(0);
+}
+
+.dt-export-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.dt-buttons .dt-button span {
+    display: inline-block;
 }
 
 .dt-buttons .buttons-copy,
 .dt-buttons .buttons-print {
-    background: #ffd900 !important;
+    background: #c99500 !important;
+    border-color: #b98700 !important;
 }
 
 .dt-buttons .buttons-csv,
 .dt-buttons .buttons-excel {
     background: #05853e !important;
+    border-color: #047237 !important;
 }
 
 .dt-buttons .buttons-pdf {
     background: #ed0909 !important;
+    border-color: #d40808 !important;
+}
+
+@media (max-width: 576px) {
+    .dt-buttons {
+        justify-content: flex-start;
+    }
+
+    .dt-buttons .dt-button {
+        min-width: calc(50% - 4px);
+    }
 }
 
 .pagination {

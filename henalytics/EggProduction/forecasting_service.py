@@ -51,7 +51,7 @@ class ForecastingService:
                     transaction__sale_date__range=(start_date, end_date),
                 )
                 .values(date=models.F('transaction__sale_date'))
-                .annotate(value=models.Sum('quantity_trays'))
+                .annotate(value=models.Sum('quantity_pieces'))
                 .order_by('date')
             )
         elif self.data_type == 'grading':

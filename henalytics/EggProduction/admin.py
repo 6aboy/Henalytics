@@ -100,13 +100,13 @@ class GradingLogAdmin(admin.ModelAdmin):
 class SalesItemInline(admin.TabularInline):
     model = SalesItem
     extra = 1
-    fields = ('grade', 'quantity_trays', 'price_per_tray', 'total_amount')
-    readonly_fields = ('total_amount',)
+    fields = ('grade', 'quantity_pieces', 'amount', 'unit_price')
+    readonly_fields = ('unit_price',)
 
 
 @admin.register(SalesTransaction)
 class SalesTransactionAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'sale_date', 'recorded_by', 'created_at')
+    list_display = ('flock', 'sale_date', 'or_number', 'recorded_by', 'created_at')
     list_filter = ('flock', 'sale_date', 'recorded_by')
     search_fields = ('flock__house_no', 'notes')
     date_hierarchy = 'sale_date'
@@ -114,7 +114,7 @@ class SalesTransactionAdmin(admin.ModelAdmin):
     readonly_fields = ('recorded_by', 'created_at', 'updated_at')
     fieldsets = (
         ('Transaction Information', {
-            'fields': ('flock', 'sale_date')
+            'fields': ('flock', 'sale_date', 'or_number')
         }),
         ('Notes & User', {
             'fields': ('notes', 'recorded_by', 'created_at', 'updated_at')

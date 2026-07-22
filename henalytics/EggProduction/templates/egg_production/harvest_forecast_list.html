@@ -18,7 +18,7 @@
                 <tr>
                     <th>Forecast Date</th>
                     <th>Flock</th>
-                    <th>Grade</th>
+                    <th>Size</th>
                     <th>Predicted Qty</th>
                     <th>Model Type</th>
                     <th>Created</th>
@@ -30,7 +30,7 @@
                 <tr>
                     <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
                     <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
-                    <td><span class="badge bg-info">{{ forecast.grade }}</span></td>
+                    <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
                     <td><strong>{{ forecast.predicted_qty }}</strong></td>
                     <td>{{ forecast.model_version.get_model_type_display }}</td>
                     <td>{{ forecast.created_at|date:"Y-m-d" }}</td>

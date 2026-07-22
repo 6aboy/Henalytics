@@ -12,7 +12,7 @@
                 <div class="card-header">Forecast Details</div>
                 <div class="card-body">
                     <p><strong>Forecast Date:</strong> {{ forecast.forecast_date }}</p>
-                    <p><strong>Grade:</strong> <span class="badge bg-info">{{ forecast.grade }}</span></p>
+                    <p><strong>Size:</strong> <span class="badge bg-info">{{ forecast.get_grade_display }}</span></p>
                     <p><strong>Predicted Trays:</strong> {{ forecast.predicted_trays }}</p>
                     <p><strong>Model Type:</strong> {{ forecast.model_version.get_model_type_display }}</p>
                     <p><strong>Model R² Score:</strong> {{ forecast.model_version.r2_score|default:"N/A" }}</p>

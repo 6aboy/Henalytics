@@ -6,6 +6,20 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timedelta
 
 
+EGG_SIZE_CHOICES = [
+    ('jumbo', 'Jumbo'),
+    ('xl', 'XL'),
+    ('large', 'Large'),
+    ('medium', 'Medium'),
+    ('small', 'Small'),
+    ('pullets', 'Pullets'),
+    ('pewee', 'Pewee'),
+    ('broken', 'Broken'),
+    ('cull', 'Cull'),
+    ('sack', 'Sack'),
+]
+
+
 # User Profile Model (aligned with ERD)
 class UserProfile(models.Model):
     ROLE_CHOICES = (
@@ -248,6 +262,7 @@ class GradingLog(models.Model):
 class SalesTransaction(models.Model):
     flock = models.ForeignKey(Flock, on_delete=models.CASCADE, related_name='sales_transactions')
     sale_date = models.DateField()
+    or_number = models.CharField('OR number', max_length=50, blank=True, null=True)
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sales_transactions')
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -258,7 +273,11 @@ class SalesTransaction(models.Model):
 
     @property
     def total_amount(self):
-        return sum(item.total_amount for item in self.items.all())
+        return sum(item.amount for item in self.items.all())
+
+    @property
+    def total_pieces(self):
+        return sum(item.quantity_pieces for item in self.items.all())
     
     class Meta:
         ordering = ['-sale_date']
@@ -266,17 +285,27 @@ class SalesTransaction(models.Model):
 
 class SalesItem(models.Model):
     transaction = models.ForeignKey(SalesTransaction, on_delete=models.CASCADE, related_name='items')
-    grade = models.CharField(max_length=2, choices=[('AA', 'AA'), ('A', 'A'), ('B', 'B'), ('C', 'C')])
-    quantity_trays = models.IntegerField(validators=[MinValueValidator(0)])
-    price_per_tray = models.DecimalField(max_digits=10, decimal_places=2)
-    total_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    grade = models.CharField('sales category', max_length=20, choices=EGG_SIZE_CHOICES)
+    quantity_pieces = models.IntegerField(validators=[MinValueValidator(0)])
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
     
     def save(self, *args, **kwargs):
-        self.total_amount = self.quantity_trays * self.price_per_tray
+        if self.quantity_pieces:
+            self.unit_price = (self.amount / Decimal(self.quantity_pieces)).quantize(
+                Decimal('0.01'),
+                rounding=ROUND_HALF_UP,
+            )
+        else:
+            self.unit_price = Decimal('0.00')
         super().save(*args, **kwargs)
+
+    @property
+    def total_amount(self):
+        return self.amount
     
     def __str__(self):
-        return f"Grade {self.grade} - {self.quantity_trays} trays"
+        return f"{self.get_grade_display()} - {self.quantity_pieces} pcs"
     
     class Meta:
         verbose_name_plural = "Sales Items"
@@ -287,7 +316,7 @@ class HarvestForecast(models.Model):
     flock = models.ForeignKey(Flock, on_delete=models.CASCADE, related_name='harvest_forecasts')
     model_version = models.ForeignKey(ModelVersion, on_delete=models.CASCADE, related_name='harvest_forecasts')
     forecast_date = models.DateField()
-    grade = models.CharField(max_length=2, choices=[('AA', 'AA'), ('A', 'A'), ('B', 'B'), ('C', 'C')])
+    grade = models.CharField('egg size', max_length=20, choices=EGG_SIZE_CHOICES)
     predicted_qty = models.IntegerField(validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -302,7 +331,7 @@ class HarvestForecast(models.Model):
 class SalesForecast(models.Model):
     model_version = models.ForeignKey(ModelVersion, on_delete=models.CASCADE, related_name='sales_forecasts')
     forecast_date = models.DateField()
-    grade = models.CharField(max_length=2, choices=[('AA', 'AA'), ('A', 'A'), ('B', 'B'), ('C', 'C')])
+    grade = models.CharField('egg size', max_length=20, choices=EGG_SIZE_CHOICES)
     predicted_trays = models.IntegerField(validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(auto_now_add=True)
     

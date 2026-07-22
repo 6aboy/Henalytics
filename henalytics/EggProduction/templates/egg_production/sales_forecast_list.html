@@ -16,7 +16,7 @@
             <thead class="table-dark">
                 <tr>
                     <th>Forecast Date</th>
-                    <th>Grade</th>
+                    <th>Size</th>
                     <th>Predicted Trays</th>
                     <th>Model Type</th>
                     <th>Created</th>
@@ -27,7 +27,7 @@
                 {% for forecast in forecasts %}
                 <tr>
                     <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
-                    <td><span class="badge bg-info">{{ forecast.grade }}</span></td>
+                    <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
                     <td><strong>{{ forecast.predicted_trays }}</strong></td>
                     <td>{{ forecast.model_version.get_model_type_display }}</td>
                     <td>{{ forecast.created_at|date:"Y-m-d" }}</td>

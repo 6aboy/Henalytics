@@ -18,14 +18,14 @@
                 {% endif %}
 
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="{{ form.flock.id_for_label }}">Flock *</label>
                             {{ form.flock }}
                             {{ form.flock.errors }}
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="{{ form.sale_date.id_for_label }}">Sale Date *</label>
                             <div class="date-input-action">
@@ -35,12 +35,13 @@
                             {{ form.sale_date.errors }}
                         </div>
                     </div>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label for="{{ form.notes.id_for_label }}">Notes</label>
-                    {{ form.notes }}
-                    {{ form.notes.errors }}
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.or_number.id_for_label }}">OR Number</label>
+                            {{ form.or_number }}
+                            {{ form.or_number.errors }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="sales-items-header">
@@ -58,22 +59,22 @@
                     <div class="sales-item-row">
                         {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
                         <div class="sales-item-field">
-                            <label for="{{ item_form.grade.id_for_label }}">Grade</label>
+                            <label for="{{ item_form.grade.id_for_label }}">Size</label>
                             {{ item_form.grade }}
                             {{ item_form.grade.errors }}
                         </div>
                         <div class="sales-item-field">
-                            <label for="{{ item_form.quantity_trays.id_for_label }}">Quantity (Trays)</label>
-                            {{ item_form.quantity_trays }}
-                            {{ item_form.quantity_trays.errors }}
+                            <label for="{{ item_form.quantity_pieces.id_for_label }}">Quantity (pcs)</label>
+                            {{ item_form.quantity_pieces }}
+                            {{ item_form.quantity_pieces.errors }}
                         </div>
                         <div class="sales-item-field">
-                            <label for="{{ item_form.price_per_tray.id_for_label }}">Price / Tray</label>
-                            {{ item_form.price_per_tray }}
-                            {{ item_form.price_per_tray.errors }}
+                            <label for="{{ item_form.amount.id_for_label }}">Amount</label>
+                            {{ item_form.amount }}
+                            {{ item_form.amount.errors }}
                         </div>
                         <div class="sales-item-total">
-                            <span>Total</span>
+                            <span>Unit Price</span>
                             <strong data-row-total>PHP 0.00</strong>
                         </div>
                         {% if item_form.DELETE %}
@@ -91,19 +92,19 @@
                         {% with item_form=sales_item_formset.empty_form %}
                         {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
                         <div class="sales-item-field">
-                            <label for="{{ item_form.grade.id_for_label }}">Grade</label>
+                            <label for="{{ item_form.grade.id_for_label }}">Size</label>
                             {{ item_form.grade }}
                         </div>
                         <div class="sales-item-field">
-                            <label for="{{ item_form.quantity_trays.id_for_label }}">Quantity (Trays)</label>
-                            {{ item_form.quantity_trays }}
+                            <label for="{{ item_form.quantity_pieces.id_for_label }}">Quantity (pcs)</label>
+                            {{ item_form.quantity_pieces }}
                         </div>
                         <div class="sales-item-field">
-                            <label for="{{ item_form.price_per_tray.id_for_label }}">Price / Tray</label>
-                            {{ item_form.price_per_tray }}
+                            <label for="{{ item_form.amount.id_for_label }}">Amount</label>
+                            {{ item_form.amount }}
                         </div>
                         <div class="sales-item-total">
-                            <span>Total</span>
+                            <span>Unit Price</span>
                             <strong data-row-total>PHP 0.00</strong>
                         </div>
                         {% if item_form.DELETE %}
@@ -119,6 +120,12 @@
                 <div class="sales-grand-total">
                     <span>Transaction Total</span>
                     <strong id="sales-grand-total">PHP 0.00</strong>
+                </div>
+
+                <div class="form-group sales-notes">
+                    <label for="{{ form.notes.id_for_label }}">Notes</label>
+                    {{ form.notes }}
+                    {{ form.notes.errors }}
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -148,13 +155,14 @@
         function updateTotals() {
             var sum = 0;
             rows.querySelectorAll('.sales-item-row').forEach(function (row) {
-                var quantity = Number((row.querySelector('[name$="-quantity_trays"]') || {}).value || 0);
-                var price = Number((row.querySelector('[name$="-price_per_tray"]') || {}).value || 0);
+                var quantity = Number((row.querySelector('[name$="-quantity_pieces"]') || {}).value || 0);
+                var amount = Number((row.querySelector('[name$="-amount"]') || {}).value || 0);
                 var deleteBox = row.querySelector('[name$="-DELETE"]');
-                var total = deleteBox && deleteBox.checked ? 0 : quantity * price;
+                var total = deleteBox && deleteBox.checked ? 0 : amount;
+                var unitPrice = quantity ? total / quantity : 0;
                 var totalTarget = row.querySelector('[data-row-total]');
                 if (totalTarget) {
-                    totalTarget.textContent = money(total);
+                    totalTarget.textContent = money(unitPrice);
                 }
                 sum += total;
             });

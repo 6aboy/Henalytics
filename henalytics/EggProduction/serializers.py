@@ -53,8 +53,8 @@ class GradingLogSerializer(serializers.ModelSerializer):
 class SalesItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesItem
-        fields = ['id', 'transaction', 'grade', 'quantity_trays', 'price_per_tray', 'total_amount']
-        read_only_fields = ['total_amount']
+        fields = ['id', 'transaction', 'grade', 'quantity_pieces', 'amount', 'unit_price']
+        read_only_fields = ['unit_price']
 
 
 class SalesTransactionSerializer(serializers.ModelSerializer):
@@ -66,12 +66,12 @@ class SalesTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesTransaction
         fields = ['id', 'flock', 'flock_detail', 'sale_date', 'recorded_by', 
-                 'recorded_by_username', 'notes', 'items', 'total_amount', 'created_at', 'updated_at']
+                 'recorded_by_username', 'or_number', 'notes', 'items', 'total_amount', 'created_at', 'updated_at']
         read_only_fields = ['recorded_by', 'created_at', 'updated_at']
     
     def get_total_amount(self, obj):
         """Calculate total amount from all items"""
-        return sum(item.total_amount for item in obj.items.all())
+        return sum(item.amount for item in obj.items.all())
 
 
 class ModelVersionSerializer(serializers.ModelSerializer):

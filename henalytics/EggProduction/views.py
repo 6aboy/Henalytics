@@ -137,13 +137,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             period_losses = period_logs.aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            period_revenue = period_sales_items.aggregate(total=models.Sum('total_amount'))['total'] or 0
+            period_revenue = period_sales_items.aggregate(total=models.Sum('amount'))['total'] or 0
             total_hens = Flock.objects.filter(status='active').aggregate(
                 total=models.Sum('initial_hen_count')
             )['total'] or 0
             weekly_revenue = SalesItem.objects.filter(
                 transaction__sale_date__gte=last_7_days
-            ).aggregate(total=models.Sum('total_amount'))['total'] or 0
+            ).aggregate(total=models.Sum('amount'))['total'] or 0
             avg_fcr_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
                 avg=models.Avg('fcr')
             )['avg'] or 0
@@ -493,7 +493,7 @@ class SalesTransactionDetailView(StaffAccessMixin, DetailView):
         transaction = self.get_object()
         items = SalesItem.objects.filter(transaction=transaction)
         context['items'] = items
-        context['total_amount'] = sum(item.total_amount for item in items)
+        context['total_amount'] = sum(item.amount for item in items)
         context['recorded_by_name'] = (
             transaction.recorded_by.get_full_name()
             or transaction.recorded_by.username
@@ -554,7 +554,7 @@ class SalesTransactionDeleteView(StaffAccessMixin, DeleteView):
 class SalesItemAddView(StaffAccessMixin, CreateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
-    fields = ['grade', 'quantity_trays', 'price_per_tray']
+    fields = ['grade', 'quantity_pieces', 'amount']
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -575,7 +575,7 @@ class SalesItemAddView(StaffAccessMixin, CreateView):
 class SalesItemUpdateView(StaffAccessMixin, UpdateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
-    fields = ['grade', 'quantity_trays', 'price_per_tray']
+    fields = ['grade', 'quantity_pieces', 'amount']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

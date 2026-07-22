@@ -13,7 +13,12 @@
         </div>
         <div class="detail-actions">
             <a href="{% url 'eggproduction:sales-transaction-edit' sales_transaction.pk %}" class="btn btn-warning">Edit</a>
-            <a href="{% url 'eggproduction:sales-transaction-delete' sales_transaction.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
+            <form method="post" action="{% url 'eggproduction:sales-transaction-delete' sales_transaction.pk %}" class="d-inline" data-swal-delete
+                data-swal-title="Delete sales transaction?"
+                data-swal-text="This sales transaction will be permanently deleted.">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
             <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary">Back</a>
         </div>
     </div>
@@ -23,8 +28,10 @@
         <div class="detail-grid">
             <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ sales_transaction.flock.house_no }}</span></div>
             <div class="detail-item"><span class="detail-label">Sale Date</span><span class="detail-value">{{ sales_transaction.sale_date|date:"Y-m-d" }}</span></div>
-            <div class="detail-item"><span class="detail-label">Recorded By</span><span class="detail-value">{{ recorded_by_name }}</span></div>
+            <div class="detail-item"><span class="detail-label">OR Number</span><span class="detail-value">{{ sales_transaction.or_number|default:"N/A" }}</span></div>
             <div class="detail-item"><span class="detail-label">Total Amount</span><span class="detail-value">PHP {{ total_amount|floatformat:2 }}</span></div>
+            <div class="detail-item"><span class="detail-label">Total Pieces</span><span class="detail-value">{{ sales_transaction.total_pieces }}</span></div>
+            <div class="detail-item"><span class="detail-label">Recorded By</span><span class="detail-value">{{ recorded_by_name }}</span></div>
         </div>
     </section>
 
@@ -38,23 +45,28 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Grade</th>
-                        <th>Trays</th>
-                        <th>Price/Tray</th>
-                        <th>Total</th>
+                        <th>Size</th>
+                        <th>Pieces</th>
+                        <th>Amount</th>
+                        <th>Unit Price</th>
                         <th class="no-export">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr>
-                        <td>{{ item.grade }}</td>
-                        <td>{{ item.quantity_trays }}</td>
-                        <td>PHP {{ item.price_per_tray|floatformat:2 }}</td>
-                        <td><strong>PHP {{ item.total_amount|floatformat:2 }}</strong></td>
+                        <td>{{ item.get_grade_display }}</td>
+                        <td>{{ item.quantity_pieces }}</td>
+                        <td><strong>PHP {{ item.amount|floatformat:2 }}</strong></td>
+                        <td>PHP {{ item.unit_price|floatformat:2 }}</td>
                         <td>
                             <a href="{% url 'eggproduction:sales-item-edit' item.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                            <a href="{% url 'eggproduction:sales-item-delete' item.pk %}" class="btn btn-sm btn-danger" data-swal-delete-link>Delete</a>
+                            <form method="post" action="{% url 'eggproduction:sales-item-delete' item.pk %}" class="d-inline" data-swal-delete
+                                data-swal-title="Delete sales item?"
+                                data-swal-text="This sales item will be permanently deleted.">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
