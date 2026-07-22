@@ -37,18 +37,17 @@
                 <a href="{% url 'eggproduction:sales-transaction-list' %}"
                     class="side-link {% if 'sales-transaction' in request.resolver_match.url_name or 'sales-item' in request.resolver_match.url_name %}active{% endif %}">
                     <span class="side-icon icon-sales"></span>
-                    <span>Manage Sales</span>
+                    <span>Sales</span>
                 </a>
                 <a href="{% url 'eggproduction:flock-list' %}"
                     class="side-link {% if 'flock' in request.resolver_match.url_name %}active{% endif %}">
                     <span class="side-icon icon-flock"></span>
-                    <span>Flock Management</span>
+                    <span>Flocks</span>
                 </a>
                 <a href="{% url 'eggproduction:harvest-forecast-list' %}"
                     class="side-link {% if 'forecast' in request.resolver_match.url_name or 'model-version' in request.resolver_match.url_name %}active{% endif %}">
                     <span class="side-icon icon-chart"></span>
-                    <span>HEN Analytics</span>
-                    <a href="{% url 'index' %}" class="btn">Button</a>
+                    <span>Analytics</span>
                 </a>
             </nav>
 

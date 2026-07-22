@@ -17,7 +17,7 @@ body {
     min-height: 100vh;
     margin: 0;
     color: var(--hen-text);
-    font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--hen-bg);
 }
 
@@ -67,7 +67,7 @@ a {
 
 .app-shell {
     display: grid;
-    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-columns: 268px minmax(0, 1fr);
     min-height: 100vh;
 }
 
@@ -78,7 +78,7 @@ a {
     display: flex;
     flex-direction: column;
     background: #fff;
-    box-shadow: 3px 0 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 2px 0 14px rgba(15, 23, 42, 0.12);
     z-index: 4;
 }
 
@@ -86,57 +86,61 @@ a {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 156px;
-    padding: 26px 34px 18px;
+    min-height: 118px;
+    padding: 22px 24px 12px;
 }
 
 .brand-lockup img,
 .logo-img {
     display: block;
-    width: min(260px, 80%);
-    max-height: 135px;
+    width: min(184px, 86%);
+    max-height: 94px;
     object-fit: contain;
 }
 
 .side-nav {
-    padding: 18px 10px 0;
+    padding: 12px 14px 0;
 }
 
 .nav-section-label {
-    margin: 18px 0 10px;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    color: #111;
+    margin: 18px 10px 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #7a8494;
+    text-transform: uppercase;
 }
 
 .side-link {
     display: grid;
-    grid-template-columns: 62px 1fr;
+    grid-template-columns: 38px 1fr;
     align-items: center;
-    min-height: 52px;
-    margin-bottom: 14px;
-    padding: 0 18px;
-    border-radius: 5px;
-    color: #101010;
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1.1;
-    transition: background 0.15s ease, color 0.15s ease;
+    min-height: 44px;
+    margin-bottom: 6px;
+    padding: 0 12px;
+    border-radius: 7px;
+    color: #253044;
+    font-size: 0.96rem;
+    font-weight: 500;
+    line-height: 1.2;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .side-link:hover,
 .side-link.active {
     color: #fff;
     background: var(--hen-blue);
+    box-shadow: 0 8px 16px rgba(51, 96, 207, 0.18);
 }
 
 .side-icon {
     position: relative;
-    width: 38px;
-    height: 38px;
+    width: 26px;
+    height: 26px;
     display: inline-block;
     color: currentColor;
+    transform: scale(0.72);
+    transform-origin: center;
 }
 
 .side-icon::before,
@@ -242,20 +246,20 @@ a {
 
 .sidebar-account {
     margin-top: auto;
-    min-height: 82px;
+    min-height: 74px;
     display: grid;
-    grid-template-columns: 64px 1fr 34px;
-    gap: 12px;
+    grid-template-columns: 42px 1fr 30px;
+    gap: 10px;
     align-items: center;
-    padding: 12px 12px 12px 42px;
-    border-top: 1px solid #d8d8d8;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    padding: 12px 14px;
+    border-top: 1px solid #e6e8ee;
+    box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
 }
 
 .account-avatar {
-    width: 44px;
-    height: 44px;
-    border: 3px solid var(--hen-blue);
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--hen-blue);
     border-radius: 50%;
     position: relative;
 }
@@ -263,10 +267,10 @@ a {
 .account-avatar::before {
     content: "";
     position: absolute;
-    left: 12px;
-    top: 8px;
-    width: 15px;
-    height: 15px;
+    left: 10px;
+    top: 7px;
+    width: 12px;
+    height: 12px;
     border: 2px solid var(--hen-blue);
     border-radius: 50%;
 }
@@ -274,33 +278,48 @@ a {
 .account-avatar::after {
     content: "";
     position: absolute;
-    left: 8px;
+    left: 7px;
     bottom: 6px;
-    width: 22px;
-    height: 13px;
+    width: 18px;
+    height: 10px;
     border: 2px solid var(--hen-blue);
     border-radius: 50% 50% 0 0;
     border-bottom: 0;
 }
 
+.account-copy {
+    min-width: 0;
+}
+
+.account-name {
+    overflow: hidden;
+    color: #182234;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .account-role {
     color: var(--hen-blue);
-    font-size: 20px;
-    font-weight: 900;
-    line-height: 1;
+    font-size: 0.76rem;
+    font-weight: 500;
+    line-height: 1.2;
 }
 
 .account-meta {
-    color: var(--hen-blue);
-    font-size: 12px;
-    font-weight: 700;
+    color: #7a8494;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
 }
 
 .account-menu button {
     border: 0;
     background: transparent;
     color: var(--hen-blue);
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 900;
     letter-spacing: 2px;
     line-height: 1;
@@ -1308,11 +1327,18 @@ select {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
+        padding: 12px;
+    }
+
+    .nav-section-label {
+        grid-column: 1 / -1;
+        margin: 8px 4px 0;
     }
 
     .side-link {
         margin: 0;
-        font-size: 17px;
+        font-size: 0.92rem;
+        min-height: 42px;
     }
 
     .app-topbar {
