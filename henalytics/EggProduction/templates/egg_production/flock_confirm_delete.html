@@ -4,10 +4,10 @@
 {% block title %}Delete Confirmation - Henalytics{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 action-page">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card border-danger">
+            <div class="card border-danger action-panel">
                 <div class="card-header bg-danger text-white">
                     Delete Confirmation
                 </div>
@@ -20,7 +20,9 @@
                         <strong>Warning:</strong> This action cannot be undone.
                     </p>
 
-                    <form method="post" class="d-inline">
+                    <form method="post" class="d-inline" data-swal-delete
+                        data-swal-title="Delete flock?"
+                        data-swal-text="This will delete the selected flock record and cannot be undone.">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">Yes, Delete</button>
                     </form>

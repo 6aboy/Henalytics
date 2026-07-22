@@ -32,7 +32,7 @@
                         <a href="{% url 'eggproduction:staff-egg-detail' p.pk %}" class="btn btn-sm btn-info">View</a>
                         <a href="{% url 'eggproduction:staff-egg-edit' p.pk %}" class="btn btn-sm btn-warning">Edit</a>
                         <a href="{% url 'eggproduction:staff-egg-delete' p.pk %}"
-                            class="btn btn-sm btn-danger">Delete</a>
+                            class="btn btn-sm btn-danger" data-swal-delete-link>Delete</a>
                     </td>
                 </tr>
                 {% empty %}

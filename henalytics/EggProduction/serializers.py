@@ -11,7 +11,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserProfile
-        fields = ['id', 'user', 'username', 'email', 'role', 'full_name', 'assigned_house', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'username', 'email', 'role', 'assigned_house', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 
@@ -29,11 +29,14 @@ class ProductionLogSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ProductionLog
-        fields = ['id', 'flock', 'flock_detail', 'production_date', 'age_weeks', 'age_days', 
-                 'live_hen_count', 'daily_mortality', 'daily_culls', 'feed_consumed_bags', 'eggs_collected',
-                 'hen_day_production', 'hen_housed_production', 'feed_conversion_ratio', 'management_remarks', 'entered_by', 
+        fields = ['id', 'flock', 'flock_detail', 'log_date', 'age_weeks', 'age_days',
+                 'hen_count', 'dead_count', 'culled_count', 'feed_bags', 'eggs_total',
+                 'pct_hen_day', 'pct_hen_housed', 'fcr', 'remarks', 'entered_by',
                  'entered_by_username', 'created_at', 'updated_at']
-        read_only_fields = ['entered_by', 'created_at', 'updated_at']
+        read_only_fields = [
+            'hen_count', 'pct_hen_day', 'pct_hen_housed', 'fcr',
+            'entered_by', 'created_at', 'updated_at'
+        ]
 
 
 class GradingLogSerializer(serializers.ModelSerializer):
@@ -41,17 +44,17 @@ class GradingLogSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = GradingLog
-        fields = ['id', 'flock', 'flock_detail', 'grading_date', 'age_weeks', 'grade_jumbo',
-                 'grade_extra_large', 'grade_large', 'grade_medium', 'grade_small', 'grade_pullets', 
-                 'grade_peewee', 'cracked_eggs', 'source', 'created_at', 'updated_at']
+        fields = ['id', 'flock', 'flock_detail', 'log_date', 'age_weeks', 'eggs_total',
+                 'eggs_aa', 'eggs_a', 'eggs_b', 'eggs_small', 'eggs_broken',
+                 'eggs_decode', 'eggs_source', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
 
 class SalesItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesItem
-        fields = ['id', 'transaction', 'grade', 'quantity_trays', 'price_per_tray', 'total_amount']
-        read_only_fields = ['total_amount']
+        fields = ['id', 'transaction', 'grade', 'quantity_pieces', 'amount', 'unit_price']
+        read_only_fields = ['unit_price']
 
 
 class SalesTransactionSerializer(serializers.ModelSerializer):
@@ -63,12 +66,12 @@ class SalesTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesTransaction
         fields = ['id', 'flock', 'flock_detail', 'sale_date', 'recorded_by', 
-                 'recorded_by_username', 'notes', 'items', 'total_amount', 'created_at', 'updated_at']
+                 'recorded_by_username', 'or_number', 'notes', 'items', 'total_amount', 'created_at', 'updated_at']
         read_only_fields = ['recorded_by', 'created_at', 'updated_at']
     
     def get_total_amount(self, obj):
         """Calculate total amount from all items"""
-        return sum(item.total_amount for item in obj.items.all())
+        return sum(item.amount for item in obj.items.all())
 
 
 class ModelVersionSerializer(serializers.ModelSerializer):

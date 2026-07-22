@@ -1,10 +1,14 @@
 {% extends 'base.html' %}
 
 {% block title %}Sales Forecasts - Henalytics{% endblock %}
+{% block page_title %}HEN Analytics{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Sales Forecasts</h1>
+    <div class="dashboard-tabs">
+        <a href="{% url 'eggproduction:harvest-forecast-list' %}">Harvest Forecasts</a>
+        <a href="{% url 'eggproduction:sales-forecast-list' %}" class="active">Sales Forecasts</a>
+    </div>
 
     {% if forecasts %}
     <div class="table-responsive">
@@ -12,7 +16,7 @@
             <thead class="table-dark">
                 <tr>
                     <th>Forecast Date</th>
-                    <th>Grade</th>
+                    <th>Size</th>
                     <th>Predicted Trays</th>
                     <th>Model Type</th>
                     <th>Created</th>
@@ -23,7 +27,7 @@
                 {% for forecast in forecasts %}
                 <tr>
                     <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
-                    <td><span class="badge bg-info">{{ forecast.grade }}</span></td>
+                    <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
                     <td><strong>{{ forecast.predicted_trays }}</strong></td>
                     <td>{{ forecast.model_version.get_model_type_display }}</td>
                     <td>{{ forecast.created_at|date:"Y-m-d" }}</td>
@@ -40,8 +44,9 @@
     {% if is_paginated %}
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page=1">First</a></li>{%
-            endif %}
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1">First</a></li>
+            {% endif %}
             <li class="page-item active"><a class="page-link" href="#">Page {{ page_obj.number }}</a></li>
             {% if page_obj.has_next %}<li class="page-item"><a class="page-link"
                     href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}

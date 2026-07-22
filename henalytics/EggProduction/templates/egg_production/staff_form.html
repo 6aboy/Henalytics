@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div class="card p-3">
+<div class="action-panel">
     <h4 class="mb-3">{% if form.instance.pk %}Edit Egg Production{% else %}Create Egg Production{% endif %}</h4>
     <form method="post">
         {% csrf_token %}

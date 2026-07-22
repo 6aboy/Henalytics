@@ -36,34 +36,34 @@ class FlockAdmin(admin.ModelAdmin):
 class ProductionLogInline(admin.TabularInline):
     model = ProductionLog
     extra = 1
-    fields = ('production_date', 'age_weeks', 'live_hen_count', 'eggs_collected', 'hen_day_production')
+    fields = ('log_date', 'age_weeks', 'hen_count', 'eggs_total', 'pct_hen_day')
 
 
 @admin.register(ProductionLog)
 class ProductionLogAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'production_date', 'live_hen_count', 'eggs_collected', 'hen_day_production', 'hen_housed_production')
-    list_filter = ('flock', 'production_date')
+    list_display = ('flock', 'log_date', 'hen_count', 'eggs_total', 'pct_hen_day', 'pct_hen_housed')
+    list_filter = ('flock', 'log_date')
     search_fields = ('flock__house_no',)
-    date_hierarchy = 'production_date'
+    date_hierarchy = 'log_date'
     readonly_fields = ('entered_by', 'created_at', 'updated_at')
     fieldsets = (
         ('Flock Information', {
-            'fields': ('flock', 'production_date')
+            'fields': ('flock', 'log_date')
         }),
         ('Age Data', {
             'fields': ('age_weeks', 'age_days')
         }),
         ('Population Metrics', {
-            'fields': ('live_hen_count', 'daily_mortality', 'daily_culls')
+            'fields': ('hen_count', 'dead_count', 'culled_count')
         }),
         ('Production Data', {
-            'fields': ('eggs_collected', 'hen_day_production', 'hen_housed_production')
+            'fields': ('eggs_total', 'pct_hen_day', 'pct_hen_housed')
         }),
         ('Feed & Conversion', {
-            'fields': ('feed_consumed_bags', 'feed_conversion_ratio')
+            'fields': ('feed_bags', 'fcr')
         }),
         ('Additional Info', {
-            'fields': ('management_remarks', 'entered_by', 'created_at', 'updated_at')
+            'fields': ('remarks', 'entered_by', 'created_at', 'updated_at')
         }),
     )
 
@@ -80,19 +80,19 @@ class GradingLogInline(admin.TabularInline):
 
 @admin.register(GradingLog)
 class GradingLogAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'grading_date', 'age_weeks', 'grade_jumbo', 'grade_extra_large', 'grade_large')
-    list_filter = ('flock', 'grading_date')
+    list_display = ('flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a', 'eggs_b')
+    list_filter = ('flock', 'log_date')
     search_fields = ('flock__house_no',)
-    date_hierarchy = 'grading_date'
+    date_hierarchy = 'log_date'
     fieldsets = (
         ('Flock Information', {
-            'fields': ('flock', 'grading_date', 'age_weeks')
+            'fields': ('flock', 'log_date', 'age_weeks')
         }),
         ('Total & Grade Distribution', {
-            'fields': ('grade_jumbo', 'grade_extra_large', 'grade_large', 'grade_medium')
+            'fields': ('eggs_total', 'eggs_aa', 'eggs_a', 'eggs_b', 'eggs_small')
         }),
         ('Defects & Special', {
-            'fields': ('grade_small', 'grade_pullets', 'grade_peewee', 'cracked_eggs', 'source')
+            'fields': ('eggs_broken', 'eggs_decode', 'eggs_source')
         }),
     )
 
@@ -100,13 +100,13 @@ class GradingLogAdmin(admin.ModelAdmin):
 class SalesItemInline(admin.TabularInline):
     model = SalesItem
     extra = 1
-    fields = ('grade', 'quantity_trays', 'price_per_tray', 'total_amount')
-    readonly_fields = ('total_amount',)
+    fields = ('grade', 'quantity_pieces', 'amount', 'unit_price')
+    readonly_fields = ('unit_price',)
 
 
 @admin.register(SalesTransaction)
 class SalesTransactionAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'sale_date', 'recorded_by', 'created_at')
+    list_display = ('flock', 'sale_date', 'or_number', 'recorded_by', 'created_at')
     list_filter = ('flock', 'sale_date', 'recorded_by')
     search_fields = ('flock__house_no', 'notes')
     date_hierarchy = 'sale_date'
@@ -114,7 +114,7 @@ class SalesTransactionAdmin(admin.ModelAdmin):
     readonly_fields = ('recorded_by', 'created_at', 'updated_at')
     fieldsets = (
         ('Transaction Information', {
-            'fields': ('flock', 'sale_date')
+            'fields': ('flock', 'sale_date', 'or_number')
         }),
         ('Notes & User', {
             'fields': ('notes', 'recorded_by', 'created_at', 'updated_at')

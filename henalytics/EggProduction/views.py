@@ -6,7 +6,8 @@ from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.db import models, transaction
 from django.utils import timezone
-from datetime import timedelta
+from django.conf import settings
+from datetime import date, timedelta
 import logging
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -22,6 +23,7 @@ from .serializers import (
     SalesTransactionSerializer, SalesItemSerializer, ModelVersionSerializer,
     HarvestForecastSerializer, SalesForecastSerializer
 )
+from .forms import SalesItemFormSet, SalesTransactionForm
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,51 @@ class ManagerAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
 # Dashboard View
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
+
+    def get_period_bounds(self):
+        today = timezone.now().date()
+        period = self.request.GET.get('period', 'month')
+        start = None
+        end = today
+
+        if period == 'today':
+            start = today
+        elif period == 'six_months':
+            start = today - timedelta(days=183)
+        elif period == 'year':
+            start = today.replace(month=1, day=1)
+        elif period == 'all':
+            end = None
+        elif period == 'custom':
+            start_value = self.request.GET.get('date_from')
+            end_value = self.request.GET.get('date_to')
+            try:
+                start = date.fromisoformat(start_value) if start_value else None
+                end = date.fromisoformat(end_value) if end_value else today
+            except ValueError:
+                start = today.replace(day=1)
+                end = today
+        else:
+            period = 'month'
+            start = today.replace(day=1)
+
+        labels = {
+            'today': 'Today',
+            'month': 'This Month',
+            'six_months': 'Last 6 Months',
+            'year': 'This Year',
+            'all': 'All Records',
+            'custom': 'Custom Range',
+        }
+        return period, start, end, labels.get(period, 'This Month')
+
+    @staticmethod
+    def filter_by_date(queryset, field_name, start, end):
+        if start:
+            queryset = queryset.filter(**{f'{field_name}__gte': start})
+        if end:
+            queryset = queryset.filter(**{f'{field_name}__lte': end})
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -73,44 +120,59 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             today = timezone.now().date()
             last_7_days = today - timedelta(days=7)
             last_30_days = today - timedelta(days=30)
+            period, date_from, date_to, period_label = self.get_period_bounds()
+            period_logs = self.filter_by_date(ProductionLog.objects.all(), 'log_date', date_from, date_to)
+            period_sales_items = self.filter_by_date(SalesItem.objects.all(), 'transaction__sale_date', date_from, date_to)
 
             active_flocks = Flock.objects.filter(status='active').count()
-            today_production = ProductionLog.objects.filter(production_date=today).aggregate(
-                total=models.Sum('eggs_collected')
+            today_production = ProductionLog.objects.filter(log_date=today).aggregate(
+                total=models.Sum('eggs_total')
             )['total'] or 0
+            period_egg_total = period_logs.aggregate(
+                total=models.Sum('eggs_total')
+            )['total'] or 0
+            period_feed_total = period_logs.aggregate(
+                total=models.Sum('feed_bags')
+            )['total'] or 0
+            period_losses = period_logs.aggregate(
+                lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
+            )['lost'] or 0
+            period_revenue = period_sales_items.aggregate(total=models.Sum('amount'))['total'] or 0
             total_hens = Flock.objects.filter(status='active').aggregate(
                 total=models.Sum('initial_hen_count')
             )['total'] or 0
             weekly_revenue = SalesItem.objects.filter(
                 transaction__sale_date__gte=last_7_days
-            ).aggregate(total=models.Sum('total_amount'))['total'] or 0
-            avg_fcr_30d = ProductionLog.objects.filter(production_date__gte=last_30_days).aggregate(
-                avg=models.Avg('feed_conversion_ratio')
+            ).aggregate(total=models.Sum('amount'))['total'] or 0
+            avg_fcr_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+                avg=models.Avg('fcr')
             )['avg'] or 0
-            avg_lay_rate_30d = ProductionLog.objects.filter(production_date__gte=last_30_days).aggregate(
-                avg=models.Avg('hen_day_production')
+            avg_lay_rate_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+                avg=models.Avg('pct_hen_day')
             )['avg'] or 0
-            feed_consumed_30d = ProductionLog.objects.filter(production_date__gte=last_30_days).aggregate(
-                total=models.Sum('feed_consumed_bags')
+            feed_consumed_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+                total=models.Sum('feed_bags')
             )['total'] or 0
-            grading_logs = GradingLog.objects.filter(grading_date__gte=last_30_days)
-            broken_eggs = grading_logs.aggregate(total=models.Sum('cracked_eggs'))['total'] or 0
-            graded_total = grading_logs.aggregate(
-                total=models.Sum(
-                    models.F('grade_jumbo') + models.F('grade_extra_large') + models.F('grade_large') +
-                    models.F('grade_medium') + models.F('grade_small') + models.F('grade_pullets') +
-                    models.F('grade_peewee')
-                )
-            )['total'] or 0
+            grading_logs = GradingLog.objects.filter(log_date__gte=last_30_days)
+            broken_eggs = grading_logs.aggregate(total=models.Sum('eggs_broken'))['total'] or 0
+            graded_total = grading_logs.aggregate(total=models.Sum('eggs_total'))['total'] or 0
             cracked_egg_loss = float(broken_eggs) / graded_total * 100 if graded_total else 0
-            recent_losses_7d = ProductionLog.objects.filter(production_date__gte=last_7_days).aggregate(
-                lost=models.Sum(models.F('daily_mortality') + models.F('daily_culls'))
+            recent_losses_7d = ProductionLog.objects.filter(log_date__gte=last_7_days).aggregate(
+                lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
 
             context.update({
                 'today': today,
+                'dashboard_period': period,
+                'dashboard_date_from': date_from,
+                'dashboard_date_to': date_to,
+                'dashboard_period_label': period_label,
                 'active_flocks': active_flocks,
                 'today_production': today_production,
+                'period_egg_total': period_egg_total,
+                'period_feed_total': period_feed_total,
+                'period_losses': period_losses,
+                'period_revenue': float(period_revenue),
                 'today_sales': SalesTransaction.objects.filter(sale_date=today).count(),
                 'total_revenue': float(weekly_revenue),
                 'total_hens': total_hens,
@@ -125,8 +187,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             logger.exception("Dashboard error: %s", e)
             context.update({
                 'today': timezone.now().date(),
+                'dashboard_period': 'month',
+                'dashboard_date_from': None,
+                'dashboard_date_to': None,
+                'dashboard_period_label': 'This Month',
                 'active_flocks': 0,
                 'today_production': 0,
+                'period_egg_total': 0,
+                'period_feed_total': 0,
+                'period_losses': 0,
+                'period_revenue': 0,
                 'today_sales': 0,
                 'total_revenue': 0,
                 'total_hens': 0,
@@ -146,7 +216,6 @@ class FlockListView(LoginRequiredMixin, ListView):
     model = Flock
     template_name = 'egg_production/flock_list.html'
     context_object_name = 'flocks'
-    paginate_by = 10
     ordering = ['-date_started']
 
 
@@ -165,9 +234,21 @@ class FlockDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         flock = self.get_object()
-        context['production_logs'] = ProductionLog.objects.filter(flock=flock).order_by('-production_date')[:10]
-        context['grading_logs'] = GradingLog.objects.filter(flock=flock).order_by('-grading_date')[:10]
-        context['sales'] = SalesTransaction.objects.filter(flock=flock).order_by('-sale_date')[:10]
+        production_qs = ProductionLog.objects.filter(flock=flock)
+        grading_qs = GradingLog.objects.filter(flock=flock)
+        sales_qs = SalesTransaction.objects.filter(flock=flock)
+        context['production_logs'] = production_qs.order_by('-log_date')[:5]
+        context['grading_logs'] = grading_qs.order_by('-log_date')[:5]
+        context['sales'] = sales_qs.order_by('-sale_date')[:5]
+        context['production_log_count'] = production_qs.count()
+        context['grading_log_count'] = grading_qs.count()
+        context['sales_count'] = sales_qs.count()
+        context['current_hen_count'] = (
+            production_qs.order_by('-log_date', '-pk')
+            .values_list('hen_count', flat=True)
+            .first()
+            or flock.initial_hen_count
+        )
         return context
 
 
@@ -190,33 +271,75 @@ class ProductionLogListView(StaffAccessMixin, ListView):
     model = ProductionLog
     template_name = 'egg_production/production_log_list.html'
     context_object_name = 'production_logs'
-    paginate_by = 15
-    ordering = ['-production_date']
-
+    ordering = ['-log_date']
+    
     def get_queryset(self):
         qs = super().get_queryset().select_related('flock', 'entered_by')
         flock_id = self.request.GET.get('flock_id')
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
+        period = self.request.GET.get('period', 'all')
+        today = timezone.now().date()
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+
+        if period == 'today':
+            qs = qs.filter(log_date=today)
+        elif period == 'month':
+            qs = qs.filter(log_date__gte=today.replace(day=1), log_date__lte=today)
+        elif period == 'six_months':
+            qs = qs.filter(log_date__gte=today - timedelta(days=183), log_date__lte=today)
+        elif period == 'year':
+            qs = qs.filter(log_date__gte=today.replace(month=1, day=1), log_date__lte=today)
+        elif period == 'custom':
+            if date_from:
+                qs = qs.filter(log_date__gte=date_from)
+            if date_to:
+                qs = qs.filter(log_date__lte=date_to)
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['flocks'] = Flock.objects.all().order_by('house_no')
-        selected_flock_id = self.request.GET.get('flock_id', '')
-        if selected_flock_id.isdigit():
-            context['selected_flock_id'] = int(selected_flock_id)
-        else:
-            context['selected_flock_id'] = None
+        context['flocks'] = Flock.objects.order_by('house_no', '-date_started')
+        context['selected_flock_id'] = self.request.GET.get('flock_id', '')
+        context['selected_period'] = self.request.GET.get('period', 'all')
+        context['selected_date_from'] = self.request.GET.get('date_from', '')
+        context['selected_date_to'] = self.request.GET.get('date_to', '')
         return context
 
 
-class ProductionLogCreateView(StaffAccessMixin, CreateView):
+class ProductionLogFormMixin:
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        for field_name in ('pct_hen_day', 'pct_hen_housed', 'fcr'):
+            form.fields[field_name].required = False
+            form.fields[field_name].widget.attrs['readonly'] = True
+            form.fields[field_name].widget.attrs['class'] = (
+                form.fields[field_name].widget.attrs.get('class', '') + ' readonly-metric'
+            ).strip()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['flock_initial_counts'] = {
+            str(flock.id): flock.initial_hen_count
+            for flock in Flock.objects.only('id', 'initial_hen_count')
+        }
+        context['feed_bag_kg'] = getattr(settings, 'HENALYTICS_FEED_BAG_KG', 50)
+        context['avg_egg_kg'] = getattr(settings, 'HENALYTICS_AVG_EGG_KG', 0.06)
+        return context
+
+    def form_valid(self, form):
+        form.instance.update_laying_percentages()
+        return super().form_valid(form)
+
+
+class ProductionLogCreateView(StaffAccessMixin, ProductionLogFormMixin, CreateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'production_date', 'age_weeks', 'age_days', 'live_hen_count', 'daily_mortality',
-              'daily_culls', 'feed_consumed_bags', 'eggs_collected', 'hen_day_production', 'hen_housed_production',
-              'feed_conversion_ratio', 'management_remarks']
+    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'dead_count',
+              'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
+              'fcr', 'remarks']
     success_url = reverse_lazy('eggproduction:production-log-list')
     
     def form_valid(self, form):
@@ -229,13 +352,27 @@ class ProductionLogDetailView(StaffAccessMixin, DetailView):
     template_name = 'egg_production/production_log_detail.html'
     context_object_name = 'production_log'
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('flock', 'entered_by')
 
-class ProductionLogUpdateView(StaffAccessMixin, UpdateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        log = self.object
+        context['entered_by_name'] = (
+            log.entered_by.get_full_name()
+            or log.entered_by.username
+            if log.entered_by_id
+            else 'N/A'
+        )
+        return context
+
+
+class ProductionLogUpdateView(StaffAccessMixin, ProductionLogFormMixin, UpdateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'production_date', 'age_weeks', 'age_days', 'live_hen_count', 'daily_mortality',
-              'daily_culls', 'feed_consumed_bags', 'eggs_collected', 'hen_day_production', 'hen_housed_production',
-              'feed_conversion_ratio', 'management_remarks']
+    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'dead_count',
+              'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
+              'fcr', 'remarks']
     success_url = reverse_lazy('eggproduction:production-log-list')
 
 
@@ -252,7 +389,7 @@ class GradingLogListView(StaffAccessMixin, ListView):
     template_name = 'egg_production/grading_log_list.html'
     context_object_name = 'grading_logs'
     paginate_by = 15
-    ordering = ['-grading_date']
+    ordering = ['-log_date']
     
     def get_queryset(self):
         qs = super().get_queryset().select_related('flock')
@@ -265,8 +402,8 @@ class GradingLogListView(StaffAccessMixin, ListView):
 class GradingLogCreateView(StaffAccessMixin, CreateView):
     model = GradingLog
     template_name = 'egg_production/grading_log_form.html'
-    fields = ['flock', 'grading_date', 'age_weeks', 'grade_jumbo', 'grade_extra_large', 'grade_large',
-              'grade_medium', 'grade_small', 'grade_pullets', 'grade_peewee', 'cracked_eggs', 'source']
+    fields = ['flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a',
+              'eggs_b', 'eggs_small', 'eggs_broken', 'eggs_decode', 'eggs_source']
     success_url = reverse_lazy('eggproduction:grading-log-list')
 
 
@@ -275,12 +412,15 @@ class GradingLogDetailView(StaffAccessMixin, DetailView):
     template_name = 'egg_production/grading_log_detail.html'
     context_object_name = 'grading_log'
 
+    def get_queryset(self):
+        return super().get_queryset().select_related('flock')
+
 
 class GradingLogUpdateView(StaffAccessMixin, UpdateView):
     model = GradingLog
     template_name = 'egg_production/grading_log_form.html'
-    fields = ['flock', 'grading_date', 'age_weeks', 'grade_jumbo', 'grade_extra_large', 'grade_large',
-              'grade_medium', 'grade_small', 'grade_pullets', 'grade_peewee', 'cracked_eggs', 'source']
+    fields = ['flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a',
+              'eggs_b', 'eggs_small', 'eggs_broken', 'eggs_decode', 'eggs_source']
     success_url = reverse_lazy('eggproduction:grading-log-list')
 
 
@@ -296,7 +436,6 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_list.html'
     context_object_name = 'sales_transactions'
-    paginate_by = 15
     ordering = ['-sale_date']
     
     def get_queryset(self):
@@ -310,33 +449,98 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
 class SalesTransactionCreateView(StaffAccessMixin, CreateView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_form.html'
-    fields = ['flock', 'sale_date', 'notes']
-    success_url = reverse_lazy('eggproduction:sales-transaction-list')
+    form_class = SalesTransactionForm
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['sales_item_formset'] = SalesItemFormSet(self.request.POST, prefix='items')
+        else:
+            context['sales_item_formset'] = SalesItemFormSet(prefix='items')
+        return context
+
     def form_valid(self, form):
-        form.instance.recorded_by = self.request.user
-        return super().form_valid(form)
+        context = self.get_context_data(form=form)
+        formset = context['sales_item_formset']
+        if not formset.is_valid():
+            return self.form_invalid(form)
+
+        with transaction.atomic():
+            form.instance.recorded_by = self.request.user
+            self.object = form.save()
+            formset.instance = self.object
+            formset.save()
+        return redirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
+    def get_success_url(self):
+        return reverse_lazy('eggproduction:sales-transaction-detail', kwargs={'pk': self.object.pk})
 
 
 class SalesTransactionDetailView(StaffAccessMixin, DetailView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_detail.html'
     context_object_name = 'sales_transaction'
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('flock', 'recorded_by')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         transaction = self.get_object()
         items = SalesItem.objects.filter(transaction=transaction)
         context['items'] = items
-        context['total_amount'] = sum(item.total_amount for item in items)
+        context['total_amount'] = sum(item.amount for item in items)
+        context['recorded_by_name'] = (
+            transaction.recorded_by.get_full_name()
+            or transaction.recorded_by.username
+            if transaction.recorded_by_id
+            else 'N/A'
+        )
         return context
 
 
 class SalesTransactionUpdateView(StaffAccessMixin, UpdateView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_form.html'
-    fields = ['flock', 'sale_date', 'notes']
-    success_url = reverse_lazy('eggproduction:sales-transaction-list')
+    form_class = SalesTransactionForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['sales_item_formset'] = SalesItemFormSet(
+                self.request.POST,
+                instance=self.object,
+                prefix='items',
+            )
+        else:
+            context['sales_item_formset'] = SalesItemFormSet(
+                instance=self.object,
+                prefix='items',
+            )
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data(form=form)
+        formset = context['sales_item_formset']
+        if not formset.is_valid():
+            return self.form_invalid(form)
+
+        with transaction.atomic():
+            self.object = form.save()
+            formset.instance = self.object
+            formset.save()
+        return redirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
+    def get_success_url(self):
+        return reverse_lazy('eggproduction:sales-transaction-detail', kwargs={'pk': self.object.pk})
 
 
 class SalesTransactionDeleteView(StaffAccessMixin, DeleteView):
@@ -350,7 +554,7 @@ class SalesTransactionDeleteView(StaffAccessMixin, DeleteView):
 class SalesItemAddView(StaffAccessMixin, CreateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
-    fields = ['grade', 'quantity_trays', 'price_per_tray']
+    fields = ['grade', 'quantity_pieces', 'amount']
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -371,7 +575,12 @@ class SalesItemAddView(StaffAccessMixin, CreateView):
 class SalesItemUpdateView(StaffAccessMixin, UpdateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
-    fields = ['grade', 'quantity_trays', 'price_per_tray']
+    fields = ['grade', 'quantity_pieces', 'amount']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['transaction'] = self.object.transaction
+        return context
     
     def get_success_url(self):
         return reverse_lazy('eggproduction:sales-transaction-detail',
@@ -469,7 +678,7 @@ class ProductionLogViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['flock__house_no']
-    ordering_fields = ['production_date', 'eggs_collected']
+    ordering_fields = ['log_date', 'eggs_total']
     
     def perform_create(self, serializer):
         serializer.save(entered_by=self.request.user)
@@ -478,7 +687,7 @@ class ProductionLogViewSet(viewsets.ModelViewSet):
     def today(self, request):
         """Get today's production logs"""
         today = timezone.now().date()
-        logs = self.queryset.filter(production_date=today)
+        logs = self.queryset.filter(log_date=today)
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
 
@@ -489,13 +698,13 @@ class GradingLogViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['flock__house_no']
-    ordering_fields = ['grading_date']
+    ordering_fields = ['log_date']
     
     @action(detail=False, methods=['get'])
     def today(self, request):
         """Get today's grading logs"""
         today = timezone.now().date()
-        logs = self.queryset.filter(grading_date=today)
+        logs = self.queryset.filter(log_date=today)
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
 

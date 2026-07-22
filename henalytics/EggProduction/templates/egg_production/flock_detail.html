@@ -2,126 +2,109 @@
 {% load static %}
 
 {% block title %}Flock {{ flock.house_no }} - Henalytics{% endblock %}
+{% block page_title %}Flock Details{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Flock House {{ flock.house_no }}</h1>
-        {% if user.is_staff or user.is_superuser %}
+<div class="action-panel detail-panel">
+    <div class="detail-header">
         <div>
+            <h2 class="detail-title">House {{ flock.house_no }}</h2>
+            <div class="detail-subtitle">{{ flock.breed_strain }} | Started {{ flock.date_started|date:"Y-m-d" }}</div>
+        </div>
+        <div class="detail-actions">
+            {% if user.is_staff or user.is_superuser %}
             <a href="{% url 'eggproduction:flock-edit' flock.pk %}" class="btn btn-warning">Edit</a>
-            <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-danger">Delete</a>
+            <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
+            {% endif %}
+            <a href="{% url 'eggproduction:flock-list' %}" class="btn btn-secondary">Back</a>
         </div>
+    </div>
+
+    <section class="detail-section">
+        <h3 class="detail-section-title">Flock Summary</h3>
+        <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">House</span><span class="detail-value">{{ flock.house_no }}</span></div>
+            <div class="detail-item"><span class="detail-label">Breed/Strain</span><span class="detail-value">{{ flock.breed_strain }}</span></div>
+            <div class="detail-item"><span class="detail-label">Initial Hens</span><span class="detail-value">{{ flock.initial_hen_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Current Hens</span><span class="detail-value">{{ current_hen_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">{{ flock.get_status_display }}</span></div>
+            <div class="detail-item"><span class="detail-label">Production Logs</span><span class="detail-value">{{ production_log_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Grading Logs</span><span class="detail-value">{{ grading_log_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Sales</span><span class="detail-value">{{ sales_count }}</span></div>
+        </div>
+    </section>
+
+    {% if flock.notes %}
+    <section class="detail-section">
+        <h3 class="detail-section-title">Notes</h3>
+        <div class="detail-note">{{ flock.notes }}</div>
+    </section>
+    {% endif %}
+
+    <section class="detail-section">
+        <h3 class="detail-section-title">Recent Production</h3>
+        {% if production_logs %}
+        <div class="table-responsive detail-mini-table">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Live Hens</th>
+                        <th>Eggs</th>
+                        <th>Hen Day</th>
+                        <th>FCR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in production_logs %}
+                    <tr>
+                        <td>{{ log.log_date|date:"Y-m-d" }}</td>
+                        <td>{{ log.hen_count }}</td>
+                        <td>{{ log.eggs_total }}</td>
+                        <td>{{ log.pct_hen_day }}%</td>
+                        <td>{{ log.fcr|default:"N/A" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="detail-note">No production logs yet.</div>
         {% endif %}
-    </div>
+    </section>
 
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Flock Information</div>
-                <div class="card-body">
-                    <p><strong>House Number:</strong> {{ flock.house_no }}</p>
-                    <p><strong>Breed/Strain:</strong> {{ flock.breed_strain }}</p>
-                    <p><strong>Date Started:</strong> {{ flock.date_started|date:"Y-m-d" }}</p>
-                    <p><strong>Initial Count:</strong> {{ flock.initial_hen_count }}</p>
-                    <p><strong>Status:</strong> <span
-                            class="badge {% if flock.status == 'active' %}bg-success{% elif flock.status == 'inactive' %}bg-warning{% else %}bg-danger{% endif %}">{{
-                            flock.get_status_display }}</span></p>
-                    {% if flock.notes %}
-                    <p><strong>Notes:</strong> {{ flock.notes }}</p>
-                    {% endif %}
-                </div>
-            </div>
+    <section class="detail-section">
+        <h3 class="detail-section-title">Recent Grading</h3>
+        {% if grading_logs %}
+        <div class="table-responsive detail-mini-table">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>AA</th>
+                        <th>A</th>
+                        <th>B</th>
+                        <th>Small</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in grading_logs %}
+                    <tr>
+                        <td>{{ log.log_date|date:"Y-m-d" }}</td>
+                        <td>{{ log.eggs_total }}</td>
+                        <td>{{ log.eggs_aa }}</td>
+                        <td>{{ log.eggs_a }}</td>
+                        <td>{{ log.eggs_b }}</td>
+                        <td>{{ log.eggs_small }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Quick Statistics</div>
-                <div class="card-body">
-                    <p><strong>Total Production Logs:</strong> {{ production_logs.count }}</p>
-                    <p><strong>Total Grading Logs:</strong> {{ grading_logs.count }}</p>
-                    <p><strong>Total Sales:</strong> {{ sales.count }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <h3>Recent Production Logs</h3>
-            {% if production_logs %}
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Production Date</th>
-                            <th>Age (weeks)</th>
-                            <th>Live Hens</th>
-                            <th>Eggs Collected</th>
-                            <th>% Hen Day</th>
-                            <th>% Hen Housed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in production_logs %}
-                        <tr>
-                            <td>{{ log.production_date|date:"Y-m-d" }}</td>
-                            <td>{{ log.age_weeks }}</td>
-                            <td>{{ log.live_hen_count }}</td>
-                            <td>{{ log.eggs_collected }}</td>
-                            <td>{{ log.hen_day_production }}%</td>
-                            <td>{{ log.hen_housed_production }}%</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <a href="{% url 'eggproduction:production-log-list' %}?flock_id={{ flock.pk }}"
-                class="btn btn-info btn-sm">View All</a>
-            {% else %}
-            <p>No production logs yet.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <h3>Recent Grading Logs</h3>
-            {% if grading_logs %}
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Grading Date</th>
-                            <th>Jumbo</th>
-                            <th>XL</th>
-                            <th>Large</th>
-                            <th>Medium</th>
-                            <th>Small</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in grading_logs %}
-                        <tr>
-                            <td>{{ log.grading_date|date:"Y-m-d" }}</td>
-                            <td>{{ log.grade_jumbo }}</td>
-                            <td>{{ log.grade_extra_large }}</td>
-                            <td>{{ log.grade_large }}</td>
-                            <td>{{ log.grade_medium }}</td>
-                            <td>{{ log.grade_small }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <a href="{% url 'eggproduction:grading-log-list' %}?flock_id={{ flock.pk }}"
-                class="btn btn-info btn-sm">View All</a>
-            {% else %}
-            <p>No grading logs yet.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <a href="{% url 'eggproduction:flock-list' %}" class="btn btn-secondary">Back to Flocks</a>
+        {% else %}
+        <div class="detail-note">No grading logs yet.</div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

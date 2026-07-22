@@ -5,44 +5,255 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Henalytics</title>
+    <title>{% block title %}Henalytics{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="{% static 'EggProduction/css/style.css' %}">
 </head>
 
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
-        <div class="container">
-            <a class="navbar-brand" href="/">Henalytics</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/api/">API</a></li>
-                    {% if request.user.is_authenticated %}
-                    <li class="nav-item"><a class="nav-link" href="/admin/">Admin</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">{{ request.user.username }}</a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
-                        </ul>
-                    </li>
-                    {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
-                    {% endif %}
-                </ul>
+<body class="{% if request.user.is_authenticated %}app-body{% else %}auth-body{% endif %}">
+    {% if request.user.is_authenticated %}
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <a href="{% url 'eggproduction:dashboard' %}" class="brand-lockup">
+                <img src="{% static 'EggProduction/img/logo.svg' %}" alt="Henalytics">
+            </a>
+
+            <nav class="side-nav" aria-label="Main navigation">
+                <div class="nav-section-label">MAIN</div>
+                <a href="{% url 'eggproduction:dashboard' %}"
+                    class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="side-icon icon-home"></span>
+                    <span>Dashboard</span>
+                </a>
+
+                <div class="nav-section-label">MANAGE</div>
+                <a href="{% url 'eggproduction:production-log-list' %}"
+                    class="side-link {% if 'production-log' in request.resolver_match.url_name or 'grading-log' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-eggs"></span>
+                    <span>Egg Production</span>
+                </a>
+                <a href="{% url 'eggproduction:sales-transaction-list' %}"
+                    class="side-link {% if 'sales-transaction' in request.resolver_match.url_name or 'sales-item' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-sales"></span>
+                    <span>Manage Sales</span>
+                </a>
+                <a href="{% url 'eggproduction:flock-list' %}"
+                    class="side-link {% if 'flock' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-flock"></span>
+                    <span>Flock Management</span>
+                </a>
+                <a href="{% url 'eggproduction:harvest-forecast-list' %}"
+                    class="side-link {% if 'forecast' in request.resolver_match.url_name or 'model-version' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="side-icon icon-chart"></span>
+                    <span>HEN Analytics</span>
+                    <a href="{% url 'index' %}" class="btn">Button</a>
+                </a>
+            </nav>
+
+            <div class="sidebar-account">
+                <div class="account-avatar"></div>
+                <div class="account-copy">
+                    <div class="account-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                    <div class="account-role">
+                        Role:
+                        {% if request.user.is_superuser %}
+                        Admin
+                        {% elif request.user.userprofile.display_role %}
+                        {{ request.user.userprofile.display_role }}
+                        {% else %}
+                        Staff
+                        {% endif %}
+                    </div>
+                    <div class="account-meta">UBAP</div>
+                </div>
+                <form method="post" action="{% url 'logout' %}" class="account-menu">
+                    {% csrf_token %}
+                    <button type="submit" aria-label="Logout">...</button>
+                </form>
             </div>
-        </div>
-    </nav>
+        </aside>
 
-    <main class="container my-4">
-        {% block content %}{% endblock %}
+        <section class="app-panel">
+            <header class="app-topbar">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                <time>{% now "F j, Y" %}</time>
+            </header>
+            <main class="app-content">
+                {% else %}
+                <main>
+                    {% endif %}
+                    {% block content %}{% endblock %}
+                    {% if request.user.is_authenticated %}
+                </main>
+        </section>
+    </div>
+    {% else %}
     </main>
-
-    <footer class="text-center text-muted py-4">
-        &copy; {{ year|default:2024 }} Henalytics
-    </footer>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-date-target]');
+            if (!button) {
+                return;
+            }
+
+            var field = document.querySelector(button.getAttribute('data-date-target'));
+            if (!field) {
+                return;
+            }
+
+            var today = new Date();
+            var month = String(today.getMonth() + 1).padStart(2, '0');
+            var day = String(today.getDate()).padStart(2, '0');
+            field.value = today.getFullYear() + '-' + month + '-' + day;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            field.focus();
+        });
+
+        document.addEventListener('click', function (event) {
+            var link = event.target.closest('[data-swal-delete-link]');
+            if (!link) {
+                return;
+            }
+
+            event.preventDefault();
+            Swal.fire({
+                title: link.dataset.swalTitle || 'Open delete confirmation?',
+                text: link.dataset.swalText || 'You are about to delete this record.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: link.dataset.swalConfirmText || 'Continue',
+                cancelButtonText: link.dataset.swalCancelText || 'Cancel',
+                confirmButtonColor: '#ed0909',
+                cancelButtonColor: '#6c757d'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    window.location.href = link.href;
+                }
+            });
+        });
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (form.dataset.swalSubmitting === 'true') {
+                return;
+            }
+
+            if (form.matches('[data-swal-filter]')) {
+                event.preventDefault();
+                Swal.fire({
+                    title: form.dataset.swalTitle || 'Applying filter',
+                    text: form.dataset.swalText || 'The records will update using your selected filters.',
+                    icon: 'info',
+                    confirmButtonText: form.dataset.swalConfirmText || 'Continue',
+                    confirmButtonColor: '#3360cf',
+                    timer: Number(form.dataset.swalTimer || 900),
+                    timerProgressBar: true
+                }).then(function () {
+                    form.dataset.swalSubmitting = 'true';
+                    form.submit();
+                });
+            }
+
+            if (form.matches('[data-swal-delete]')) {
+                event.preventDefault();
+                Swal.fire({
+                    title: form.dataset.swalTitle || 'Delete this record?',
+                    text: form.dataset.swalText || 'This action cannot be undone.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: form.dataset.swalConfirmText || 'Yes, delete',
+                    cancelButtonText: form.dataset.swalCancelText || 'Cancel',
+                    confirmButtonColor: '#ed0909',
+                    cancelButtonColor: '#6c757d'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.dataset.swalSubmitting = 'true';
+                        form.submit();
+                    }
+                });
+            }
+        });
+
+        $(function () {
+            $('.js-data-table').each(function () {
+                var $table = $(this);
+                var exportEnabled = $table.data('export-enabled') === true || $table.data('export-enabled') === 'true';
+                var exportTitle = $table.data('export-title') || 'Henalytics Export';
+                var totalColumn = $table.data('total-column');
+                var exportIcons = {
+                    copy: '<svg class="dt-export-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="10" height="12" rx="2"></rect><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+                    csv: '<svg class="dt-export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>',
+                    excel: '<svg class="dt-export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="m8 13 4 5"></path><path d="m12 13-4 5"></path></svg>',
+                    pdf: '<svg class="dt-export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 17h1.5a2 2 0 0 0 0-4H8v5"></path><path d="M13 13v5h1a2 2 0 0 0 0-5z"></path></svg>',
+                    print: '<svg class="dt-export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v8H6z"></path></svg>'
+                };
+                var exportButtonText = function (icon, label) {
+                    return exportIcons[icon] + '<span>' + label + '</span>';
+                };
+                var buttons = exportEnabled ? [
+                    { extend: 'copyHtml5', text: exportButtonText('copy', 'Copy'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } },
+                    { extend: 'csvHtml5', text: exportButtonText('csv', 'CSV'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } },
+                    { extend: 'excelHtml5', text: exportButtonText('excel', 'Excel'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } },
+                    { extend: 'pdfHtml5', text: exportButtonText('pdf', 'PDF'), title: exportTitle, orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':not(.no-export)' } },
+                    { extend: 'print', text: exportButtonText('print', 'Print'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } }
+                ] : [];
+
+                $table.DataTable({
+                    dom: exportEnabled
+                        ? "<'dt-action-row'B><'dt-control-row'lf>rt<'dt-footer-row'ip>"
+                        : "<'dt-control-row'lf>rt<'dt-footer-row'ip>",
+                    buttons: buttons,
+                    pageLength: 10,
+                    lengthMenu: [10, 25, 50, 100],
+                    order: [],
+                    columnDefs: [
+                        { targets: 'no-export', orderable: false, searchable: false }
+                    ],
+                    footerCallback: function () {
+                        if (totalColumn === undefined) {
+                            return;
+                        }
+
+                        var api = this.api();
+                        var total = api
+                            .column(Number(totalColumn), { search: 'applied' })
+                            .data()
+                            .reduce(function (sum, value) {
+                                var text = $('<div>').html(value).text();
+                                var number = Number(String(text).replace(/[^0-9.-]/g, '')) || 0;
+                                return sum + number;
+                            }, 0);
+                        var footer = $table.find('[data-table-total]');
+                        if (footer.length) {
+                            footer.text(total.toLocaleString());
+                        }
+                    },
+                    language: {
+                        emptyTable: 'No records found.',
+                        zeroRecords: 'No matching records found.',
+                        lengthMenu: 'Show _MENU_ entries',
+                        info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                        infoEmpty: 'Showing 0 to 0 of 0 entries'
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>

@@ -4,31 +4,30 @@
 {% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Sales Item - Henalytics{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 action-page">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-6 action-panel">
             <h1>{% if form.instance.pk %}Edit Sales Item{% else %}Add Sales Item{% endif %}</h1>
 
             <div class="alert alert-info mb-4">
-                <strong>Transaction:</strong> {{ transaction.sale_date|date:"Y-m-d" }} - House {{
-                transaction.flock.house_no }}
+                <strong>Transaction:</strong> {{ transaction.sale_date|date:"Y-m-d" }} - House {{ transaction.flock.house_no }}
             </div>
 
             <form method="post" class="form">
                 {% csrf_token %}
                 <div class="form-group mb-3">
-                    <label for="{{ form.grade.id_for_label }}">Grade *</label>
+                    <label for="{{ form.grade.id_for_label }}">Size *</label>
                     {{ form.grade }}
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.quantity_trays.id_for_label }}">Quantity (Trays) *</label>
-                    {{ form.quantity_trays }}
+                    <label for="{{ form.quantity_pieces.id_for_label }}">Quantity (pcs) *</label>
+                    {{ form.quantity_pieces }}
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.price_per_tray.id_for_label }}">Price Per Tray *</label>
-                    {{ form.price_per_tray }}
+                    <label for="{{ form.amount.id_for_label }}">Amount *</label>
+                    {{ form.amount }}
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">

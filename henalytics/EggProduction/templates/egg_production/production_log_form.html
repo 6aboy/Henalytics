@@ -2,11 +2,12 @@
 {% load static %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Production Log - Henalytics{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Egg Production{% else %}Create Egg Production{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 action-page">
     <div class="row justify-content-center">
-        <div class="col-md-10">
+        <div class="col-md-10 action-panel">
             <h1>{% if form.instance.pk %}Edit Production Log{% else %}New Production Log{% endif %}</h1>
 
             <form method="post" class="form mt-4">
@@ -20,8 +21,11 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="{{ form.production_date.id_for_label }}">Production Date *</label>
-                            {{ form.production_date }}
+                            <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
+                            <div class="date-input-action">
+                                {{ form.log_date }}
+                                <button type="button" class="btn btn-today" data-date-target="#{{ form.log_date.id_for_label }}">Today</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -39,10 +43,25 @@
                             {{ form.age_days }}
                         </div>
                     </div>
+                </div>
+
+                <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.live_hen_count.id_for_label }}">Live Hen Count *</label>
-                            {{ form.live_hen_count }}
+                            <label for="{{ form.dead_count.id_for_label }}">Dead Count</label>
+                            {{ form.dead_count }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.culled_count.id_for_label }}">Culled Count</label>
+                            {{ form.culled_count }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.feed_bags.id_for_label }}">Feed Bags</label>
+                            {{ form.feed_bags }}
                         </div>
                     </div>
                 </div>
@@ -50,57 +69,44 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.daily_mortality.id_for_label }}">Daily Mortality</label>
-                            {{ form.daily_mortality }}
+                            <label for="{{ form.eggs_total.id_for_label }}">Eggs Total *</label>
+                            {{ form.eggs_total }}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.daily_culls.id_for_label }}">Daily Culls</label>
-                            {{ form.daily_culls }}
+                            <label for="{{ form.pct_hen_day.id_for_label }}">% Hen Day</label>
+                            {{ form.pct_hen_day }}
+                            <small class="form-help">Auto: eggs total / live hens x 100</small>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.feed_consumed_bags.id_for_label }}">Feed Consumed (Bags)</label>
-                            {{ form.feed_consumed_bags }}
+                            <label for="{{ form.pct_hen_housed.id_for_label }}">% Hen Housed</label>
+                            {{ form.pct_hen_housed }}
+                            <small class="form-help">Auto: eggs total / initial housed hens x 100</small>
                         </div>
                     </div>
+                </div>
+
+                <div class="auto-metric-note">
+                    Live hen count is calculated automatically from the flock's initial hen count minus cumulative dead
+                    and culled hens. FCR uses {{ feed_bag_kg }} kg per feed bag and {{ avg_egg_kg }} kg per egg.
                 </div>
 
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_collected.id_for_label }}">Eggs Collected *</label>
-                            {{ form.eggs_collected }}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.hen_day_production.id_for_label }}">% Hen Day *</label>
-                            {{ form.hen_day_production }}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.hen_housed_production.id_for_label }}">% Hen Housed *</label>
-                            {{ form.hen_housed_production }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.feed_conversion_ratio.id_for_label }}">FCR</label>
-                            {{ form.feed_conversion_ratio }}
+                            <label for="{{ form.fcr.id_for_label }}">FCR</label>
+                            {{ form.fcr }}
+                            <small class="form-help">Auto: feed kg / egg kg</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.management_remarks.id_for_label }}">Management Remarks</label>
-                    {{ form.management_remarks }}
+                    <label for="{{ form.remarks.id_for_label }}">Remarks</label>
+                    {{ form.remarks }}
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -129,4 +135,63 @@
         min-height: 100px;
     }
 </style>
+{{ flock_initial_counts|json_script:"flock-initial-counts" }}
+<script>
+    (function () {
+        var flockField = document.getElementById('{{ form.flock.id_for_label }}');
+        var eggsField = document.getElementById('{{ form.eggs_total.id_for_label }}');
+        var deadCountField = document.getElementById('{{ form.dead_count.id_for_label }}');
+        var culledCountField = document.getElementById('{{ form.culled_count.id_for_label }}');
+        var henDayField = document.getElementById('{{ form.pct_hen_day.id_for_label }}');
+        var henHousedField = document.getElementById('{{ form.pct_hen_housed.id_for_label }}');
+        var feedBagsField = document.getElementById('{{ form.feed_bags.id_for_label }}');
+        var fcrField = document.getElementById('{{ form.fcr.id_for_label }}');
+        var countsElement = document.getElementById('flock-initial-counts');
+        var flockInitialCounts = countsElement ? JSON.parse(countsElement.textContent) : {};
+        var feedBagKg = Number('{{ feed_bag_kg }}');
+        var avgEggKg = Number('{{ avg_egg_kg }}');
+
+        function percent(numerator, denominator) {
+            numerator = Number(numerator);
+            denominator = Number(denominator);
+            if (!numerator || !denominator) {
+                return '0.00';
+            }
+            return ((numerator / denominator) * 100).toFixed(2);
+        }
+
+        function fcr(feedBags, eggsTotal) {
+            feedBags = Number(feedBags);
+            eggsTotal = Number(eggsTotal);
+            if (!feedBags || !eggsTotal || !feedBagKg || !avgEggKg) {
+                return '0.000';
+            }
+            return ((feedBags * feedBagKg) / (eggsTotal * avgEggKg)).toFixed(3);
+        }
+
+        function updatePercentages() {
+            var eggsTotal = eggsField ? eggsField.value : 0;
+            var initialHens = flockField ? flockInitialCounts[flockField.value] : 0;
+            var liveHens = Math.max(Number(initialHens || 0) - Number(deadCountField ? deadCountField.value || 0 : 0) - Number(culledCountField ? culledCountField.value || 0 : 0), 0);
+
+            if (henDayField) {
+                henDayField.value = percent(eggsTotal, liveHens);
+            }
+            if (henHousedField) {
+                henHousedField.value = percent(eggsTotal, initialHens);
+            }
+            if (fcrField) {
+                fcrField.value = fcr(feedBagsField ? feedBagsField.value : 0, eggsTotal);
+            }
+        }
+
+        [flockField, eggsField, deadCountField, culledCountField, feedBagsField].forEach(function (field) {
+            if (field) {
+                field.addEventListener('input', updatePercentages);
+                field.addEventListener('change', updatePercentages);
+            }
+        });
+        updatePercentages();
+    })();
+</script>
 {% endblock %}
