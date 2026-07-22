@@ -1100,6 +1100,45 @@ input[readonly].readonly-metric {
     margin-bottom: 18px;
 }
 
+.forecast-chart-card .detail-header {
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: end;
+    justify-content: flex-end;
+}
+
+.chart-controls label {
+    display: block;
+    margin-bottom: 4px;
+    color: #5f6878;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.chart-controls select {
+    min-width: 128px;
+}
+
+.chart-check {
+    display: inline-flex !important;
+    min-height: 31px;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: #344054 !important;
+    white-space: nowrap;
+}
+
+.chart-check input {
+    margin: 0;
+}
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));

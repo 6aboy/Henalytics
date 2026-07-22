@@ -74,6 +74,9 @@ class ForecastingService:
     @classmethod
     def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=True):
         series_map = cls._egg_series_map(flock, include_sizes=include_sizes)
+        forecast_start_date = cls._latest_production_date(flock)
+        if forecast_start_date:
+            forecast_start_date += timedelta(days=1)
 
         return cls._generate_series_forecasts(
             series_map=series_map,
@@ -81,6 +84,7 @@ class ForecastingService:
             user=user,
             model_kind='egg',
             flock=flock,
+            forecast_start_date=forecast_start_date,
         )
 
     @classmethod
@@ -126,10 +130,11 @@ class ForecastingService:
         return cls._evaluate_series_map(series_map, allow_seasonal=False, use_exog=False)
 
     @classmethod
-    def _generate_series_forecasts(cls, series_map, periods, user, model_kind, flock=None):
+    def _generate_series_forecasts(cls, series_map, periods, user, model_kind, flock=None, forecast_start_date=None):
         created_ids = []
         errors = []
         model_versions = []
+        required_rows = cls._min_history_for_periods(periods)
 
         cls._clear_previous_forecasts(model_kind, flock)
 
@@ -138,8 +143,16 @@ class ForecastingService:
             if prepared is None:
                 errors.append(f'{grade}: at least {cls.MIN_POINTS} dated records are required')
                 continue
+            if len(prepared['series']) < required_rows:
+                errors.append(f'{grade}: {required_rows} historical days are required for a {periods}-day forecast')
+                continue
 
-            result = cls._forecast_series(prepared, periods, allow_seasonal=model_kind == 'egg')
+            result = cls._forecast_series(
+                prepared,
+                periods,
+                allow_seasonal=model_kind == 'egg',
+                forecast_start_date=forecast_start_date,
+            )
             if not result['success']:
                 errors.append(f'{grade}: {result["error"]}')
                 continue
@@ -195,7 +208,7 @@ class ForecastingService:
             HarvestForecast.objects.filter(flock=flock).delete()
 
     @classmethod
-    def _forecast_series(cls, prepared, periods, allow_seasonal=False):
+    def _forecast_series(cls, prepared, periods, allow_seasonal=False, forecast_start_date=None):
         series = prepared['series']
         exog = prepared['exog']
         best = None
@@ -213,6 +226,16 @@ class ForecastingService:
         future_exog = cls._future_exog(exog, periods)
         forecast_values = np.asarray(best['model'].forecast(steps=periods, exog=future_exog), dtype=float)
         rmse, r_squared = cls._score_series(prepared, best['spec'])
+        fallback = cls._fallback_forecast_if_needed(
+            series,
+            forecast_values,
+            periods,
+            rmse,
+            forecast_start_date=forecast_start_date,
+        )
+        if fallback is not None:
+            return fallback
+
         return {
             'success': True,
             'forecasted_values': forecast_values,
@@ -220,8 +243,58 @@ class ForecastingService:
             'aic_score': float(best['model'].aic),
             'rmse': rmse,
             'r_squared': r_squared,
-            'start_date': series.index.max().date() + timedelta(days=1),
+            'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
+
+    @classmethod
+    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None):
+        if periods < 90 or not len(forecast_values):
+            return None
+
+        recent = series.tail(min(60, len(series))).to_numpy(dtype=float)
+        recent_mean = float(np.mean(recent)) if len(recent) else 0
+        zero_share = float(np.mean(forecast_values <= 0))
+        final_value = float(forecast_values[-1])
+        collapsed = zero_share > 0.10 or (recent_mean and final_value < recent_mean * 0.35)
+        if not collapsed:
+            return None
+
+        baseline_values = cls._seasonal_naive_forecast(series, periods)
+        baseline_rmse, baseline_r2 = cls._score_seasonal_naive(series)
+        if model_rmse is not None and baseline_rmse is not None and baseline_rmse > model_rmse and zero_share <= 0.25:
+            return None
+
+        return {
+            'success': True,
+            'forecasted_values': baseline_values,
+            'order': 'seasonal naive baseline (7-day)',
+            'aic_score': None,
+            'rmse': baseline_rmse,
+            'r_squared': baseline_r2,
+            'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
+        }
+
+    @classmethod
+    def _seasonal_naive_forecast(cls, series, periods):
+        values = series.to_numpy(dtype=float)
+        window = values[-cls.SEASONAL_PERIOD:] if len(values) >= cls.SEASONAL_PERIOD else values[-1:]
+        repeated = np.resize(window, periods)
+        return repeated.astype(float)
+
+    @classmethod
+    def _score_seasonal_naive(cls, series):
+        values = series.to_numpy(dtype=float)
+        test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
+        if len(values) <= cls.SEASONAL_PERIOD or test_size <= 0:
+            return None, None
+
+        train = values[:-test_size]
+        test = values[-test_size:]
+        window = train[-cls.SEASONAL_PERIOD:] if len(train) >= cls.SEASONAL_PERIOD else train[-1:]
+        predictions = np.resize(window, test_size).astype(float)
+        rmse = float(np.sqrt(mean_squared_error(test, predictions)))
+        r_squared = float(r2_score(test, predictions)) if test_size > 1 else None
+        return rmse, r_squared
 
     @classmethod
     def _score_series(cls, prepared, spec):
@@ -330,6 +403,10 @@ class ForecastingService:
         if baseline_rmse == 0:
             return None
         return float((baseline_rmse - arima_rmse) / baseline_rmse * 100)
+
+    @classmethod
+    def _min_history_for_periods(cls, periods):
+        return min(max(cls.MIN_POINTS, periods), 90)
 
     @staticmethod
     def _fit_arima(values, order):
@@ -449,6 +526,15 @@ class ForecastingService:
             )
             .annotate(value=models.Sum('eggs_total'))
             .order_by('date')
+        )
+
+    @staticmethod
+    def _latest_production_date(flock):
+        return (
+            ProductionLog.objects.filter(flock=flock)
+            .order_by('-log_date')
+            .values_list('log_date', flat=True)
+            .first()
         )
 
     @classmethod

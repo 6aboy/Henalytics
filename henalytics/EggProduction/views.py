@@ -1,4 +1,5 @@
 from django.http import HttpResponse, JsonResponse
+from django.http import QueryDict
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.contrib import messages
@@ -9,6 +10,7 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.conf import settings
 from datetime import date, timedelta
+import json
 import logging
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -28,6 +30,35 @@ from .forms import SalesItemFormSet, SalesTransactionForm
 from .forecasting_service import ForecastingService
 
 logger = logging.getLogger(__name__)
+
+
+def build_forecast_chart_payload(queryset, value_field):
+    rows = (
+        queryset.values('forecast_date', 'grade')
+        .annotate(total=models.Sum(value_field))
+        .order_by('forecast_date', 'grade')
+    )
+    dates = sorted({row['forecast_date'] for row in rows})
+    grades = sorted({row['grade'] for row in rows})
+    labels = [forecast_date.strftime('%b %d, %Y') for forecast_date in dates]
+    choice_map = dict(queryset.model._meta.get_field('grade').choices)
+
+    series = {}
+    for grade in grades:
+        values_by_date = {
+            row['forecast_date']: float(row['total'] or 0)
+            for row in rows
+            if row['grade'] == grade
+        }
+        series[grade] = {
+            'label': choice_map.get(grade, grade.title()),
+            'values': [values_by_date.get(forecast_date, 0) for forecast_date in dates],
+        }
+
+    return {
+        'labels': labels,
+        'series': series,
+    }
 
 
 # Custom login view so staff users land on the dashboard instead of admin
@@ -604,7 +635,6 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
     model = HarvestForecast
     template_name = 'egg_production/harvest_forecast_list.html'
     context_object_name = 'forecasts'
-    paginate_by = 20
     ordering = ['-forecast_date']
 
     def post(self, request, *args, **kwargs):
@@ -637,7 +667,12 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
             messages.success(request, f'Generated {total_created} egg forecast rows.')
         if errors:
             messages.warning(request, '; '.join(errors[:3]))
-        return redirect('eggproduction:harvest-forecast-list')
+        redirect_url = reverse_lazy('eggproduction:harvest-forecast-list')
+        if flock_id:
+            query = QueryDict(mutable=True)
+            query['flock_id'] = flock_id
+            redirect_url = f'{redirect_url}?{query.urlencode()}'
+        return redirect(redirect_url)
     
     def get_queryset(self):
         qs = super().get_queryset().select_related('flock', 'model_version')
@@ -649,15 +684,18 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
-        upcoming = forecasts.order_by('forecast_date')[:30]
+        overall_forecasts = forecasts.filter(grade='overall')
+        chart_payload = build_forecast_chart_payload(forecasts, 'predicted_qty')
         context.update({
             'flocks': Flock.objects.filter(status='active').order_by('house_no'),
+            'selected_flock_id': self.request.GET.get('flock_id', ''),
             'range_options': self._range_options(),
-            'forecast_total': forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
+            'forecast_total': overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
             'forecast_rows': forecasts.count(),
+            'forecast_start': forecasts.order_by('forecast_date').first(),
+            'forecast_end': forecasts.order_by('-forecast_date').first(),
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
-            'chart_labels': [item.forecast_date.strftime('%b %d') for item in upcoming],
-            'chart_values': [item.predicted_qty for item in upcoming],
+            'chart_payload_json': json.dumps(chart_payload),
         })
         return context
 
@@ -694,7 +732,6 @@ class SalesForecastListView(LoginRequiredMixin, ListView):
     model = SalesForecast
     template_name = 'egg_production/sales_forecast_list.html'
     context_object_name = 'forecasts'
-    paginate_by = 20
     ordering = ['-forecast_date']
 
     def post(self, request, *args, **kwargs):
@@ -720,14 +757,15 @@ class SalesForecastListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
-        upcoming = forecasts.order_by('forecast_date')[:30]
+        chart_payload = build_forecast_chart_payload(forecasts, 'predicted_amount')
         context.update({
             'range_options': HarvestForecastListView._range_options(),
             'forecast_total': forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0,
             'forecast_rows': forecasts.count(),
+            'forecast_start': forecasts.order_by('forecast_date').first(),
+            'forecast_end': forecasts.order_by('-forecast_date').first(),
             'forecast_peak': forecasts.order_by('-predicted_amount').first(),
-            'chart_labels': [item.forecast_date.strftime('%b %d') for item in upcoming],
-            'chart_values': [float(item.predicted_amount) for item in upcoming],
+            'chart_payload_json': json.dumps(chart_payload),
         })
         return context
 
