@@ -1,22 +1,24 @@
 """
-Forecasting helpers for Henalytics.
+Database-backed ARIMA forecasting helpers for Henalytics.
 
-The service reads the app's current operational tables and writes to the current
-forecast tables. It intentionally avoids the older TimeSeriesData/Forecast schema.
+This first draft keeps the pipeline deliberately small: build daily time series
+from saved production/sales records, fit ARIMA, and save forecast rows.
 """
 import logging
+import warnings
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 import numpy as np
 import pandas as pd
 from django.db import models, transaction
 from django.utils import timezone
-from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.model import ARIMA
 
 from .models import (
+    Flock,
     GradingLog,
     HarvestForecast,
     ModelVersion,
@@ -29,212 +31,266 @@ logger = logging.getLogger(__name__)
 
 
 class ForecastingService:
-    """Generate simple ARIMA, MLR, or hybrid forecasts from stored farm records."""
+    """Generate ARIMA forecasts from current database records."""
 
-    SALES_TYPES = {'sales', 'sales_volume', 'sales_price'}
+    MIN_POINTS = 10
+    DEFAULT_ORDERS = ((1, 1, 1), (1, 0, 0), (0, 1, 1), (0, 0, 0))
+    HORIZONS = {
+        'week': 7,
+        'month': 30,
+        'three_months': 90,
+        'six_months': 180,
+        'year': 365,
+    }
+    EGG_GRADE_FIELDS = {
+        'xl': 'eggs_aa',
+        'large': 'eggs_a',
+        'medium': 'eggs_b',
+        'small': 'eggs_small',
+        'broken': 'eggs_broken',
+        'pewee': 'eggs_decode',
+    }
 
-    def __init__(self, flock, data_type='egg_production', forecast_type=None):
-        self.flock = flock
-        self.data_type = data_type
-        self.forecast_type = forecast_type or data_type
-        self.series = None
-        self.values = None
+    @classmethod
+    def periods_for_range(cls, range_key, custom_start=None, custom_end=None):
+        if range_key == 'custom' and custom_start and custom_end:
+            days = (custom_end - custom_start).days + 1
+            return max(days, 1)
+        return cls.HORIZONS.get(range_key, 30)
 
-    def prepare_data(self, lookback_days=365):
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=lookback_days)
+    @classmethod
+    def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=True):
+        series_map = {'overall': cls._production_total_series(flock)}
+        if include_sizes:
+            series_map.update(cls._grading_size_series(flock))
 
-        if self.data_type in self.SALES_TYPES:
-            rows = (
-                SalesItem.objects.filter(
-                    transaction__flock=self.flock,
-                    transaction__sale_date__range=(start_date, end_date),
+        return cls._generate_series_forecasts(
+            series_map=series_map,
+            periods=periods,
+            user=user,
+            model_kind='egg',
+            flock=flock,
+        )
+
+    @classmethod
+    def generate_sales_forecasts(cls, periods=30, user=None, include_sizes=True):
+        series_map = {'overall': cls._sales_amount_series()}
+        if include_sizes:
+            series_map.update(cls._sales_amount_series_by_grade())
+
+        return cls._generate_series_forecasts(
+            series_map=series_map,
+            periods=periods,
+            user=user,
+            model_kind='sales',
+        )
+
+    @classmethod
+    def generate_for_active_flocks(cls, data_type='egg', periods=30, user=None, include_sizes=True):
+        if data_type == 'sales':
+            return [cls.generate_sales_forecasts(periods=periods, user=user, include_sizes=include_sizes)]
+
+        results = []
+        for flock in Flock.objects.filter(status='active'):
+            results.append(
+                cls.generate_egg_forecasts(
+                    flock=flock,
+                    periods=periods,
+                    user=user,
+                    include_sizes=include_sizes,
                 )
-                .values(date=models.F('transaction__sale_date'))
-                .annotate(value=models.Sum('quantity_pieces'))
-                .order_by('date')
             )
-        elif self.data_type == 'grading':
-            rows = (
-                GradingLog.objects.filter(flock=self.flock, log_date__range=(start_date, end_date))
-                .values(date=models.F('log_date'))
-                .annotate(value=models.Sum('eggs_total'))
-                .order_by('date')
-            )
-        elif self.data_type == 'hen_performance':
-            rows = (
-                ProductionLog.objects.filter(flock=self.flock, log_date__range=(start_date, end_date))
-                .values(date=models.F('log_date'))
-                .annotate(value=models.Avg('pct_hen_day'))
-                .order_by('date')
-            )
-        else:
-            rows = (
-                ProductionLog.objects.filter(flock=self.flock, log_date__range=(start_date, end_date))
-                .values(date=models.F('log_date'))
-                .annotate(value=models.Sum('eggs_total'))
-                .order_by('date')
-            )
+        return results
 
+    @classmethod
+    def _generate_series_forecasts(cls, series_map, periods, user, model_kind, flock=None):
+        created_ids = []
+        errors = []
+        model_versions = []
+
+        for grade, series in series_map.items():
+            prepared = cls._prepare_daily_series(series)
+            if prepared is None:
+                errors.append(f'{grade}: at least {cls.MIN_POINTS} dated records are required')
+                continue
+
+            result = cls._forecast_series(prepared, periods)
+            if not result['success']:
+                errors.append(f'{grade}: {result["error"]}')
+                continue
+
+            with transaction.atomic():
+                model_version = ModelVersion.objects.create(
+                    model_type='arima',
+                    triggered_by=user,
+                    r2_score=cls._decimal_or_none(result['r_squared'], 4, min_value=-9.9999, max_value=9.9999),
+                    rmse=cls._decimal_or_none(result['rmse'], 2),
+                    aic_score=cls._decimal_or_none(result['aic_score'], 2),
+                    arima_order=str(result['order']),
+                    training_rows=len(prepared),
+                    is_active=True,
+                )
+                model_versions.append(model_version.id)
+
+                start_date = timezone.now().date()
+                for index, raw_value in enumerate(result['forecasted_values'], start=1):
+                    forecast_date = start_date + timedelta(days=index)
+                    if model_kind == 'sales':
+                        amount = cls._decimal_money(max(float(raw_value), 0))
+                        forecast = SalesForecast.objects.create(
+                            model_version=model_version,
+                            forecast_date=forecast_date,
+                            grade=grade,
+                            predicted_trays=0,
+                            predicted_amount=amount,
+                        )
+                    else:
+                        forecast = HarvestForecast.objects.create(
+                            flock=flock,
+                            model_version=model_version,
+                            forecast_date=forecast_date,
+                            grade=grade,
+                            predicted_qty=max(0, int(round(float(raw_value)))),
+                        )
+                    created_ids.append(forecast.id)
+
+        return {
+            'success': bool(created_ids),
+            'forecast_ids': created_ids,
+            'model_version_ids': model_versions,
+            'errors': errors,
+            'created_count': len(created_ids),
+        }
+
+    @classmethod
+    def _forecast_series(cls, series, periods):
+        best = None
+        for order in cls.DEFAULT_ORDERS:
+            try:
+                model = cls._fit_arima(series.to_numpy(dtype=float), order)
+                if best is None or model.aic < best['model'].aic:
+                    best = {'model': model, 'order': order}
+            except Exception:
+                logger.debug("ARIMA order %s failed", order, exc_info=True)
+
+        if best is None:
+            return {'success': False, 'error': 'ARIMA could not fit this series'}
+
+        forecast_values = np.asarray(best['model'].forecast(steps=periods), dtype=float)
+        rmse, r_squared = cls._score_series(series, best['order'])
+        return {
+            'success': True,
+            'forecasted_values': forecast_values,
+            'order': best['order'],
+            'aic_score': float(best['model'].aic),
+            'rmse': rmse,
+            'r_squared': r_squared,
+        }
+
+    @classmethod
+    def _score_series(cls, series, order):
+        values = series.to_numpy(dtype=float)
+        test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
+        try:
+            model = cls._fit_arima(values[:-test_size], order)
+            predictions = np.asarray(model.forecast(steps=test_size), dtype=float)
+            rmse = float(np.sqrt(mean_squared_error(values[-test_size:], predictions)))
+            r_squared = float(r2_score(values[-test_size:], predictions)) if test_size > 1 else None
+            return rmse, r_squared
+        except Exception:
+            logger.debug("ARIMA scoring failed", exc_info=True)
+            return None, None
+
+    @staticmethod
+    def _fit_arima(values, order):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', UserWarning)
+            warnings.simplefilter('ignore', ConvergenceWarning)
+            return ARIMA(values, order=order).fit()
+
+    @classmethod
+    def _prepare_daily_series(cls, rows):
         if not rows:
-            return False
+            return None
 
         df = pd.DataFrame(rows)
+        if df.empty:
+            return None
+
         df['date'] = pd.to_datetime(df['date'])
-        df = df.sort_values('date').set_index('date')
-        df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
-        df['value'] = df['value'].astype(float).interpolate(method='linear').ffill().bfill()
+        df['value'] = df['value'].fillna(0).astype(float)
+        df = df.groupby('date', as_index=True)['value'].sum().sort_index().to_frame()
+        df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'), fill_value=0)
 
-        self.series = df['value']
-        self.values = self.series.to_numpy()
-        return len(self.values) >= 10
+        if len(df) < cls.MIN_POINTS:
+            return None
 
-    def forecast_arima(self, periods=30, order=(1, 1, 1)):
-        if self.values is None and not self.prepare_data():
-            return {'success': False, 'error': 'Insufficient data for forecasting'}
+        return df['value']
 
-        try:
-            model = ARIMA(self.values, order=order).fit()
-            forecast_values = np.asarray(model.forecast(steps=periods), dtype=float)
-            rmse, r_squared = self._score_arima(order)
-            return {
-                'success': True,
-                'model_type': 'arima',
-                'forecasted_values': forecast_values,
-                'rmse': rmse,
-                'r_squared': r_squared,
-                'aic_score': float(model.aic),
-                'arima_order': str(order),
-            }
-        except Exception as exc:
-            logger.exception("ARIMA forecast failed")
-            return {'success': False, 'error': str(exc)}
+    @staticmethod
+    def _production_total_series(flock):
+        return (
+            ProductionLog.objects.filter(flock=flock)
+            .values(date=models.F('log_date'))
+            .annotate(value=models.Sum('eggs_total'))
+            .order_by('date')
+        )
 
-    def forecast_mlr(self, periods=30):
-        if self.values is None and not self.prepare_data():
-            return {'success': False, 'error': 'Insufficient data for forecasting'}
-
-        try:
-            n = len(self.values)
-            x = np.arange(n).reshape(-1, 1)
-            y = self.values
-            model = LinearRegression().fit(x, y)
-            future_x = np.arange(n, n + periods).reshape(-1, 1)
-            forecast_values = model.predict(future_x)
-
-            test_size = max(2, min(int(n * 0.2), n - 2))
-            train_model = LinearRegression().fit(x[:-test_size], y[:-test_size])
-            predictions = train_model.predict(x[-test_size:])
-            rmse = float(np.sqrt(mean_squared_error(y[-test_size:], predictions)))
-            r_squared = float(r2_score(y[-test_size:], predictions)) if test_size > 1 else None
-
-            return {
-                'success': True,
-                'model_type': 'mlr',
-                'forecasted_values': forecast_values,
-                'rmse': rmse,
-                'r_squared': r_squared,
-                'aic_score': None,
-                'arima_order': '',
-            }
-        except Exception as exc:
-            logger.exception("MLR forecast failed")
-            return {'success': False, 'error': str(exc)}
-
-    def forecast_hybrid(self, periods=30):
-        arima = self.forecast_arima(periods)
-        mlr = self.forecast_mlr(periods)
-        if not arima['success']:
-            return mlr
-        if not mlr['success']:
-            return arima
-
-        return {
-            'success': True,
-            'model_type': 'hybrid',
-            'forecasted_values': (arima['forecasted_values'] + mlr['forecasted_values']) / 2,
-            'rmse': (arima['rmse'] + mlr['rmse']) / 2,
-            'r_squared': self._average_optional(arima['r_squared'], mlr['r_squared']),
-            'aic_score': arima['aic_score'],
-            'arima_order': arima['arima_order'],
-        }
-
-    def generate_forecast(self, model_type='hybrid', periods=30, user=None):
-        if not self.prepare_data():
-            return {'success': False, 'error': 'Insufficient data for forecasting'}
-
-        if model_type == 'arima':
-            result = self.forecast_arima(periods)
-        elif model_type == 'mlr':
-            result = self.forecast_mlr(periods)
-        else:
-            result = self.forecast_hybrid(periods)
-
-        if not result['success']:
-            return result
-
-        with transaction.atomic():
-            model_version = ModelVersion.objects.create(
-                model_type=result['model_type'],
-                triggered_by=user,
-                r2_score=self._decimal_or_none(result['r_squared'], places=4),
-                rmse=self._decimal_or_none(result['rmse'], places=2),
-                aic_score=self._decimal_or_none(result['aic_score'], places=2),
-                arima_order=result.get('arima_order', ''),
-                training_rows=len(self.values),
-                is_active=True,
+    @classmethod
+    def _grading_size_series(cls, flock):
+        series = {}
+        for grade, field_name in cls.EGG_GRADE_FIELDS.items():
+            rows = (
+                GradingLog.objects.filter(flock=flock)
+                .values(date=models.F('log_date'))
+                .annotate(value=models.Sum(field_name))
+                .order_by('date')
             )
-
-            forecast_ids = []
-            start_date = timezone.now().date()
-            for index, raw_value in enumerate(result['forecasted_values'], start=1):
-                forecast_date = start_date + timedelta(days=index)
-                value = max(0, int(round(float(raw_value))))
-
-                if self.data_type in self.SALES_TYPES:
-                    forecast = SalesForecast.objects.create(
-                        model_version=model_version,
-                        forecast_date=forecast_date,
-                        grade='A',
-                        predicted_trays=value,
-                    )
-                else:
-                    forecast = HarvestForecast.objects.create(
-                        flock=self.flock,
-                        model_version=model_version,
-                        forecast_date=forecast_date,
-                        grade='A',
-                        predicted_qty=value,
-                    )
-                forecast_ids.append(forecast.id)
-
-        return {
-            'success': True,
-            'forecast_ids': forecast_ids,
-            'model_type': result['model_type'],
-            'rmse': result['rmse'],
-            'r_squared': result['r_squared'],
-        }
-
-    def _score_arima(self, order):
-        n = len(self.values)
-        test_size = max(2, min(int(n * 0.2), n - 2))
-        train_values = self.values[:-test_size]
-        test_values = self.values[-test_size:]
-        model = ARIMA(train_values, order=order).fit()
-        predictions = np.asarray(model.forecast(steps=test_size), dtype=float)
-        rmse = float(np.sqrt(mean_squared_error(test_values, predictions)))
-        r_squared = float(r2_score(test_values, predictions)) if test_size > 1 else None
-        return rmse, r_squared
+            if rows:
+                series[grade] = rows
+        return series
 
     @staticmethod
-    def _average_optional(first, second):
-        values = [value for value in (first, second) if value is not None]
-        return sum(values) / len(values) if values else None
+    def _sales_amount_series():
+        return (
+            SalesItem.objects.values(date=models.F('transaction__sale_date'))
+            .annotate(value=models.Sum('amount'))
+            .order_by('date')
+        )
 
     @staticmethod
-    def _decimal_or_none(value, places):
-        if value is None or np.isnan(value):
+    def _sales_amount_series_by_grade():
+        series = {}
+        grades = (
+            SalesItem.objects.values_list('grade', flat=True)
+            .order_by('grade')
+            .distinct()
+        )
+        for grade in grades:
+            series[grade] = (
+                SalesItem.objects.filter(grade=grade)
+                .values(date=models.F('transaction__sale_date'))
+                .annotate(value=models.Sum('amount'))
+                .order_by('date')
+            )
+        return series
+
+    @staticmethod
+    def _decimal_money(value):
+        return Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    @staticmethod
+    def _decimal_or_none(value, places, min_value=None, max_value=None):
+        if value is None:
+            return None
+        try:
+            if np.isnan(value):
+                return None
+        except TypeError:
+            pass
+        if min_value is not None and value < min_value:
+            return None
+        if max_value is not None and value > max_value:
             return None
         quantizer = Decimal('1') if places == 0 else Decimal(f'0.{"0" * (places - 1)}1')
-        return Decimal(str(value)).quantize(quantizer)
+        return Decimal(str(value)).quantize(quantizer, rounding=ROUND_HALF_UP)

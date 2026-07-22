@@ -85,6 +85,13 @@
                 <time>{% now "F j, Y" %}</time>
             </header>
             <main class="app-content">
+                {% if messages %}
+                <div class="message-stack">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% else %}
                 <main>
                     {% endif %}

@@ -19,6 +19,8 @@ EGG_SIZE_CHOICES = [
     ('sack', 'Sack'),
 ]
 
+FORECAST_CATEGORY_CHOICES = [('overall', 'Overall')] + EGG_SIZE_CHOICES
+
 
 # User Profile Model (aligned with ERD)
 class UserProfile(models.Model):
@@ -316,7 +318,7 @@ class HarvestForecast(models.Model):
     flock = models.ForeignKey(Flock, on_delete=models.CASCADE, related_name='harvest_forecasts')
     model_version = models.ForeignKey(ModelVersion, on_delete=models.CASCADE, related_name='harvest_forecasts')
     forecast_date = models.DateField()
-    grade = models.CharField('egg size', max_length=20, choices=EGG_SIZE_CHOICES)
+    grade = models.CharField('egg size', max_length=20, choices=FORECAST_CATEGORY_CHOICES)
     predicted_qty = models.IntegerField(validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -331,8 +333,9 @@ class HarvestForecast(models.Model):
 class SalesForecast(models.Model):
     model_version = models.ForeignKey(ModelVersion, on_delete=models.CASCADE, related_name='sales_forecasts')
     forecast_date = models.DateField()
-    grade = models.CharField('egg size', max_length=20, choices=EGG_SIZE_CHOICES)
+    grade = models.CharField('egg size', max_length=20, choices=FORECAST_CATEGORY_CHOICES)
     predicted_trays = models.IntegerField(validators=[MinValueValidator(0)])
+    predicted_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

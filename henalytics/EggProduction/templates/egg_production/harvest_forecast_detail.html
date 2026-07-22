@@ -1,23 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}Harvest Forecast - Henalytics{% endblock %}
+{% block title %}Egg Forecast - Henalytics{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Harvest Forecast - {{ forecast.forecast_date|date:"Y-m-d" }}</h1>
+    <h1 class="mb-4">Egg Forecast - {{ forecast.forecast_date|date:"Y-m-d" }}</h1>
 
     <div class="row">
         <div class="col-md-8">
             <div class="card mb-4">
                 <div class="card-header">Forecast Details</div>
                 <div class="card-body">
-                    <p><strong>Flock:</strong> <a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House
-                            {{ forecast.flock.house_no }}</a></p>
+                    <p><strong>Flock:</strong> <a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></p>
                     <p><strong>Forecast Date:</strong> {{ forecast.forecast_date }}</p>
                     <p><strong>Size:</strong> <span class="badge bg-info">{{ forecast.get_grade_display }}</span></p>
                     <p><strong>Predicted Quantity:</strong> {{ forecast.predicted_qty }}</p>
                     <p><strong>Model Used:</strong> {{ forecast.model_version.get_model_type_display }}</p>
-                    <p><strong>Model R² Score:</strong> {{ forecast.model_version.r2_score|default:"N/A" }}</p>
+                    <p><strong>Model R2 Score:</strong> {{ forecast.model_version.r2_score|default:"N/A" }}</p>
                 </div>
             </div>
         </div>

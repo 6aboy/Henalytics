@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 
 from EggProduction.forecasting_service import ForecastingService
-from EggProduction.models import Flock, GradingLog, ProductionLog, SalesItem
+from EggProduction.models import Flock, ProductionLog, SalesItem
 
 
 class Command(BaseCommand):
@@ -10,24 +10,31 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--flock-id', type=int, help='Database ID of a specific flock to forecast.')
-        parser.add_argument(
-            '--model',
-            type=str,
-            default='hybrid',
-            choices=['arima', 'mlr', 'hybrid'],
-            help='Forecasting model to use.',
-        )
         parser.add_argument('--periods', type=int, default=30, help='Number of future days to forecast.')
         parser.add_argument(
             '--data-type',
             type=str,
-            default='egg_production',
-            choices=['egg_production', 'grading', 'sales_volume', 'hen_performance'],
+            default='egg',
+            choices=['egg', 'sales'],
             help='Operational data to forecast.',
         )
+        parser.add_argument('--overall-only', action='store_true', help='Skip per-size forecast series.')
 
     def handle(self, *args, **options):
         admin_user = User.objects.filter(is_staff=True).first()
+
+        total_forecasts = 0
+        total_errors = 0
+
+        if options['data_type'] == 'sales':
+            result = ForecastingService.generate_sales_forecasts(
+                periods=options['periods'],
+                user=admin_user,
+                include_sizes=not options['overall_only'],
+            )
+            self._write_result('Sales revenue', result)
+            return
+
         flocks = Flock.objects.filter(status='active')
 
         if options['flock_id']:
@@ -37,34 +44,31 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('No active flocks found to forecast.'))
             return
 
-        total_forecasts = 0
-        total_errors = 0
-
         for flock in flocks:
             if not self._has_source_data(flock, options['data_type']):
-                self.stdout.write(
-                    self.style.WARNING(
-                        f'No {options["data_type"]} records for House {flock.house_no} (flock #{flock.id}).'
-                    )
-                )
+                self.stdout.write(self.style.WARNING(f'No production records for House {flock.house_no}.'))
                 continue
 
-            service = ForecastingService(flock, options['data_type'])
-            result = service.generate_forecast(options['model'], options['periods'], admin_user)
+            result = ForecastingService.generate_egg_forecasts(
+                flock=flock,
+                periods=options['periods'],
+                user=admin_user,
+                include_sizes=not options['overall_only'],
+            )
 
             if result['success']:
-                total_forecasts += len(result['forecast_ids'])
+                total_forecasts += result['created_count']
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'House {flock.house_no}: generated {len(result["forecast_ids"])} '
-                        f'{result["model_type"]} forecast rows.'
+                        f'House {flock.house_no}: generated {result["created_count"]} ARIMA forecast rows.'
                     )
                 )
             else:
                 total_errors += 1
+                error_text = '; '.join(result.get('errors', [])) or 'No forecasts generated.'
                 self.stdout.write(
                     self.style.ERROR(
-                        f'House {flock.house_no}: {result.get("error", "Unknown forecasting error")}'
+                        f'House {flock.house_no}: {error_text}'
                     )
                 )
 
@@ -72,10 +76,14 @@ class Command(BaseCommand):
         if total_errors:
             self.stdout.write(self.style.WARNING(f'{total_errors} flock forecast(s) failed.'))
 
+    def _write_result(self, label, result):
+        if result['success']:
+            self.stdout.write(self.style.SUCCESS(f'{label}: generated {result["created_count"]} ARIMA forecast rows.'))
+        else:
+            self.stdout.write(self.style.ERROR(f'{label}: {"; ".join(result["errors"]) or "No forecasts generated."}'))
+
     @staticmethod
     def _has_source_data(flock, data_type):
-        if data_type == 'sales_volume':
-            return SalesItem.objects.filter(transaction__flock=flock).exists()
-        if data_type == 'grading':
-            return GradingLog.objects.filter(flock=flock).exists()
+        if data_type == 'sales':
+            return SalesItem.objects.exists()
         return ProductionLog.objects.filter(flock=flock).exists()

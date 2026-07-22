@@ -24,7 +24,7 @@
             <div class="card mb-4">
                 <div class="card-header">Performance Metrics</div>
                 <div class="card-body">
-                    <p><strong>R² Score:</strong> {{ model.r2_score|default:"N/A" }}</p>
+                    <p><strong>R2 Score:</strong> {{ model.r2_score|default:"N/A" }}</p>
                     <p><strong>RMSE:</strong> {{ model.rmse|default:"N/A" }}</p>
                     <p><strong>AIC Score:</strong> {{ model.aic_score|default:"N/A" }}</p>
                     <p><strong>ARIMA Order:</strong> {{ model.arima_order|default:"N/A" }}</p>
@@ -34,7 +34,7 @@
 
             {% if harvest_forecasts %}
             <div class="card mb-4">
-                <div class="card-header">Recent Harvest Forecasts</div>
+                <div class="card-header">Recent Egg Forecasts</div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
                         {% for forecast in harvest_forecasts %}
@@ -56,7 +56,7 @@
                         {% for forecast in sales_forecasts %}
                         <li class="list-group-item">
                             <strong>{{ forecast.forecast_date|date:"Y-m-d" }}</strong> -
-                            {{ forecast.get_grade_display }}: {{ forecast.predicted_trays }} trays
+                            {{ forecast.get_grade_display }}: PHP {{ forecast.predicted_amount|floatformat:2 }}
                         </li>
                         {% endfor %}
                     </ul>

@@ -19,6 +19,7 @@ from .models import (
     SalesTransaction,
     UserProfile,
 )
+from .forecasting_service import ForecastingService
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
 
 
@@ -211,6 +212,54 @@ class ForecastModelTest(TestCase):
 
         self.assertEqual(harvest.predicted_qty, 1500)
         self.assertEqual(sales.predicted_trays, 50)
+
+    def test_arima_service_generates_database_forecasts(self):
+        flock = create_flock(date_started=timezone.now().date() - timedelta(days=20))
+        user = User.objects.create_user(username='forecaster', password='pass12345')
+        start_date = timezone.now().date() - timedelta(days=14)
+
+        for day in range(12):
+            log_date = start_date + timedelta(days=day)
+            ProductionLog.objects.create(
+                flock=flock,
+                log_date=log_date,
+                age_weeks=30,
+                age_days=210 + day,
+                hen_count=1780,
+                feed_bags=12,
+                eggs_total=1400 + day,
+                pct_hen_day=Decimal('78.00'),
+                pct_hen_housed=Decimal('77.00'),
+                entered_by=user,
+            )
+            GradingLog.objects.create(
+                flock=flock,
+                log_date=log_date,
+                age_weeks=30,
+                eggs_total=1400 + day,
+                eggs_a=700 + day,
+            )
+            transaction = SalesTransaction.objects.create(
+                flock=flock,
+                sale_date=log_date,
+                recorded_by=user,
+            )
+            SalesItem.objects.create(
+                transaction=transaction,
+                grade='large',
+                quantity_pieces=100,
+                amount=Decimal(1000 + day),
+            )
+
+        egg_result = ForecastingService.generate_egg_forecasts(flock, periods=3, user=user, include_sizes=True)
+        sales_result = ForecastingService.generate_sales_forecasts(periods=3, user=user, include_sizes=True)
+
+        self.assertTrue(egg_result['success'])
+        self.assertTrue(sales_result['success'])
+        self.assertTrue(HarvestForecast.objects.filter(grade='overall').exists())
+        self.assertTrue(HarvestForecast.objects.filter(grade='large').exists())
+        self.assertTrue(SalesForecast.objects.filter(grade='overall', predicted_amount__gt=0).exists())
+        self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
 
 
 class APIAuthenticationTest(APITestCase):

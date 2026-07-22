@@ -102,6 +102,6 @@ class SalesForecastSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesForecast
         fields = ['id', 'model_version', 'model_version_detail', 'forecast_date', 
-                 'grade', 'predicted_trays', 'created_at']
+                 'grade', 'predicted_trays', 'predicted_amount', 'created_at']
         read_only_fields = ['created_at']
 

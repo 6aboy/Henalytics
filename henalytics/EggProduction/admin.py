@@ -160,7 +160,7 @@ class HarvestForecastAdmin(admin.ModelAdmin):
 
 @admin.register(SalesForecast)
 class SalesForecastAdmin(admin.ModelAdmin):
-    list_display = ('forecast_date', 'grade', 'predicted_trays', 'model_version')
+    list_display = ('forecast_date', 'grade', 'predicted_amount', 'model_version')
     list_filter = ('forecast_date', 'grade', 'model_version')
     date_hierarchy = 'forecast_date'
     readonly_fields = ('created_at',)

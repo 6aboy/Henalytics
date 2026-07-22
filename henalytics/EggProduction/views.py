@@ -1,6 +1,7 @@
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
@@ -24,6 +25,7 @@ from .serializers import (
     HarvestForecastSerializer, SalesForecastSerializer
 )
 from .forms import SalesItemFormSet, SalesTransactionForm
+from .forecasting_service import ForecastingService
 
 logger = logging.getLogger(__name__)
 
@@ -604,6 +606,38 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
     context_object_name = 'forecasts'
     paginate_by = 20
     ordering = ['-forecast_date']
+
+    def post(self, request, *args, **kwargs):
+        if not ManagerAccessMixin.test_func(self):
+            messages.error(request, 'Only admin or manager accounts can run forecasts.')
+            return redirect('eggproduction:harvest-forecast-list')
+
+        flock_id = request.POST.get('flock_id')
+        range_key = request.POST.get('range', 'month')
+        periods = self._get_periods(request, range_key)
+        include_sizes = request.POST.get('scope', 'both') == 'both'
+
+        flocks = Flock.objects.filter(status='active')
+        if flock_id:
+            flocks = flocks.filter(id=flock_id)
+
+        total_created = 0
+        errors = []
+        for flock in flocks:
+            result = ForecastingService.generate_egg_forecasts(
+                flock=flock,
+                periods=periods,
+                user=request.user,
+                include_sizes=include_sizes,
+            )
+            total_created += result['created_count']
+            errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
+
+        if total_created:
+            messages.success(request, f'Generated {total_created} egg forecast rows.')
+        if errors:
+            messages.warning(request, '; '.join(errors[:3]))
+        return redirect('eggproduction:harvest-forecast-list')
     
     def get_queryset(self):
         qs = super().get_queryset().select_related('flock', 'model_version')
@@ -611,6 +645,43 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        forecasts = self.get_queryset()
+        upcoming = forecasts.order_by('forecast_date')[:30]
+        context.update({
+            'flocks': Flock.objects.filter(status='active').order_by('house_no'),
+            'range_options': self._range_options(),
+            'forecast_total': forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
+            'forecast_rows': forecasts.count(),
+            'forecast_peak': forecasts.order_by('-predicted_qty').first(),
+            'chart_labels': [item.forecast_date.strftime('%b %d') for item in upcoming],
+            'chart_values': [item.predicted_qty for item in upcoming],
+        })
+        return context
+
+    @staticmethod
+    def _range_options():
+        return [
+            ('week', '1 Week'),
+            ('month', '1 Month'),
+            ('three_months', '3 Months'),
+            ('six_months', '6 Months'),
+            ('year', '1 Year'),
+            ('custom', 'Custom'),
+        ]
+
+    @staticmethod
+    def _get_periods(request, range_key):
+        custom_start = custom_end = None
+        if range_key == 'custom':
+            try:
+                custom_start = date.fromisoformat(request.POST.get('date_from'))
+                custom_end = date.fromisoformat(request.POST.get('date_to'))
+            except (TypeError, ValueError):
+                return 30
+        return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
 
 
 class HarvestForecastDetailView(LoginRequiredMixin, DetailView):
@@ -625,6 +696,40 @@ class SalesForecastListView(LoginRequiredMixin, ListView):
     context_object_name = 'forecasts'
     paginate_by = 20
     ordering = ['-forecast_date']
+
+    def post(self, request, *args, **kwargs):
+        if not ManagerAccessMixin.test_func(self):
+            messages.error(request, 'Only admin or manager accounts can run forecasts.')
+            return redirect('eggproduction:sales-forecast-list')
+
+        range_key = request.POST.get('range', 'month')
+        periods = HarvestForecastListView._get_periods(request, range_key)
+        include_sizes = request.POST.get('scope', 'both') == 'both'
+        result = ForecastingService.generate_sales_forecasts(
+            periods=periods,
+            user=request.user,
+            include_sizes=include_sizes,
+        )
+
+        if result['success']:
+            messages.success(request, f'Generated {result["created_count"]} sales revenue forecast rows.')
+        if result['errors']:
+            messages.warning(request, '; '.join(result['errors'][:3]))
+        return redirect('eggproduction:sales-forecast-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        forecasts = self.get_queryset()
+        upcoming = forecasts.order_by('forecast_date')[:30]
+        context.update({
+            'range_options': HarvestForecastListView._range_options(),
+            'forecast_total': forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0,
+            'forecast_rows': forecasts.count(),
+            'forecast_peak': forecasts.order_by('-predicted_amount').first(),
+            'chart_labels': [item.forecast_date.strftime('%b %d') for item in upcoming],
+            'chart_values': [float(item.predicted_amount) for item in upcoming],
+        })
+        return context
 
 
 class SalesForecastDetailView(LoginRequiredMixin, DetailView):
