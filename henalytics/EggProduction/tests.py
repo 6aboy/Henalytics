@@ -261,6 +261,34 @@ class ForecastModelTest(TestCase):
         self.assertTrue(SalesForecast.objects.filter(grade='overall', predicted_amount__gt=0).exists())
         self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
 
+    def test_forecast_evaluation_compares_against_baseline(self):
+        flock = create_flock(date_started=timezone.now().date() - timedelta(days=40))
+        user = User.objects.create_user(username='evaluser', password='pass12345')
+        start_date = timezone.now().date() - timedelta(days=30)
+
+        for day in range(25):
+            log_date = start_date + timedelta(days=day)
+            ProductionLog.objects.create(
+                flock=flock,
+                log_date=log_date,
+                age_weeks=30,
+                age_days=210 + day,
+                hen_count=1780,
+                feed_bags=12,
+                eggs_total=1400 + (day % 7) * 10,
+                pct_hen_day=Decimal('78.00'),
+                pct_hen_housed=Decimal('77.00'),
+                entered_by=user,
+            )
+
+        results = ForecastingService.evaluate_egg_forecasts(flock, include_sizes=False)
+
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0]['success'])
+        self.assertIn(results[0]['winner'], ['ARIMA', 'Baseline'])
+        self.assertIn('rmse', results[0]['arima'])
+        self.assertIn('rmse', results[0]['baseline'])
+
 
 class APIAuthenticationTest(APITestCase):
     def test_api_requires_authentication(self):

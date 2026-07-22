@@ -127,7 +127,7 @@ class ProductionLog(models.Model):
     eggs_total = models.IntegerField(validators=[MinValueValidator(0)])
     pct_hen_day = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
     pct_hen_housed = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
-    fcr = models.DecimalField(max_digits=5, decimal_places=3, null=True, blank=True, help_text="Feed Conversion Ratio")
+    fcr = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True, help_text="Feed Conversion Ratio")
     remarks = models.TextField(blank=True, null=True)
     entered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='production_logs')
     created_at = models.DateTimeField(auto_now_add=True)

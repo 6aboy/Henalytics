@@ -13,9 +13,10 @@ import numpy as np
 import pandas as pd
 from django.db import models, transaction
 from django.utils import timezone
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from .models import (
     Flock,
@@ -35,6 +36,8 @@ class ForecastingService:
 
     MIN_POINTS = 10
     DEFAULT_ORDERS = ((1, 1, 1), (1, 0, 0), (0, 1, 1), (0, 0, 0))
+    SEASONAL_PERIOD = 7
+    SEASONAL_ORDERS = ((1, 0, 1, SEASONAL_PERIOD), (0, 1, 1, SEASONAL_PERIOD))
     HORIZONS = {
         'week': 7,
         'month': 30,
@@ -50,6 +53,16 @@ class ForecastingService:
         'broken': 'eggs_broken',
         'pewee': 'eggs_decode',
     }
+    EGG_FEATURE_FIELDS = (
+        'age_weeks',
+        'age_days',
+        'dead_count',
+        'culled_count',
+        'hen_count',
+        'feed_bags',
+        'pct_hen_day',
+        'pct_hen_housed',
+    )
 
     @classmethod
     def periods_for_range(cls, range_key, custom_start=None, custom_end=None):
@@ -60,9 +73,7 @@ class ForecastingService:
 
     @classmethod
     def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=True):
-        series_map = {'overall': cls._production_total_series(flock)}
-        if include_sizes:
-            series_map.update(cls._grading_size_series(flock))
+        series_map = cls._egg_series_map(flock, include_sizes=include_sizes)
 
         return cls._generate_series_forecasts(
             series_map=series_map,
@@ -103,18 +114,32 @@ class ForecastingService:
         return results
 
     @classmethod
+    def evaluate_egg_forecasts(cls, flock, include_sizes=True):
+        series_map = cls._egg_series_map(flock, include_sizes=include_sizes)
+        return cls._evaluate_series_map(series_map, allow_seasonal=True, use_exog=True)
+
+    @classmethod
+    def evaluate_sales_forecasts(cls, include_sizes=True):
+        series_map = {'overall': cls._sales_amount_series()}
+        if include_sizes:
+            series_map.update(cls._sales_amount_series_by_grade())
+        return cls._evaluate_series_map(series_map, allow_seasonal=False, use_exog=False)
+
+    @classmethod
     def _generate_series_forecasts(cls, series_map, periods, user, model_kind, flock=None):
         created_ids = []
         errors = []
         model_versions = []
 
+        cls._clear_previous_forecasts(model_kind, flock)
+
         for grade, series in series_map.items():
-            prepared = cls._prepare_daily_series(series)
+            prepared = cls._prepare_daily_dataset(series, use_exog=model_kind == 'egg')
             if prepared is None:
                 errors.append(f'{grade}: at least {cls.MIN_POINTS} dated records are required')
                 continue
 
-            result = cls._forecast_series(prepared, periods)
+            result = cls._forecast_series(prepared, periods, allow_seasonal=model_kind == 'egg')
             if not result['success']:
                 errors.append(f'{grade}: {result["error"]}')
                 continue
@@ -127,14 +152,14 @@ class ForecastingService:
                     rmse=cls._decimal_or_none(result['rmse'], 2),
                     aic_score=cls._decimal_or_none(result['aic_score'], 2),
                     arima_order=str(result['order']),
-                    training_rows=len(prepared),
+                    training_rows=len(prepared['series']),
                     is_active=True,
                 )
                 model_versions.append(model_version.id)
 
-                start_date = timezone.now().date()
+                start_date = result['start_date']
                 for index, raw_value in enumerate(result['forecasted_values'], start=1):
-                    forecast_date = start_date + timedelta(days=index)
+                    forecast_date = start_date + timedelta(days=index - 1)
                     if model_kind == 'sales':
                         amount = cls._decimal_money(max(float(raw_value), 0))
                         forecast = SalesForecast.objects.create(
@@ -162,44 +187,149 @@ class ForecastingService:
             'created_count': len(created_ids),
         }
 
+    @staticmethod
+    def _clear_previous_forecasts(model_kind, flock=None):
+        if model_kind == 'sales':
+            SalesForecast.objects.all().delete()
+        elif flock is not None:
+            HarvestForecast.objects.filter(flock=flock).delete()
+
     @classmethod
-    def _forecast_series(cls, series, periods):
+    def _forecast_series(cls, prepared, periods, allow_seasonal=False):
+        series = prepared['series']
+        exog = prepared['exog']
         best = None
-        for order in cls.DEFAULT_ORDERS:
+        for spec in cls._candidate_model_specs(len(series), allow_seasonal):
             try:
-                model = cls._fit_arima(series.to_numpy(dtype=float), order)
+                model = cls._fit_model(series.to_numpy(dtype=float), spec, exog=exog)
                 if best is None or model.aic < best['model'].aic:
-                    best = {'model': model, 'order': order}
+                    best = {'model': model, 'spec': spec}
             except Exception:
-                logger.debug("ARIMA order %s failed", order, exc_info=True)
+                logger.debug("Time-series model %s failed", spec, exc_info=True)
 
         if best is None:
             return {'success': False, 'error': 'ARIMA could not fit this series'}
 
-        forecast_values = np.asarray(best['model'].forecast(steps=periods), dtype=float)
-        rmse, r_squared = cls._score_series(series, best['order'])
+        future_exog = cls._future_exog(exog, periods)
+        forecast_values = np.asarray(best['model'].forecast(steps=periods, exog=future_exog), dtype=float)
+        rmse, r_squared = cls._score_series(prepared, best['spec'])
         return {
             'success': True,
             'forecasted_values': forecast_values,
-            'order': best['order'],
+            'order': cls._format_model_spec(best['spec'], uses_exog=exog is not None),
             'aic_score': float(best['model'].aic),
             'rmse': rmse,
             'r_squared': r_squared,
+            'start_date': series.index.max().date() + timedelta(days=1),
         }
 
     @classmethod
-    def _score_series(cls, series, order):
+    def _score_series(cls, prepared, spec):
+        series = prepared['series']
+        exog = prepared['exog']
         values = series.to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
         try:
-            model = cls._fit_arima(values[:-test_size], order)
-            predictions = np.asarray(model.forecast(steps=test_size), dtype=float)
+            train_exog = exog.iloc[:-test_size] if exog is not None else None
+            test_exog = exog.iloc[-test_size:] if exog is not None else None
+            model = cls._fit_model(values[:-test_size], spec, exog=train_exog)
+            predictions = np.asarray(model.forecast(steps=test_size, exog=test_exog), dtype=float)
             rmse = float(np.sqrt(mean_squared_error(values[-test_size:], predictions)))
             r_squared = float(r2_score(values[-test_size:], predictions)) if test_size > 1 else None
             return rmse, r_squared
         except Exception:
             logger.debug("ARIMA scoring failed", exc_info=True)
             return None, None
+
+    @classmethod
+    def _evaluate_series_map(cls, series_map, allow_seasonal=False, use_exog=False):
+        results = []
+        for category, rows in series_map.items():
+            prepared = cls._prepare_daily_dataset(rows, use_exog=use_exog)
+            if prepared is None:
+                results.append({
+                    'category': category,
+                    'success': False,
+                    'error': f'at least {cls.MIN_POINTS} dated records are required',
+                })
+                continue
+
+            evaluation = cls._evaluate_series(prepared, allow_seasonal=allow_seasonal)
+            evaluation['category'] = category
+            results.append(evaluation)
+        return results
+
+    @classmethod
+    def _evaluate_series(cls, prepared, allow_seasonal=False):
+        series = prepared['series']
+        exog = prepared['exog']
+        values = series.to_numpy(dtype=float)
+        test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
+        train = values[:-test_size]
+        test = values[-test_size:]
+        train_exog = exog.iloc[:-test_size] if exog is not None else None
+        test_exog = exog.iloc[-test_size:] if exog is not None else None
+
+        best = None
+        for spec in cls._candidate_model_specs(len(train), allow_seasonal):
+            try:
+                model = cls._fit_model(train, spec, exog=train_exog)
+                if best is None or model.aic < best['model'].aic:
+                    best = {'model': model, 'spec': spec}
+            except Exception:
+                logger.debug("Evaluation model %s failed", spec, exc_info=True)
+
+        if best is None:
+            return {
+                'success': False,
+                'error': 'ARIMA could not fit this series',
+            }
+
+        arima_predictions = np.asarray(best['model'].forecast(steps=test_size, exog=test_exog), dtype=float)
+        baseline_predictions = np.repeat(train[-1], test_size)
+
+        arima_metrics = cls._prediction_metrics(test, arima_predictions)
+        baseline_metrics = cls._prediction_metrics(test, baseline_predictions)
+        arima_beats_baseline = arima_metrics['rmse'] < baseline_metrics['rmse']
+
+        return {
+            'success': True,
+            'rows': len(values),
+            'test_rows': test_size,
+            'model_order': cls._format_model_spec(best['spec'], uses_exog=exog is not None),
+            'uses_features': exog is not None,
+            'arima': arima_metrics,
+            'baseline': baseline_metrics,
+            'winner': 'ARIMA' if arima_beats_baseline else 'Baseline',
+            'improvement_pct': cls._improvement_percent(
+                baseline_metrics['rmse'],
+                arima_metrics['rmse'],
+            ),
+        }
+
+    @staticmethod
+    def _prediction_metrics(actual, predicted):
+        rmse = float(np.sqrt(mean_squared_error(actual, predicted)))
+        mae = float(mean_absolute_error(actual, predicted))
+        r_squared = float(r2_score(actual, predicted)) if len(actual) > 1 else None
+        nonzero = actual != 0
+        mape = (
+            float(np.mean(np.abs((actual[nonzero] - predicted[nonzero]) / actual[nonzero])) * 100)
+            if nonzero.any()
+            else None
+        )
+        return {
+            'rmse': rmse,
+            'mae': mae,
+            'r2': r_squared,
+            'mape': mape,
+        }
+
+    @staticmethod
+    def _improvement_percent(baseline_rmse, arima_rmse):
+        if baseline_rmse == 0:
+            return None
+        return float((baseline_rmse - arima_rmse) / baseline_rmse * 100)
 
     @staticmethod
     def _fit_arima(values, order):
@@ -208,8 +338,56 @@ class ForecastingService:
             warnings.simplefilter('ignore', ConvergenceWarning)
             return ARIMA(values, order=order).fit()
 
+    @staticmethod
+    def _fit_sarima(values, order, seasonal_order, exog=None):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', UserWarning)
+            warnings.simplefilter('ignore', ConvergenceWarning)
+            return SARIMAX(
+                values,
+                exog=exog,
+                order=order,
+                seasonal_order=seasonal_order,
+                enforce_stationarity=False,
+                enforce_invertibility=False,
+            ).fit(disp=False)
+
+    @classmethod
+    def _fit_model(cls, values, spec, exog=None):
+        if spec['seasonal_order'] is None and exog is None:
+            return cls._fit_arima(values, spec['order'])
+        return cls._fit_sarima(
+            values,
+            spec['order'],
+            spec['seasonal_order'] or (0, 0, 0, 0),
+            exog=exog,
+        )
+
+    @classmethod
+    def _candidate_model_specs(cls, series_length, allow_seasonal):
+        specs = [{'order': order, 'seasonal_order': None} for order in cls.DEFAULT_ORDERS]
+        if allow_seasonal and series_length >= cls.SEASONAL_PERIOD * 4:
+            for order in cls.DEFAULT_ORDERS[:3]:
+                for seasonal_order in cls.SEASONAL_ORDERS:
+                    specs.append({'order': order, 'seasonal_order': seasonal_order})
+        return specs
+
+    @staticmethod
+    def _format_model_spec(spec, uses_exog=False):
+        order = spec['order']
+        seasonal_order = spec['seasonal_order']
+        suffix = ' + features' if uses_exog else ''
+        if seasonal_order is None:
+            return f'{order}{suffix}'
+        return f'{order}x{seasonal_order}{suffix}'
+
     @classmethod
     def _prepare_daily_series(cls, rows):
+        prepared = cls._prepare_daily_dataset(rows, use_exog=False)
+        return prepared['series'] if prepared else None
+
+    @classmethod
+    def _prepare_daily_dataset(cls, rows, use_exog=False):
         if not rows:
             return None
 
@@ -219,19 +397,56 @@ class ForecastingService:
 
         df['date'] = pd.to_datetime(df['date'])
         df['value'] = df['value'].fillna(0).astype(float)
-        df = df.groupby('date', as_index=True)['value'].sum().sort_index().to_frame()
-        df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'), fill_value=0)
+        aggregations = {'value': 'sum'}
+        if use_exog:
+            for field_name in cls.EGG_FEATURE_FIELDS:
+                if field_name in df.columns:
+                    df[field_name] = pd.to_numeric(df[field_name], errors='coerce')
+                    aggregations[field_name] = 'mean'
+
+        df = df.groupby('date', as_index=True).agg(aggregations).sort_index()
+        df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
+        df = df.interpolate(method='time').ffill().bfill()
 
         if len(df) < cls.MIN_POINTS:
             return None
 
-        return df['value']
+        exog = None
+        feature_columns = [field for field in cls.EGG_FEATURE_FIELDS if field in df.columns]
+        if use_exog and feature_columns:
+            exog = df[feature_columns].shift(1).ffill().bfill()
+
+        return {'series': df['value'], 'exog': exog}
+
+    @staticmethod
+    def _future_exog(exog, periods):
+        if exog is None:
+            return None
+        last_row = exog.iloc[[-1]]
+        return pd.concat([last_row] * periods, ignore_index=True)
+
+    @classmethod
+    def _egg_series_map(cls, flock, include_sizes=True):
+        series_map = {'overall': cls._production_total_series(flock)}
+        if include_sizes:
+            series_map.update(cls._grading_size_series(flock))
+        return series_map
 
     @staticmethod
     def _production_total_series(flock):
         return (
             ProductionLog.objects.filter(flock=flock)
-            .values(date=models.F('log_date'))
+            .values(
+                'age_weeks',
+                'age_days',
+                'dead_count',
+                'culled_count',
+                'hen_count',
+                'feed_bags',
+                'pct_hen_day',
+                'pct_hen_housed',
+                date=models.F('log_date'),
+            )
             .annotate(value=models.Sum('eggs_total'))
             .order_by('date')
         )
@@ -239,6 +454,20 @@ class ForecastingService:
     @classmethod
     def _grading_size_series(cls, flock):
         series = {}
+        production_features = {
+            row['log_date']: row
+            for row in ProductionLog.objects.filter(flock=flock).values(
+                'log_date',
+                'age_weeks',
+                'age_days',
+                'dead_count',
+                'culled_count',
+                'hen_count',
+                'feed_bags',
+                'pct_hen_day',
+                'pct_hen_housed',
+            )
+        }
         for grade, field_name in cls.EGG_GRADE_FIELDS.items():
             rows = (
                 GradingLog.objects.filter(flock=flock)
@@ -247,7 +476,15 @@ class ForecastingService:
                 .order_by('date')
             )
             if rows:
-                series[grade] = rows
+                enriched_rows = []
+                for row in rows:
+                    enriched = dict(row)
+                    features = production_features.get(row['date'])
+                    if features:
+                        for feature_name in cls.EGG_FEATURE_FIELDS:
+                            enriched[feature_name] = features[feature_name]
+                    enriched_rows.append(enriched)
+                series[grade] = enriched_rows
         return series
 
     @staticmethod
