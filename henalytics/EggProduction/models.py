@@ -160,6 +160,16 @@ class ProductionLog(models.Model):
             0,
         )
 
+    def update_flock_age(self):
+        if not self.flock_id or not self.flock or not self.log_date or not self.flock.date_started:
+            self.age_days = 0
+            self.age_weeks = 0
+            return
+
+        elapsed_days = max((self.log_date - self.flock.date_started).days, 0)
+        self.age_days = elapsed_days
+        self.age_weeks = elapsed_days // 7
+
     def update_laying_percentages(self):
         self.pct_hen_day = self._calculate_percentage(self.eggs_total, self.hen_count)
         initial_hens = self.flock.initial_hen_count if self.flock_id and self.flock else 0
@@ -169,6 +179,7 @@ class ProductionLog(models.Model):
         self.fcr = self._calculate_fcr(self.feed_bags, self.eggs_total)
 
     def save(self, *args, **kwargs):
+        self.update_flock_age()
         self.update_live_hen_count()
         self.update_laying_percentages()
         self.update_fcr()
@@ -195,16 +206,23 @@ class ProductionLog(models.Model):
         logs = cls.objects.filter(flock_id=flock_id).order_by('log_date', 'pk')
         for log in logs:
             live_hens = max(live_hens - (log.dead_count or 0) - (log.culled_count or 0), 0)
+            elapsed_days = max((log.log_date - flock.date_started).days, 0)
+            age_weeks = elapsed_days // 7
             hen_day = cls._calculate_percentage(log.eggs_total, live_hens)
             hen_housed = cls._calculate_percentage(log.eggs_total, flock.initial_hen_count)
             fcr = cls._calculate_fcr(log.feed_bags, log.eggs_total)
             if (
+                log.age_days != elapsed_days
+                or log.age_weeks != age_weeks
+                or
                 log.hen_count != live_hens
                 or log.pct_hen_day != hen_day
                 or log.pct_hen_housed != hen_housed
                 or log.fcr != fcr
             ):
                 cls.objects.filter(pk=log.pk).update(
+                    age_days=elapsed_days,
+                    age_weeks=age_weeks,
                     hen_count=live_hens,
                     pct_hen_day=hen_day,
                     pct_hen_housed=hen_housed,

@@ -33,14 +33,16 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.age_weeks.id_for_label }}">Age (Weeks) *</label>
-                            {{ form.age_weeks }}
+                            <label>Flock Age (Weeks)</label>
+                            <input type="text" id="ageWeeksPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_weeks }}{% else %}0{% endif %}" readonly>
+                            <small class="form-help">Auto: log date minus flock start date</small>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.age_days.id_for_label }}">Age (Days) *</label>
-                            {{ form.age_days }}
+                            <label>Flock Age (Days)</label>
+                            <input type="text" id="ageDaysPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_days }}{% else %}0{% endif %}" readonly>
+                            <small class="form-help">Saved automatically by the system</small>
                         </div>
                     </div>
                 </div>
@@ -90,8 +92,9 @@
                 </div>
 
                 <div class="auto-metric-note">
-                    Live hen count is calculated automatically from the flock's initial hen count minus cumulative dead
-                    and culled hens. FCR uses {{ feed_bag_kg }} kg per feed bag and {{ avg_egg_kg }} kg per egg.
+                    Flock age is calculated automatically from the flock start date and log date. Live hen count is
+                    calculated from the flock's initial hen count minus cumulative dead and culled hens. FCR uses
+                    {{ feed_bag_kg }} kg per feed bag and {{ avg_egg_kg }} kg per egg.
                 </div>
 
                 <div class="row">
@@ -136,9 +139,13 @@
     }
 </style>
 {{ flock_initial_counts|json_script:"flock-initial-counts" }}
+{{ flock_start_dates|json_script:"flock-start-dates" }}
 <script>
     (function () {
         var flockField = document.getElementById('{{ form.flock.id_for_label }}');
+        var logDateField = document.getElementById('{{ form.log_date.id_for_label }}');
+        var ageWeeksPreview = document.getElementById('ageWeeksPreview');
+        var ageDaysPreview = document.getElementById('ageDaysPreview');
         var eggsField = document.getElementById('{{ form.eggs_total.id_for_label }}');
         var deadCountField = document.getElementById('{{ form.dead_count.id_for_label }}');
         var culledCountField = document.getElementById('{{ form.culled_count.id_for_label }}');
@@ -148,6 +155,8 @@
         var fcrField = document.getElementById('{{ form.fcr.id_for_label }}');
         var countsElement = document.getElementById('flock-initial-counts');
         var flockInitialCounts = countsElement ? JSON.parse(countsElement.textContent) : {};
+        var startsElement = document.getElementById('flock-start-dates');
+        var flockStartDates = startsElement ? JSON.parse(startsElement.textContent) : {};
         var feedBagKg = Number('{{ feed_bag_kg }}');
         var avgEggKg = Number('{{ avg_egg_kg }}');
 
@@ -169,6 +178,25 @@
             return ((feedBags * feedBagKg) / (eggsTotal * avgEggKg)).toFixed(3);
         }
 
+        function updateAgePreview() {
+            var startValue = flockField ? flockStartDates[flockField.value] : null;
+            var logValue = logDateField ? logDateField.value : null;
+            var days = 0;
+            if (startValue && logValue) {
+                var startDate = new Date(startValue + 'T00:00:00');
+                var logDate = new Date(logValue + 'T00:00:00');
+                if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(logDate.getTime())) {
+                    days = Math.max(Math.round((logDate - startDate) / 86400000), 0);
+                }
+            }
+            if (ageDaysPreview) {
+                ageDaysPreview.value = days;
+            }
+            if (ageWeeksPreview) {
+                ageWeeksPreview.value = Math.floor(days / 7);
+            }
+        }
+
         function updatePercentages() {
             var eggsTotal = eggsField ? eggsField.value : 0;
             var initialHens = flockField ? flockInitialCounts[flockField.value] : 0;
@@ -185,12 +213,15 @@
             }
         }
 
-        [flockField, eggsField, deadCountField, culledCountField, feedBagsField].forEach(function (field) {
+        [flockField, logDateField, eggsField, deadCountField, culledCountField, feedBagsField].forEach(function (field) {
             if (field) {
+                field.addEventListener('input', updateAgePreview);
+                field.addEventListener('change', updateAgePreview);
                 field.addEventListener('input', updatePercentages);
                 field.addEventListener('change', updatePercentages);
             }
         });
+        updateAgePreview();
         updatePercentages();
     })();
 </script>

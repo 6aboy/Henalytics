@@ -708,11 +708,16 @@ class ProductionLogFormMixin:
             str(flock.id): flock.initial_hen_count
             for flock in Flock.objects.only('id', 'initial_hen_count')
         }
+        context['flock_start_dates'] = {
+            str(flock.id): flock.date_started.isoformat()
+            for flock in Flock.objects.only('id', 'date_started')
+        }
         context['feed_bag_kg'] = getattr(settings, 'HENALYTICS_FEED_BAG_KG', 50)
         context['avg_egg_kg'] = getattr(settings, 'HENALYTICS_AVG_EGG_KG', 0.06)
         return context
 
     def form_valid(self, form):
+        form.instance.update_flock_age()
         form.instance.update_laying_percentages()
         return super().form_valid(form)
 
@@ -720,7 +725,7 @@ class ProductionLogFormMixin:
 class ProductionLogCreateView(StaffAccessMixin, ProductionLogFormMixin, CreateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'dead_count',
+    fields = ['flock', 'log_date', 'dead_count',
               'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
               'fcr', 'remarks']
     success_url = reverse_lazy('eggproduction:production-log-list')
@@ -753,7 +758,7 @@ class ProductionLogDetailView(StaffAccessMixin, DetailView):
 class ProductionLogUpdateView(StaffAccessMixin, ProductionLogFormMixin, UpdateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'log_date', 'age_weeks', 'age_days', 'dead_count',
+    fields = ['flock', 'log_date', 'dead_count',
               'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
               'fcr', 'remarks']
     success_url = reverse_lazy('eggproduction:production-log-list')

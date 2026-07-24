@@ -458,6 +458,29 @@ class TemplateRenderTest(TestCase):
         log = ProductionLog.objects.get(flock=self.flock, log_date=timezone.now().date())
         self.assertEqual(log.hen_count, 1800)
         self.assertEqual(log.pct_hen_day, Decimal('66.67'))
+
+    def test_production_log_create_auto_calculates_flock_age(self):
+        log_date = timezone.now().date()
+        self.flock.date_started = log_date - timedelta(days=24)
+        self.flock.save()
+
+        response = self.client.post(reverse('eggproduction:production-log-create'), {
+            'flock': self.flock.id,
+            'log_date': log_date,
+            'dead_count': 0,
+            'culled_count': 0,
+            'feed_bags': 12,
+            'eggs_total': 1200,
+            'pct_hen_day': '',
+            'pct_hen_housed': '',
+            'fcr': '',
+            'remarks': '',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        log = ProductionLog.objects.get(flock=self.flock, log_date=log_date)
+        self.assertEqual(log.age_days, 24)
+        self.assertEqual(log.age_weeks, 3)
         self.assertEqual(log.pct_hen_housed, Decimal('66.67'))
         self.assertEqual(log.fcr, Decimal('8.333'))
 
