@@ -568,7 +568,8 @@ class ForecastingService:
                     features = production_features.get(row['date'])
                     if features:
                         for feature_name in cls.EGG_FEATURE_FIELDS:
-                            enriched[feature_name] = features[feature_name]
+                            if feature_name in features:
+                                enriched[feature_name] = features[feature_name]
                     enriched_rows.append(enriched)
                 series[grade] = enriched_rows
         return series
