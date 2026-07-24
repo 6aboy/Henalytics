@@ -23,13 +23,14 @@ class ProductionLogForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        today = timezone.now().date()
+        today = timezone.localdate()
         self.fields['log_date'].initial = self.initial.get('log_date') or today
+        self.fields['log_date'].widget.input_type = 'date'
         self.fields['log_date'].widget.attrs['max'] = today.isoformat()
 
     def clean_log_date(self):
         log_date = self.cleaned_data['log_date']
-        today = timezone.now().date()
+        today = timezone.localdate()
         if log_date > today:
             raise forms.ValidationError('Log date cannot be in the future.')
         return log_date

@@ -487,7 +487,7 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(log.age_weeks, 3)
 
     def test_production_log_rejects_future_log_date(self):
-        future_date = timezone.now().date() + timedelta(days=1)
+        future_date = timezone.localdate() + timedelta(days=1)
 
         response = self.client.post(reverse('eggproduction:production-log-create'), {
             'flock': self.flock.id,
