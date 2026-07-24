@@ -26,8 +26,13 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.amount.id_for_label }}">Amount *</label>
-                    {{ form.amount }}
+                    <label for="{{ form.price_per_piece.id_for_label }}">Price per Piece *</label>
+                    {{ form.price_per_piece }}
+                </div>
+
+                <div class="sales-grand-total">
+                    <span>Total Amount</span>
+                    <strong id="sales-item-total">PHP 0.00</strong>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -51,4 +56,34 @@
         font-size: 1rem;
     }
 </style>
+<script>
+    (function () {
+        var quantityField = document.getElementById('{{ form.quantity_pieces.id_for_label }}');
+        var unitPriceField = document.getElementById('{{ form.price_per_piece.id_for_label }}');
+        var totalTarget = document.getElementById('sales-item-total');
+
+        function money(value) {
+            return 'PHP ' + Number(value || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function updateTotal() {
+            var quantity = Number(quantityField ? quantityField.value || 0 : 0);
+            var unitPrice = Number(unitPriceField ? unitPriceField.value || 0 : 0);
+            if (totalTarget) {
+                totalTarget.textContent = money(quantity * unitPrice);
+            }
+        }
+
+        [quantityField, unitPriceField].forEach(function (field) {
+            if (field) {
+                field.addEventListener('input', updateTotal);
+                field.addEventListener('change', updateTotal);
+            }
+        });
+        updateTotal();
+    })();
+</script>
 {% endblock %}

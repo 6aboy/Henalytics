@@ -26,7 +26,7 @@ from .serializers import (
     SalesTransactionSerializer, SalesItemSerializer, ModelVersionSerializer,
     HarvestForecastSerializer, SalesForecastSerializer
 )
-from .forms import ProductionLogForm, SalesItemFormSet, SalesTransactionForm
+from .forms import ProductionLogForm, SalesItemForm, SalesItemFormSet, SalesTransactionForm
 from .forecasting_service import ForecastingService
 
 logger = logging.getLogger(__name__)
@@ -944,7 +944,7 @@ class SalesTransactionDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, Delete
 class SalesItemAddView(StaffAccessMixin, CreateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
-    fields = ['grade', 'quantity_pieces', 'amount']
+    form_class = SalesItemForm
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -965,7 +965,7 @@ class SalesItemAddView(StaffAccessMixin, CreateView):
 class SalesItemUpdateView(StaffAccessMixin, UpdateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
-    fields = ['grade', 'quantity_pieces', 'amount']
+    form_class = SalesItemForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -559,7 +559,7 @@ class TemplateRenderTest(TestCase):
             'items-MAX_NUM_FORMS': '1000',
             'items-0-grade': 'large',
             'items-0-quantity_pieces': '90',
-            'items-0-amount': '630.00',
+            'items-0-price_per_piece': '7.00',
         })
 
         transaction = SalesTransaction.objects.get(notes='Counter sale')
@@ -567,6 +567,7 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(transaction.items.count(), 1)
         self.assertEqual(transaction.total_amount, Decimal('630.00'))
         self.assertEqual(transaction.total_pieces, 90)
+        self.assertEqual(transaction.items.first().unit_price, Decimal('7.00'))
 
 
 class SerializerTest(TestCase):

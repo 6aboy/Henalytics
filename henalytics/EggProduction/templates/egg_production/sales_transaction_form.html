@@ -69,12 +69,12 @@
                             {{ item_form.quantity_pieces.errors }}
                         </div>
                         <div class="sales-item-field">
-                            <label for="{{ item_form.amount.id_for_label }}">Amount</label>
-                            {{ item_form.amount }}
-                            {{ item_form.amount.errors }}
+                            <label for="{{ item_form.price_per_piece.id_for_label }}">Price per Piece</label>
+                            {{ item_form.price_per_piece }}
+                            {{ item_form.price_per_piece.errors }}
                         </div>
                         <div class="sales-item-total">
-                            <span>Unit Price</span>
+                            <span>Total Amount</span>
                             <strong data-row-total>PHP 0.00</strong>
                         </div>
                         {% if item_form.DELETE %}
@@ -100,11 +100,11 @@
                             {{ item_form.quantity_pieces }}
                         </div>
                         <div class="sales-item-field">
-                            <label for="{{ item_form.amount.id_for_label }}">Amount</label>
-                            {{ item_form.amount }}
+                            <label for="{{ item_form.price_per_piece.id_for_label }}">Price per Piece</label>
+                            {{ item_form.price_per_piece }}
                         </div>
                         <div class="sales-item-total">
-                            <span>Unit Price</span>
+                            <span>Total Amount</span>
                             <strong data-row-total>PHP 0.00</strong>
                         </div>
                         {% if item_form.DELETE %}
@@ -156,13 +156,12 @@
             var sum = 0;
             rows.querySelectorAll('.sales-item-row').forEach(function (row) {
                 var quantity = Number((row.querySelector('[name$="-quantity_pieces"]') || {}).value || 0);
-                var amount = Number((row.querySelector('[name$="-amount"]') || {}).value || 0);
+                var unitPrice = Number((row.querySelector('[name$="-price_per_piece"]') || {}).value || 0);
                 var deleteBox = row.querySelector('[name$="-DELETE"]');
-                var total = deleteBox && deleteBox.checked ? 0 : amount;
-                var unitPrice = quantity ? total / quantity : 0;
+                var total = deleteBox && deleteBox.checked ? 0 : quantity * unitPrice;
                 var totalTarget = row.querySelector('[data-row-total]');
                 if (totalTarget) {
-                    totalTarget.textContent = money(unitPrice);
+                    totalTarget.textContent = money(total);
                 }
                 sum += total;
             });
