@@ -148,6 +148,32 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.message-stack .alert.swal').forEach(function (alert) {
+                var icon = 'info';
+                var title = 'Notice';
+                if (alert.classList.contains('alert-success')) {
+                    icon = 'success';
+                    title = 'Success';
+                } else if (alert.classList.contains('alert-danger') || alert.classList.contains('alert-error')) {
+                    icon = 'error';
+                    title = 'Something went wrong';
+                } else if (alert.classList.contains('alert-warning')) {
+                    icon = 'warning';
+                    title = 'Please check';
+                }
+
+                Swal.fire({
+                    title: title,
+                    text: alert.textContent.trim(),
+                    icon: icon,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#3360cf'
+                });
+                alert.remove();
+            });
+        });
+
         document.addEventListener('click', function (event) {
             var button = event.target.closest('[data-date-target]');
             if (!button) {

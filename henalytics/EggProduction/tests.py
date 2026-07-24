@@ -458,6 +458,8 @@ class TemplateRenderTest(TestCase):
         log = ProductionLog.objects.get(flock=self.flock, log_date=timezone.now().date())
         self.assertEqual(log.hen_count, 1800)
         self.assertEqual(log.pct_hen_day, Decimal('66.67'))
+        queued_messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('swal' in message.tags for message in queued_messages))
 
     def test_production_log_create_auto_calculates_flock_age(self):
         log_date = timezone.now().date()

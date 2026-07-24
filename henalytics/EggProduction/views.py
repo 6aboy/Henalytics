@@ -732,7 +732,13 @@ class ProductionLogCreateView(StaffAccessMixin, ProductionLogFormMixin, CreateVi
     
     def form_valid(self, form):
         form.instance.entered_by = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            'Egg production record created successfully.',
+            extra_tags='swal',
+        )
+        return response
 
 
 class ProductionLogDetailView(StaffAccessMixin, DetailView):
