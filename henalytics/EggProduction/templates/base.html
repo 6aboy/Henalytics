@@ -17,7 +17,7 @@
     <div class="app-shell">
         <aside class="app-sidebar">
             <a href="{% url 'eggproduction:dashboard' %}" class="brand-lockup">
-                <img src="{% static 'EggProduction/img/logo.svg' %}" alt="Henalytics">
+                <img src="{% static 'EggProduction/img/logo-login.png' %}" alt="Henalytics">
             </a>
 
             <nav class="side-nav" aria-label="Main navigation">
@@ -44,7 +44,8 @@
                 </a>
                 <a href="{% url 'eggproduction:flock-list' %}"
                     class="side-link {% if 'flock' in request.resolver_match.url_name %}active{% endif %}">
-                    <span class="side-icon icon-flock"></span>
+                    <img class="side-icon side-img-icon" src="{% static 'EggProduction/img/barn-duotone.svg' %}" alt=""
+                        aria-hidden="true">
                     <span>Flocks</span>
                 </a>
                 <a href="{% url 'eggproduction:harvest-forecast-list' %}"
@@ -55,7 +56,8 @@
                 </a>
                 <a href="{% url 'index' %}"
                     class="side-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
-                    <span class="side-icon icon-heart"></span>
+                    <img class="side-icon side-img-icon" src="{% static 'EggProduction/img/info-duotone.svg' %}" alt=""
+                        aria-hidden="true">
                     <span>About</span>
                 </a>
             </nav>
@@ -63,7 +65,8 @@
             <div class="sidebar-account dropdown">
                 <button class="account-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
                     aria-expanded="false" aria-label="Open account menu">
-                    <span class="account-avatar" aria-hidden="true"></span>
+                    <img class="account-avatar-img" src="{% static 'EggProduction/img/user-circle-duotone.svg' %}" alt=""
+                        aria-hidden="true">
                     <span class="account-copy">
                         <span class="account-name">{{ request.user.get_full_name|default:request.user.username }}</span>
                         <span class="account-role">
