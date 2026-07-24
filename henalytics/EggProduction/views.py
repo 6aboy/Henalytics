@@ -860,6 +860,11 @@ class SalesTransactionCreateView(StaffAccessMixin, CreateView):
             self.object = form.save()
             formset.instance = self.object
             formset.save()
+        messages.success(
+            self.request,
+            'Sales transaction created successfully.',
+            extra_tags='swal',
+        )
         return redirect(self.get_success_url())
 
     def form_invalid(self, form):

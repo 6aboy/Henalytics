@@ -563,11 +563,19 @@ class TemplateRenderTest(TestCase):
         })
 
         transaction = SalesTransaction.objects.get(notes='Counter sale')
-        self.assertRedirects(response, reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]))
+        self.assertRedirects(
+            response,
+            reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]),
+            fetch_redirect_response=False,
+        )
         self.assertEqual(transaction.items.count(), 1)
         self.assertEqual(transaction.total_amount, Decimal('630.00'))
         self.assertEqual(transaction.total_pieces, 90)
         self.assertEqual(transaction.items.first().unit_price, Decimal('7.00'))
+
+        detail_response = self.client.get(reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]))
+        self.assertContains(detail_response, 'alert-success swal')
+        self.assertContains(detail_response, 'Sales transaction created successfully.')
 
     def test_sales_transaction_missing_size_shows_red_field_error(self):
         response = self.client.post(reverse('eggproduction:sales-transaction-create'), {

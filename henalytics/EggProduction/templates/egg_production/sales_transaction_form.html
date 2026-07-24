@@ -17,30 +17,24 @@
                 <div class="alert alert-danger">{{ form.non_field_errors }}</div>
                 {% endif %}
 
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.flock.id_for_label }}">Flock *</label>
-                            {{ form.flock }}
-                            {{ form.flock.errors }}
-                        </div>
+                <div class="sales-meta-grid">
+                    <div class="form-group">
+                        <label for="{{ form.flock.id_for_label }}">Flock *</label>
+                        {{ form.flock }}
+                        {{ form.flock.errors }}
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.sale_date.id_for_label }}">Sale Date *</label>
-                            <div class="date-input-action">
-                                {{ form.sale_date }}
-                                <button type="button" class="btn btn-today" data-date-target="#{{ form.sale_date.id_for_label }}">Today</button>
-                            </div>
-                            {{ form.sale_date.errors }}
+                    <div class="form-group">
+                        <label for="{{ form.sale_date.id_for_label }}">Sale Date *</label>
+                        <div class="date-input-action">
+                            {{ form.sale_date }}
+                            <button type="button" class="btn btn-today" data-date-target="#{{ form.sale_date.id_for_label }}">Today</button>
                         </div>
+                        {{ form.sale_date.errors }}
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.or_number.id_for_label }}">OR Number</label>
-                            {{ form.or_number }}
-                            {{ form.or_number.errors }}
-                        </div>
+                    <div class="form-group">
+                        <label for="{{ form.or_number.id_for_label }}">OR Number</label>
+                        {{ form.or_number }}
+                        {{ form.or_number.errors }}
                     </div>
                 </div>
 
