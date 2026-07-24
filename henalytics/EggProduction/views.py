@@ -81,6 +81,23 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
     }
 
 
+def build_sales_actual_vs_forecast_payload(actual_rows, forecast_rows):
+    actual_by_date = {
+        row['transaction__sale_date']: float(row['total'] or 0)
+        for row in actual_rows
+    }
+    forecast_by_date = {
+        row['forecast_date']: float(row['total'] or 0)
+        for row in forecast_rows
+    }
+    dates = sorted(set(actual_by_date) | set(forecast_by_date))
+    return {
+        'labels': [item.strftime('%b %d, %Y') for item in dates],
+        'actual': [actual_by_date.get(item) for item in dates],
+        'forecast': [forecast_by_date.get(item) for item in dates],
+    }
+
+
 def build_hen_performance_payload(logs):
     rows = (
         logs.values('log_date')
@@ -270,6 +287,111 @@ def build_egg_insights(logs, grading_logs, forecasts):
         'notes': notes,
         'latest_hen_housed': latest_hen_housed,
         'latest_hen_day': latest_hen_day,
+    }
+
+
+def build_forecast_run_summary(forecasts, value_field):
+    model_ids = list(forecasts.values_list('model_version_id', flat=True).distinct())
+    model_count = len(model_ids)
+    first_row = forecasts.order_by('forecast_date').first()
+    last_row = forecasts.order_by('-forecast_date').first()
+    rows = forecasts.count()
+    total = forecasts.aggregate(total=models.Sum(value_field))['total'] or 0
+    daily_points = forecasts.values('forecast_date').distinct().count()
+    categories = forecasts.values('grade').distinct().count()
+
+    return {
+        'model_count': model_count,
+        'first_row': first_row,
+        'last_row': last_row,
+        'rows': rows,
+        'total': total,
+        'daily_points': daily_points,
+        'categories': categories,
+        'is_single_run': model_count <= max(categories, 1),
+    }
+
+
+def build_sales_insights(actual_rows, forecasts):
+    actual_values = [float(row['total'] or 0) for row in actual_rows]
+    recent_actual = actual_values[-14:]
+    previous_actual = actual_values[-28:-14]
+    actual_change = percent_change(average(previous_actual), average(recent_actual))
+
+    overall_forecasts = list(forecasts.filter(grade='overall').order_by('forecast_date'))
+    first_forecast_avg = average([forecast.predicted_amount for forecast in overall_forecasts[:7]])
+    last_forecast_avg = average([forecast.predicted_amount for forecast in overall_forecasts[-7:]])
+    forecast_change = percent_change(first_forecast_avg, last_forecast_avg)
+
+    if forecast_change is None:
+        direction = {
+            'label': 'Revenue Direction',
+            'tone': 'neutral',
+            'value': 'Pending',
+            'meta': 'Run a forecast to compare early and late revenue periods.',
+        }
+    elif forecast_change < -5:
+        direction = {
+            'label': 'Revenue Direction',
+            'tone': 'danger',
+            'value': 'Declining',
+            'meta': f'Forecast average drops by {abs(forecast_change):.1f}% across the selected horizon.',
+        }
+    elif forecast_change > 5:
+        direction = {
+            'label': 'Revenue Direction',
+            'tone': 'good',
+            'value': 'Improving',
+            'meta': f'Forecast average rises by {forecast_change:.1f}% across the selected horizon.',
+        }
+    else:
+        direction = {
+            'label': 'Revenue Direction',
+            'tone': 'neutral',
+            'value': 'Mostly Flat',
+            'meta': f'Forecast average changes by {forecast_change:.1f}% across the selected horizon.',
+        }
+
+    if actual_change is None:
+        recent = {
+            'label': 'Recent Sales',
+            'tone': 'neutral',
+            'value': 'No Basis',
+            'meta': 'More sales records are needed for recent comparison.',
+        }
+    elif actual_change < -5:
+        recent = {
+            'label': 'Recent Sales',
+            'tone': 'warning',
+            'value': 'Lower',
+            'meta': f'Recent revenue is {abs(actual_change):.1f}% lower than the previous period.',
+        }
+    elif actual_change > 5:
+        recent = {
+            'label': 'Recent Sales',
+            'tone': 'good',
+            'value': 'Higher',
+            'meta': f'Recent revenue is {actual_change:.1f}% higher than the previous period.',
+        }
+    else:
+        recent = {
+            'label': 'Recent Sales',
+            'tone': 'neutral',
+            'value': 'Steady',
+            'meta': f'Recent revenue changed by {actual_change:.1f}%.',
+        }
+
+    notes = []
+    if actual_change is not None:
+        notes.append(f'Recent actual revenue changed by {actual_change:.1f}% compared with the previous comparable period.')
+    if forecast_change is not None:
+        notes.append(f'The selected forecast horizon expects revenue to change by {forecast_change:.1f}% from its first week to its final week.')
+    if not notes:
+        notes.append('Run a sales forecast after adding sales records to generate revenue interpretation.')
+
+    return {
+        'cards': [direction, recent],
+        'notes': notes,
     }
 
 
@@ -884,13 +1006,21 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
             errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
 
         if total_created:
-            messages.success(request, f'Generated {total_created} egg forecast rows.')
+            messages.success(request, f'Generated {total_created} egg forecast rows for the next {periods} day{"s" if periods != 1 else ""}.')
         if errors:
             messages.warning(request, '; '.join(errors[:3]))
         redirect_url = reverse_lazy('eggproduction:harvest-forecast-list')
+        query = QueryDict(mutable=True)
         if flock_id:
-            query = QueryDict(mutable=True)
             query['flock_id'] = flock_id
+        query['range'] = range_key
+        query['scope'] = request.POST.get('scope', 'both')
+        if range_key == 'custom':
+            if request.POST.get('date_from'):
+                query['date_from'] = request.POST.get('date_from')
+            if request.POST.get('date_to'):
+                query['date_to'] = request.POST.get('date_to')
+        if query:
             redirect_url = f'{redirect_url}?{query.urlencode()}'
         return redirect(redirect_url)
     
@@ -899,6 +1029,10 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
         flock_id = self.request.GET.get('flock_id')
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
+        periods = self._get_display_periods(self.request)
+        first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
+        if first_date:
+            qs = qs.filter(forecast_date__lte=first_date + timedelta(days=periods - 1))
         return qs
 
     def get_context_data(self, **kwargs):
@@ -907,6 +1041,10 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
         overall_forecasts = forecasts.filter(grade='overall')
         chart_payload = build_forecast_chart_payload(forecasts, 'predicted_qty')
         flock_id = self.request.GET.get('flock_id', '')
+        selected_range = self.request.GET.get('range', 'month')
+        selected_scope = self.request.GET.get('scope', 'both')
+        selected_periods = self._get_display_periods(self.request)
+        selected_range_label = self._range_label(selected_range, selected_periods)
         production_logs = ProductionLog.objects.select_related('flock')
         grading_logs = GradingLog.objects.select_related('flock')
         if flock_id:
@@ -918,9 +1056,9 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
 
         forecast_start_row = forecasts.order_by('forecast_date').first()
         if forecast_start_row:
-            actual_chart_start = forecast_start_row.forecast_date - timedelta(days=180)
+            actual_chart_start = forecast_start_row.forecast_date - timedelta(days=self._history_days_for_horizon(selected_periods))
         else:
-            actual_chart_start = timezone.now().date() - timedelta(days=180)
+            actual_chart_start = timezone.now().date() - timedelta(days=self._history_days_for_horizon(selected_periods))
         chart_logs = production_logs.filter(log_date__gte=actual_chart_start)
         chart_grading_logs = grading_logs.filter(log_date__gte=actual_chart_start)
         actual_rows = (
@@ -937,17 +1075,26 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
         hen_payload = build_hen_performance_payload(chart_logs)
         size_mix_payload = build_size_mix_payload(chart_grading_logs, forecasts)
         egg_insights = build_egg_insights(production_logs, grading_logs, forecasts)
+        run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
         context.update({
             'flocks': Flock.objects.filter(status='active').order_by('house_no'),
             'selected_flock_id': flock_id,
+            'selected_range': selected_range,
+            'selected_range_label': selected_range_label,
+            'selected_scope': selected_scope,
+            'selected_periods': selected_periods,
+            'history_days': self._history_days_for_horizon(selected_periods),
             'range_options': self._range_options(),
             'forecast_total': overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
-            'forecast_rows': forecasts.count(),
+            'forecast_rows': run_summary['rows'],
+            'forecast_daily_points': run_summary['daily_points'],
+            'forecast_categories': run_summary['categories'],
             'forecast_table_limit': FORECAST_TABLE_LIMIT,
             'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
-            'forecast_start': forecasts.order_by('forecast_date').first(),
-            'forecast_end': forecasts.order_by('-forecast_date').first(),
+            'forecast_start': run_summary['first_row'],
+            'forecast_end': run_summary['last_row'],
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
+            'run_summary': run_summary,
             'chart_payload_json': json.dumps(chart_payload),
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'hen_payload_json': json.dumps(hen_payload),
@@ -977,6 +1124,35 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
             except (TypeError, ValueError):
                 return 30
         return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
+
+    @classmethod
+    def _get_display_periods(cls, request):
+        range_key = request.GET.get('range', 'month')
+        if range_key != 'custom':
+            return ForecastingService.periods_for_range(range_key)
+
+        try:
+            custom_start = date.fromisoformat(request.GET.get('date_from'))
+            custom_end = date.fromisoformat(request.GET.get('date_to'))
+        except (TypeError, ValueError):
+            return ForecastingService.periods_for_range('month')
+        return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
+
+    @staticmethod
+    def _history_days_for_horizon(periods):
+        return min(max(periods, 90), 365)
+
+    @staticmethod
+    def _range_label(range_key, periods):
+        labels = {
+            'week': 'Next 7 Days',
+            'month': 'Next 30 Days',
+            'three_months': 'Next 3 Months',
+            'six_months': 'Next 6 Months',
+            'year': 'Next 1 Year',
+            'custom': f'Custom Horizon ({periods} days)',
+        }
+        return labels.get(range_key, f'Next {periods} Days')
 
 
 class HarvestForecastDetailView(LoginRequiredMixin, DetailView):
@@ -1138,25 +1314,77 @@ class SalesForecastListView(LoginRequiredMixin, ListView):
         )
 
         if result['success']:
-            messages.success(request, f'Generated {result["created_count"]} sales revenue forecast rows.')
+            messages.success(request, f'Generated {result["created_count"]} sales revenue forecast rows for the next {periods} day{"s" if periods != 1 else ""}.')
         if result['errors']:
             messages.warning(request, '; '.join(result['errors'][:3]))
-        return redirect('eggproduction:sales-forecast-list')
+        redirect_url = reverse_lazy('eggproduction:sales-forecast-list')
+        query = QueryDict(mutable=True)
+        query['range'] = range_key
+        query['scope'] = request.POST.get('scope', 'both')
+        if range_key == 'custom':
+            if request.POST.get('date_from'):
+                query['date_from'] = request.POST.get('date_from')
+            if request.POST.get('date_to'):
+                query['date_to'] = request.POST.get('date_to')
+        return redirect(f'{redirect_url}?{query.urlencode()}')
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related('model_version')
+        periods = HarvestForecastListView._get_display_periods(self.request)
+        first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
+        if first_date:
+            qs = qs.filter(forecast_date__lte=first_date + timedelta(days=periods - 1))
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
         chart_payload = build_forecast_chart_payload(forecasts, 'predicted_amount')
+        selected_range = self.request.GET.get('range', 'month')
+        selected_scope = self.request.GET.get('scope', 'both')
+        selected_periods = HarvestForecastListView._get_display_periods(self.request)
+        selected_range_label = HarvestForecastListView._range_label(selected_range, selected_periods)
+        forecast_start_row = forecasts.order_by('forecast_date').first()
+        if forecast_start_row:
+            actual_chart_start = forecast_start_row.forecast_date - timedelta(days=HarvestForecastListView._history_days_for_horizon(selected_periods))
+        else:
+            actual_chart_start = timezone.now().date() - timedelta(days=HarvestForecastListView._history_days_for_horizon(selected_periods))
+        actual_sales_rows = (
+            SalesItem.objects
+            .filter(transaction__sale_date__gte=actual_chart_start)
+            .values('transaction__sale_date')
+            .annotate(total=models.Sum('amount'))
+            .order_by('transaction__sale_date')
+        )
+        forecast_rows = (
+            forecasts.filter(grade='overall')
+            .values('forecast_date')
+            .annotate(total=models.Sum('predicted_amount'))
+            .order_by('forecast_date')
+        )
+        actual_forecast_payload = build_sales_actual_vs_forecast_payload(actual_sales_rows, forecast_rows)
+        sales_insights = build_sales_insights(actual_sales_rows, forecasts)
+        run_summary = build_forecast_run_summary(forecasts, 'predicted_amount')
         context.update({
             'range_options': HarvestForecastListView._range_options(),
+            'selected_range': selected_range,
+            'selected_range_label': selected_range_label,
+            'selected_scope': selected_scope,
+            'selected_periods': selected_periods,
+            'history_days': HarvestForecastListView._history_days_for_horizon(selected_periods),
             'forecast_total': forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0,
-            'forecast_rows': forecasts.count(),
+            'forecast_rows': run_summary['rows'],
+            'forecast_daily_points': run_summary['daily_points'],
+            'forecast_categories': run_summary['categories'],
             'forecast_table_limit': FORECAST_TABLE_LIMIT,
             'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
-            'forecast_start': forecasts.order_by('forecast_date').first(),
-            'forecast_end': forecasts.order_by('-forecast_date').first(),
+            'forecast_start': run_summary['first_row'],
+            'forecast_end': run_summary['last_row'],
             'forecast_peak': forecasts.order_by('-predicted_amount').first(),
+            'run_summary': run_summary,
             'chart_payload_json': json.dumps(chart_payload),
+            'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
+            'sales_insights': sales_insights,
         })
         return context
 

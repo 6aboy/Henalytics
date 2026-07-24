@@ -1109,6 +1109,41 @@ input[readonly].readonly-metric {
     font-weight: 600;
 }
 
+.forecast-method-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: -4px 0 18px;
+}
+
+.forecast-method-strip div {
+    padding: 14px 16px;
+    border: 1px solid #e3e8f4;
+    border-left: 4px solid var(--hen-blue);
+    border-radius: 5px;
+    background: #fff;
+    box-shadow: var(--hen-shadow);
+}
+
+.forecast-method-strip strong,
+.forecast-method-strip span {
+    display: block;
+}
+
+.forecast-method-strip strong {
+    color: #1f3763;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.forecast-method-strip span {
+    margin-top: 3px;
+    color: #667085;
+    font-size: 0.84rem;
+    font-weight: 500;
+    line-height: 1.35;
+}
+
 .forecast-maintenance-panel {
     margin-bottom: 18px;
     border-left: 4px solid #f79009;
@@ -1566,6 +1601,10 @@ select {
 
     .forecast-toolbar .btn {
         grid-column: 1 / -1;
+    }
+
+    .forecast-method-strip {
+        grid-template-columns: 1fr;
     }
 
     .forecast-maintenance-form {

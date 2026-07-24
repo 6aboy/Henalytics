@@ -23,30 +23,52 @@
         </select>
     </div>
     <div>
-        <label for="range">Range</label>
+        <label for="range">Forecast Horizon</label>
         <select name="range" id="range" class="form-select">
             {% for value,label in range_options %}
-            <option value="{{ value }}">{{ label }}</option>
+            <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
     </div>
     <div>
         <label for="scope">Scope</label>
         <select name="scope" id="scope" class="form-select">
-            <option value="both">Overall and per size</option>
-            <option value="overall">Overall only</option>
+            <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
+            <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
         </select>
     </div>
     <div>
-        <label for="date_from">Custom From</label>
-        <input type="date" name="date_from" id="date_from" class="form-control">
+        <label for="date_from">Custom Start</label>
+        <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
     </div>
     <div>
-        <label for="date_to">Custom To</label>
-        <input type="date" name="date_to" id="date_to" class="form-control">
+        <label for="date_to">Custom End</label>
+        <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
     </div>
-    <button type="submit" class="btn btn-primary">Run ARIMA</button>
+    <button type="submit" class="btn btn-primary">Generate Forecast</button>
 </form>
+
+<div class="forecast-method-strip">
+    <div>
+        <strong>{{ selected_range_label }}</strong>
+        <span>{{ selected_periods }} future daily point{{ selected_periods|pluralize }} shown in charts and tables.</span>
+    </div>
+    <div>
+        <strong>{{ history_days }} Days History</strong>
+        <span>Recent actual records provide visual context before the forecast begins.</span>
+    </div>
+    <div>
+        <strong>Solid + Dashed Lines</strong>
+        <span>Solid is actual data. Dashed is forecast output.</span>
+    </div>
+</div>
+
+{% if forecast_daily_points and forecast_daily_points < selected_periods %}
+<div class="alert alert-warning">
+    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points }} future day{{ forecast_daily_points|pluralize }}.
+    Click Generate Forecast with this horizon to create the full range.
+</div>
+{% endif %}
 
 {% if user.is_superuser or user.userprofile.role == 'admin' or user.userprofile.role == 'manager' %}
 <details class="action-panel forecast-maintenance-panel">
@@ -133,11 +155,11 @@
     <div class="metric-card">
         <div class="metric-label">Predicted Overall Eggs</div>
         <div class="metric-value">{{ forecast_total|default:0 }}</div>
-        <div class="metric-meta">All saved egg forecast rows</div>
+        <div class="metric-meta">{{ selected_range_label }}</div>
     </div>
     <div class="metric-card">
-        <div class="metric-label">Forecast Rows</div>
-        <div class="metric-value">{{ forecast_rows|default:0 }}</div>
+        <div class="metric-label">Daily Forecast Points</div>
+        <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
         <div class="metric-meta">
             {% if forecast_start and forecast_end %}
             {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
@@ -147,9 +169,9 @@
         </div>
     </div>
     <div class="metric-card">
-        <div class="metric-label">Highest Forecast</div>
-        <div class="metric-value">{% if forecast_peak %}{{ forecast_peak.predicted_qty }}{% else %}0{% endif %}</div>
-        <div class="metric-meta">{% if forecast_peak %}{{ forecast_peak.get_grade_display }} on {{ forecast_peak.forecast_date|date:"M d" }}{% else %}No forecast yet{% endif %}</div>
+        <div class="metric-label">Forecast Categories</div>
+        <div class="metric-value">{{ forecast_categories|default:0 }}</div>
+        <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
     </div>
 </div>
 
@@ -158,7 +180,7 @@
         <div>
             <h2 class="detail-title">Actual Production vs Forecast</h2>
             <div class="detail-subtitle">
-                Historical egg production is shown with the future forecast so the direction is easier to defend.
+                Shows recent actual records plus {{ selected_periods }} future daily forecast point{{ selected_periods|pluralize }}.
             </div>
         </div>
     </div>
@@ -193,9 +215,9 @@
             <h2 class="detail-title">Forecast by Egg Size</h2>
             <div class="detail-subtitle">
                 {% if forecast_start and forecast_end %}
-                Saved forecast span: {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
+                {{ selected_range_label }}: {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
                 {% else %}
-                Saved forecast rows by date
+                Generate a forecast to show future rows by date
                 {% endif %}
             </div>
         </div>
@@ -222,7 +244,7 @@
 
 {% if table_forecasts %}
 {% if forecast_rows > forecast_table_limit %}
-<div class="alert alert-info">Showing the latest {{ forecast_table_limit }} forecast rows to keep this page responsive. Use Forecast Maintenance to clear old generated rows.</div>
+<div class="alert alert-info">Showing the first {{ forecast_table_limit }} rows within {{ selected_range_label }} to keep this page responsive.</div>
 {% endif %}
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table js-data-table"

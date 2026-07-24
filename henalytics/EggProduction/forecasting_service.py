@@ -248,11 +248,18 @@ class ForecastingService:
 
     @classmethod
     def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None):
-        if periods < 90 or not len(forecast_values):
+        if not len(forecast_values):
             return None
 
         recent = series.tail(min(60, len(series))).to_numpy(dtype=float)
         recent_mean = float(np.mean(recent)) if len(recent) else 0
+        trend_fallback = cls._trend_forecast_if_model_is_flat(series, forecast_values, periods, model_rmse, forecast_start_date)
+        if trend_fallback is not None:
+            return trend_fallback
+
+        if periods < 90:
+            return None
+
         zero_share = float(np.mean(forecast_values <= 0))
         final_value = float(forecast_values[-1])
         collapsed = zero_share > 0.10 or (recent_mean and final_value < recent_mean * 0.35)
@@ -273,6 +280,76 @@ class ForecastingService:
             'r_squared': baseline_r2,
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
+
+    @classmethod
+    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None):
+        values = series.to_numpy(dtype=float)
+        if len(values) < cls.MIN_POINTS:
+            return None
+
+        window_size = min(30, len(values))
+        recent = values[-window_size:]
+        recent_mean = float(np.mean(recent)) if len(recent) else 0
+        if recent_mean <= 0:
+            return None
+
+        x_values = np.arange(window_size, dtype=float)
+        slope, intercept = np.polyfit(x_values, recent, 1)
+        recent_change_pct = ((recent[-1] - recent[0]) / recent[0] * 100) if recent[0] else 0
+
+        forecast_slope = (
+            (float(forecast_values[-1]) - float(forecast_values[0])) / max(len(forecast_values) - 1, 1)
+            if len(forecast_values) > 1
+            else 0
+        )
+        forecast_change_pct = (
+            (float(forecast_values[-1]) - float(forecast_values[0])) / float(forecast_values[0]) * 100
+            if forecast_values[0]
+            else 0
+        )
+
+        strong_recent_trend = abs(recent_change_pct) >= 12 and abs(slope) >= recent_mean * 0.005
+        model_is_flat = abs(forecast_change_pct) < max(3, abs(recent_change_pct) * 0.25)
+        model_opposes_trend = slope and forecast_slope and np.sign(slope) != np.sign(forecast_slope)
+        if not strong_recent_trend or not (model_is_flat or model_opposes_trend):
+            return None
+
+        # Damping keeps the short data trend visible without unrealistically accelerating far into the future.
+        damping = np.linspace(0.85, 0.35, periods)
+        steps = np.arange(1, periods + 1, dtype=float)
+        trend_values = recent[-1] + (slope * steps * damping)
+        trend_values = np.maximum(trend_values, 0)
+        trend_rmse, trend_r2 = cls._score_trend_baseline(series)
+
+        return {
+            'success': True,
+            'forecasted_values': trend_values,
+            'order': 'trend-adjusted ARIMA fallback',
+            'aic_score': None,
+            'rmse': trend_rmse if trend_rmse is not None else model_rmse,
+            'r_squared': trend_r2,
+            'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
+        }
+
+    @classmethod
+    def _score_trend_baseline(cls, series):
+        values = series.to_numpy(dtype=float)
+        test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
+        if len(values) < cls.MIN_POINTS or test_size <= 0:
+            return None, None
+
+        train = values[:-test_size]
+        test = values[-test_size:]
+        window_size = min(30, len(train))
+        recent = train[-window_size:]
+        x_values = np.arange(window_size, dtype=float)
+        slope, _intercept = np.polyfit(x_values, recent, 1)
+        damping = np.linspace(0.85, 0.35, test_size)
+        steps = np.arange(1, test_size + 1, dtype=float)
+        predictions = np.maximum(train[-1] + (slope * steps * damping), 0)
+        rmse = float(np.sqrt(mean_squared_error(test, predictions)))
+        r_squared = float(r2_score(test, predictions)) if test_size > 1 else None
+        return rmse, r_squared
 
     @classmethod
     def _seasonal_naive_forecast(cls, series, periods):
