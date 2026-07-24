@@ -458,6 +458,8 @@ class TemplateRenderTest(TestCase):
         log = ProductionLog.objects.get(flock=self.flock, log_date=timezone.now().date())
         self.assertEqual(log.hen_count, 1800)
         self.assertEqual(log.pct_hen_day, Decimal('66.67'))
+        self.assertEqual(log.pct_hen_housed, Decimal('66.67'))
+        self.assertEqual(log.fcr, Decimal('8.333'))
         queued_messages = list(response.wsgi_request._messages)
         self.assertTrue(any('swal' in message.tags for message in queued_messages))
 
@@ -483,8 +485,46 @@ class TemplateRenderTest(TestCase):
         log = ProductionLog.objects.get(flock=self.flock, log_date=log_date)
         self.assertEqual(log.age_days, 24)
         self.assertEqual(log.age_weeks, 3)
-        self.assertEqual(log.pct_hen_housed, Decimal('66.67'))
-        self.assertEqual(log.fcr, Decimal('8.333'))
+
+    def test_production_log_rejects_future_log_date(self):
+        future_date = timezone.now().date() + timedelta(days=1)
+
+        response = self.client.post(reverse('eggproduction:production-log-create'), {
+            'flock': self.flock.id,
+            'log_date': future_date,
+            'dead_count': 0,
+            'culled_count': 0,
+            'feed_bags': 12,
+            'eggs_total': 1200,
+            'pct_hen_day': '',
+            'pct_hen_housed': '',
+            'fcr': '',
+            'remarks': '',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Log date cannot be in the future.')
+        self.assertFalse(ProductionLog.objects.filter(flock=self.flock, log_date=future_date).exists())
+
+    def test_production_log_rejects_date_before_flock_start(self):
+        invalid_date = self.flock.date_started - timedelta(days=1)
+
+        response = self.client.post(reverse('eggproduction:production-log-create'), {
+            'flock': self.flock.id,
+            'log_date': invalid_date,
+            'dead_count': 0,
+            'culled_count': 0,
+            'feed_bags': 12,
+            'eggs_total': 1200,
+            'pct_hen_day': '',
+            'pct_hen_housed': '',
+            'fcr': '',
+            'remarks': '',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Log date cannot be earlier than the flock start date.')
+        self.assertFalse(ProductionLog.objects.filter(flock=self.flock, log_date=invalid_date).exists())
 
     def test_sales_transaction_list_renders_total_amount(self):
         transaction = SalesTransaction.objects.create(

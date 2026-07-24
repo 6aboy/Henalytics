@@ -12,11 +12,19 @@
 
             <form method="post" class="form mt-4">
                 {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="{{ form.flock.id_for_label }}">Flock *</label>
                             {{ form.flock }}
+                            {% for error in form.flock.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -26,6 +34,9 @@
                                 {{ form.log_date }}
                                 <button type="button" class="btn btn-today" data-date-target="#{{ form.log_date.id_for_label }}">Today</button>
                             </div>
+                            {% for error in form.log_date.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>

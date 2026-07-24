@@ -26,7 +26,7 @@ from .serializers import (
     SalesTransactionSerializer, SalesItemSerializer, ModelVersionSerializer,
     HarvestForecastSerializer, SalesForecastSerializer
 )
-from .forms import SalesItemFormSet, SalesTransactionForm
+from .forms import ProductionLogForm, SalesItemFormSet, SalesTransactionForm
 from .forecasting_service import ForecastingService
 
 logger = logging.getLogger(__name__)
@@ -725,9 +725,7 @@ class ProductionLogFormMixin:
 class ProductionLogCreateView(StaffAccessMixin, ProductionLogFormMixin, CreateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'log_date', 'dead_count',
-              'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
-              'fcr', 'remarks']
+    form_class = ProductionLogForm
     success_url = reverse_lazy('eggproduction:production-log-list')
     
     def form_valid(self, form):
@@ -764,9 +762,7 @@ class ProductionLogDetailView(StaffAccessMixin, DetailView):
 class ProductionLogUpdateView(StaffAccessMixin, ProductionLogFormMixin, UpdateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
-    fields = ['flock', 'log_date', 'dead_count',
-              'culled_count', 'feed_bags', 'eggs_total', 'pct_hen_day', 'pct_hen_housed',
-              'fcr', 'remarks']
+    form_class = ProductionLogForm
     success_url = reverse_lazy('eggproduction:production-log-list')
 
 
