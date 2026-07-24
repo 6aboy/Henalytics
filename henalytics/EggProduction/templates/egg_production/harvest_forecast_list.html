@@ -53,9 +53,9 @@
     <summary>Forecast Maintenance</summary>
     <form method="post" action="{% url 'eggproduction:forecast-maintenance-clear' %}" class="forecast-maintenance-form"
         data-swal-forecast-clear
-        data-swal-title="Clear generated egg forecasts?"
+        data-swal-title="Update generated egg forecasts?"
         data-swal-text="This only removes saved forecast output rows. Historical production and sales records will not be deleted."
-        data-swal-confirm-text="Clear forecasts">
+        data-swal-confirm-text="Continue">
         {% csrf_token %}
         <input type="hidden" name="forecast_type" value="egg">
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -70,16 +70,38 @@
                 {% endfor %}
             </select>
         </div>
-        <div>
-            <label for="clear_date_from">Forecast From</label>
-            <input type="date" name="date_from" id="clear_date_from" class="form-control">
+        <div class="maintenance-button-row">
+            <button type="submit" name="mode" value="keep_latest" class="btn btn-warning">Keep Latest Only</button>
+            <button type="submit" name="mode" value="clear_all" class="btn btn-danger">Clear All Forecasts</button>
         </div>
-        <div>
-            <label for="clear_date_to">Forecast To</label>
-            <input type="date" name="date_to" id="clear_date_to" class="form-control">
-        </div>
-        <button type="submit" class="btn btn-danger">Clear Forecast Rows</button>
     </form>
+
+    <div class="testing-cleanup">
+        <div>
+            <strong>Testing Data Cleanup</strong>
+            <p>Use only when resetting ML test data. Flocks and user accounts are not deleted.</p>
+        </div>
+        <div class="maintenance-button-row">
+            <form method="post" action="{% url 'eggproduction:testing-data-clear' %}" data-swal-source-clear
+                data-swal-title="Delete all egg production test data?"
+                data-swal-text="This deletes all production logs, grading logs, and egg forecast rows. Flocks remain."
+                data-swal-confirm-text="Delete egg data">
+                {% csrf_token %}
+                <input type="hidden" name="data_type" value="egg">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-danger">Delete Egg Production Data</button>
+            </form>
+            <form method="post" action="{% url 'eggproduction:testing-data-clear' %}" data-swal-source-clear
+                data-swal-title="Delete all sales test data?"
+                data-swal-text="This deletes all sales transactions, sales items, and sales forecast rows."
+                data-swal-confirm-text="Delete sales data">
+                {% csrf_token %}
+                <input type="hidden" name="data_type" value="sales">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-danger">Delete Sales Data</button>
+            </form>
+        </div>
+    </div>
 </details>
 {% endif %}
 

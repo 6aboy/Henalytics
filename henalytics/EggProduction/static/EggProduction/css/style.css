@@ -1127,7 +1127,7 @@ input[readonly].readonly-metric {
 
 .forecast-maintenance-form {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(140px, 0.7fr)) auto;
+    grid-template-columns: minmax(200px, 1fr) auto;
     gap: 12px;
     align-items: end;
     margin-top: 16px;
@@ -1139,6 +1139,42 @@ input[readonly].readonly-metric {
     color: #5f6878;
     font-size: 0.78rem;
     font-weight: 600;
+}
+
+.maintenance-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.testing-cleanup {
+    display: grid;
+    grid-template-columns: minmax(230px, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e6e8ee;
+}
+
+.testing-cleanup strong {
+    display: block;
+    color: #b42318;
+    font-size: 0.94rem;
+    font-weight: 800;
+}
+
+.testing-cleanup p {
+    margin: 3px 0 0;
+    color: #667085;
+    font-size: 0.84rem;
+    font-weight: 500;
+}
+
+.testing-cleanup form {
+    margin: 0;
 }
 
 .forecast-cards {
@@ -1534,6 +1570,17 @@ select {
 
     .forecast-maintenance-form {
         grid-template-columns: 1fr;
+    }
+
+    .maintenance-button-row,
+    .testing-cleanup {
+        justify-content: stretch;
+        grid-template-columns: 1fr;
+    }
+
+    .maintenance-button-row .btn,
+    .testing-cleanup .btn {
+        width: 100%;
     }
 
     .forecast-cards {

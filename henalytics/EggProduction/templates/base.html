@@ -176,17 +176,26 @@
 
             event.preventDefault();
             Swal.fire({
-                title: link.dataset.swalTitle || 'Open delete confirmation?',
-                text: link.dataset.swalText || 'You are about to delete this record.',
+                title: link.dataset.swalTitle || 'Delete this record?',
+                text: link.dataset.swalText || 'This action cannot be undone.',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: link.dataset.swalConfirmText || 'Continue',
+                confirmButtonText: link.dataset.swalConfirmText || 'Yes, delete',
                 cancelButtonText: link.dataset.swalCancelText || 'Cancel',
                 confirmButtonColor: '#ed0909',
                 cancelButtonColor: '#6c757d'
             }).then(function (result) {
                 if (result.isConfirmed) {
-                    window.location.href = link.href;
+                    var form = document.createElement('form');
+                    var csrf = document.createElement('input');
+                    form.method = 'post';
+                    form.action = link.href;
+                    csrf.type = 'hidden';
+                    csrf.name = 'csrfmiddlewaretoken';
+                    csrf.value = '{{ csrf_token }}';
+                    form.appendChild(csrf);
+                    document.body.appendChild(form);
+                    form.submit();
                 }
             });
         });
@@ -259,6 +268,25 @@
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: form.dataset.swalConfirmText || 'Clear forecasts',
+                    cancelButtonText: form.dataset.swalCancelText || 'Cancel',
+                    confirmButtonColor: '#ed0909',
+                    cancelButtonColor: '#6c757d'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.dataset.swalSubmitting = 'true';
+                        form.submit();
+                    }
+                });
+            }
+
+            if (form.matches('[data-swal-source-clear]')) {
+                event.preventDefault();
+                Swal.fire({
+                    title: form.dataset.swalTitle || 'Delete testing data?',
+                    text: form.dataset.swalText || 'This deletes source records used for ML testing.',
+                    icon: 'error',
+                    showCancelButton: true,
+                    confirmButtonText: form.dataset.swalConfirmText || 'Delete data',
                     cancelButtonText: form.dataset.swalCancelText || 'Cancel',
                     confirmButtonColor: '#ed0909',
                     cancelButtonColor: '#6c757d'

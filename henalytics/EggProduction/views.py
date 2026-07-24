@@ -310,6 +310,14 @@ class ManagerAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
             return user.is_superuser
 
 
+class DirectDeleteOnlyMixin:
+    """Keep DeleteView POST behavior, but avoid rendering a second confirmation page."""
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        messages.info(request, 'Use the delete button to confirm removal.')
+        return redirect(self.get_success_url())
+
+
 # Dashboard View
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
@@ -504,7 +512,7 @@ class FlockUpdateView(ManagerAccessMixin, UpdateView):
     success_url = reverse_lazy('eggproduction:flock-list')
 
 
-class FlockDeleteView(ManagerAccessMixin, DeleteView):
+class FlockDeleteView(DirectDeleteOnlyMixin, ManagerAccessMixin, DeleteView):
     model = Flock
     template_name = 'egg_production/flock_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:flock-list')
@@ -621,7 +629,7 @@ class ProductionLogUpdateView(StaffAccessMixin, ProductionLogFormMixin, UpdateVi
     success_url = reverse_lazy('eggproduction:production-log-list')
 
 
-class ProductionLogDeleteView(StaffAccessMixin, DeleteView):
+class ProductionLogDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
     model = ProductionLog
     template_name = 'egg_production/production_log_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:production-log-list')
@@ -669,7 +677,7 @@ class GradingLogUpdateView(StaffAccessMixin, UpdateView):
     success_url = reverse_lazy('eggproduction:grading-log-list')
 
 
-class GradingLogDeleteView(StaffAccessMixin, DeleteView):
+class GradingLogDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
     model = GradingLog
     template_name = 'egg_production/grading_log_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:grading-log-list')
@@ -788,7 +796,7 @@ class SalesTransactionUpdateView(StaffAccessMixin, UpdateView):
         return reverse_lazy('eggproduction:sales-transaction-detail', kwargs={'pk': self.object.pk})
 
 
-class SalesTransactionDeleteView(StaffAccessMixin, DeleteView):
+class SalesTransactionDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:sales-transaction-list')
@@ -832,7 +840,7 @@ class SalesItemUpdateView(StaffAccessMixin, UpdateView):
                           kwargs={'pk': self.object.transaction.pk})
 
 
-class SalesItemDeleteView(StaffAccessMixin, DeleteView):
+class SalesItemDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
     model = SalesItem
     template_name = 'egg_production/sales_item_confirm_delete.html'
     
@@ -983,53 +991,94 @@ class ForecastMaintenanceClearView(LoginRequiredMixin, UserPassesTestMixin, View
 
     def post(self, request, *args, **kwargs):
         forecast_type = request.POST.get('forecast_type', 'egg')
-        date_from = self._parse_date(request.POST.get('date_from'))
-        date_to = self._parse_date(request.POST.get('date_to'))
+        mode = request.POST.get('mode', 'clear_all')
         flock_id = request.POST.get('flock_id')
         redirect_to = request.POST.get('next') or reverse_lazy('eggproduction:harvest-forecast-list')
 
-        if forecast_type == 'sales':
-            queryset = SalesForecast.objects.all()
-            label = 'sales forecast'
-        elif forecast_type == 'all':
-            egg_queryset = self._filter_forecast_range(HarvestForecast.objects.all(), date_from, date_to)
-            sales_queryset = self._filter_forecast_range(SalesForecast.objects.all(), date_from, date_to)
-            if flock_id:
-                egg_queryset = egg_queryset.filter(flock_id=flock_id)
-            egg_count = egg_queryset.count()
-            sales_count = sales_queryset.count()
-            egg_queryset.delete()
-            sales_queryset.delete()
-            self._delete_orphan_model_versions()
-            messages.success(request, f'Cleared {egg_count + sales_count} generated forecast rows.')
+        if mode == 'keep_latest':
+            deleted_count = self._keep_latest_only(forecast_type, flock_id)
+            messages.success(request, f'Removed {deleted_count} older generated forecast rows and kept the latest run per category.')
             return redirect(redirect_to)
-        else:
-            queryset = HarvestForecast.objects.all()
-            label = 'egg forecast'
-            if flock_id:
-                queryset = queryset.filter(flock_id=flock_id)
 
-        queryset = self._filter_forecast_range(queryset, date_from, date_to)
-        deleted_count = queryset.count()
-        queryset.delete()
+        deleted_count = self._clear_all(forecast_type, flock_id)
         self._delete_orphan_model_versions()
-        messages.success(request, f'Cleared {deleted_count} generated {label} rows.')
+        messages.success(request, f'Cleared {deleted_count} generated forecast rows.')
         return redirect(redirect_to)
 
     @staticmethod
-    def _parse_date(value):
-        try:
-            return date.fromisoformat(value) if value else None
-        except (TypeError, ValueError):
-            return None
+    def _clear_all(forecast_type, flock_id=None):
+        if forecast_type == 'sales':
+            queryset = SalesForecast.objects.all()
+        elif forecast_type == 'all':
+            egg_queryset = HarvestForecast.objects.all()
+            if flock_id:
+                egg_queryset = egg_queryset.filter(flock_id=flock_id)
+            egg_count = egg_queryset.count()
+            sales_count = SalesForecast.objects.count()
+            egg_queryset.delete()
+            SalesForecast.objects.all().delete()
+            return egg_count + sales_count
+        else:
+            queryset = HarvestForecast.objects.all()
+            if flock_id:
+                queryset = queryset.filter(flock_id=flock_id)
+
+        deleted_count = queryset.count()
+        queryset.delete()
+        return deleted_count
+
+    @classmethod
+    def _keep_latest_only(cls, forecast_type, flock_id=None):
+        if forecast_type == 'sales':
+            return cls._keep_latest_sales_forecasts()
+        if forecast_type == 'all':
+            return cls._keep_latest_harvest_forecasts(flock_id) + cls._keep_latest_sales_forecasts()
+        return cls._keep_latest_harvest_forecasts(flock_id)
 
     @staticmethod
-    def _filter_forecast_range(queryset, date_from, date_to):
-        if date_from:
-            queryset = queryset.filter(forecast_date__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(forecast_date__lte=date_to)
-        return queryset
+    def _keep_latest_harvest_forecasts(flock_id=None):
+        queryset = HarvestForecast.objects.select_related('model_version')
+        if flock_id:
+            queryset = queryset.filter(flock_id=flock_id)
+
+        deleted_count = 0
+        groups = queryset.values('flock_id', 'grade').distinct()
+        for group in groups:
+            group_queryset = queryset.filter(flock_id=group['flock_id'], grade=group['grade'])
+            latest_model_id = (
+                group_queryset
+                .order_by('-model_version__trained_at', '-model_version_id')
+                .values_list('model_version_id', flat=True)
+                .first()
+            )
+            if latest_model_id:
+                stale_queryset = group_queryset.exclude(model_version_id=latest_model_id)
+                deleted_count += stale_queryset.count()
+                stale_queryset.delete()
+
+        ForecastMaintenanceClearView._delete_orphan_model_versions()
+        return deleted_count
+
+    @staticmethod
+    def _keep_latest_sales_forecasts():
+        queryset = SalesForecast.objects.select_related('model_version')
+        deleted_count = 0
+        groups = queryset.values('grade').distinct()
+        for group in groups:
+            group_queryset = queryset.filter(grade=group['grade'])
+            latest_model_id = (
+                group_queryset
+                .order_by('-model_version__trained_at', '-model_version_id')
+                .values_list('model_version_id', flat=True)
+                .first()
+            )
+            if latest_model_id:
+                stale_queryset = group_queryset.exclude(model_version_id=latest_model_id)
+                deleted_count += stale_queryset.count()
+                stale_queryset.delete()
+
+        ForecastMaintenanceClearView._delete_orphan_model_versions()
+        return deleted_count
 
     @staticmethod
     def _delete_orphan_model_versions():
@@ -1037,6 +1086,35 @@ class ForecastMaintenanceClearView(LoginRequiredMixin, UserPassesTestMixin, View
             harvest_forecasts__isnull=True,
             sales_forecasts__isnull=True,
         ).delete()
+
+
+class TestingDataClearView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return ManagerAccessMixin.test_func(self)
+
+    def post(self, request, *args, **kwargs):
+        data_type = request.POST.get('data_type', 'egg')
+        redirect_to = request.POST.get('next') or reverse_lazy('eggproduction:harvest-forecast-list')
+
+        if data_type == 'sales':
+            sales_count = SalesTransaction.objects.count()
+            item_count = SalesItem.objects.count()
+            forecast_count = SalesForecast.objects.count()
+            SalesTransaction.objects.all().delete()
+            SalesForecast.objects.all().delete()
+            ForecastMaintenanceClearView._delete_orphan_model_versions()
+            messages.success(request, f'Cleared {sales_count} sales transactions, {item_count} sales items, and {forecast_count} sales forecast rows.')
+            return redirect(redirect_to)
+
+        production_count = ProductionLog.objects.count()
+        grading_count = GradingLog.objects.count()
+        forecast_count = HarvestForecast.objects.count()
+        ProductionLog.objects.all().delete()
+        GradingLog.objects.all().delete()
+        HarvestForecast.objects.all().delete()
+        ForecastMaintenanceClearView._delete_orphan_model_versions()
+        messages.success(request, f'Cleared {production_count} production logs, {grading_count} grading logs, and {forecast_count} egg forecast rows.')
+        return redirect(redirect_to)
 
 
 class SalesForecastListView(LoginRequiredMixin, ListView):
