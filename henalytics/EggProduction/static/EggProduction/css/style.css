@@ -143,6 +143,21 @@ a {
     transform-origin: center;
 }
 
+.side-img-icon {
+    width: 23px;
+    height: 23px;
+    object-fit: contain;
+    opacity: 0.84;
+    transform: none;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.side-link:hover .side-img-icon,
+.side-link.active .side-img-icon {
+    opacity: 1;
+    filter: brightness(0) invert(1);
+}
+
 .side-icon::before,
 .side-icon::after {
     content: "";

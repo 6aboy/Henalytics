@@ -24,19 +24,22 @@
                 <div class="nav-section-label">MAIN</div>
                 <a href="{% url 'eggproduction:dashboard' %}"
                     class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <span class="side-icon icon-home"></span>
+                    <img class="side-icon side-img-icon" src="{% static 'EggProduction/img/house-line-duotone.svg' %}"
+                        alt="" aria-hidden="true">
                     <span>Dashboard</span>
                 </a>
 
                 <div class="nav-section-label">MANAGE</div>
                 <a href="{% url 'eggproduction:production-log-list' %}"
                     class="side-link {% if 'production-log' in request.resolver_match.url_name or 'grading-log' in request.resolver_match.url_name %}active{% endif %}">
-                    <span class="side-icon icon-eggs"></span>
+                    <img class="side-icon side-img-icon" src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt=""
+                        aria-hidden="true">
                     <span>Egg Production</span>
                 </a>
                 <a href="{% url 'eggproduction:sales-transaction-list' %}"
                     class="side-link {% if 'sales-transaction' in request.resolver_match.url_name or 'sales-item' in request.resolver_match.url_name %}active{% endif %}">
-                    <span class="side-icon icon-sales"></span>
+                    <img class="side-icon side-img-icon" src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt=""
+                        aria-hidden="true">
                     <span>Sales</span>
                 </a>
                 <a href="{% url 'eggproduction:flock-list' %}"
@@ -46,7 +49,8 @@
                 </a>
                 <a href="{% url 'eggproduction:harvest-forecast-list' %}"
                     class="side-link {% if 'forecast' in request.resolver_match.url_name or 'model-version' in request.resolver_match.url_name %}active{% endif %}">
-                    <span class="side-icon icon-chart"></span>
+                    <img class="side-icon side-img-icon" src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}"
+                        alt="" aria-hidden="true">
                     <span>Analytics</span>
                 </a>
                 <a href="{% url 'index' %}"
