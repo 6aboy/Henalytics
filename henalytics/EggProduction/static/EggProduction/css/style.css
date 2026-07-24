@@ -1294,6 +1294,12 @@ input[readonly].readonly-metric {
     margin-bottom: 18px;
 }
 
+#actualForecastChart,
+#actualSalesForecastChart {
+    width: 100% !important;
+    height: 340px !important;
+}
+
 .forecast-chart-card .detail-header {
     gap: 16px;
     align-items: flex-start;

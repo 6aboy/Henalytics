@@ -74,10 +74,14 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
         for row in forecast_rows
     }
     dates = sorted(set(actual_by_date) | set(forecast_by_date))
+    last_actual_date = max(actual_by_date) if actual_by_date else None
     return {
         'labels': [item.strftime('%b %d, %Y') for item in dates],
         'actual': [actual_by_date.get(item) for item in dates],
-        'forecast': [forecast_by_date.get(item) for item in dates],
+        'forecast': [
+            actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)
+            for item in dates
+        ],
     }
 
 
@@ -91,10 +95,14 @@ def build_sales_actual_vs_forecast_payload(actual_rows, forecast_rows):
         for row in forecast_rows
     }
     dates = sorted(set(actual_by_date) | set(forecast_by_date))
+    last_actual_date = max(actual_by_date) if actual_by_date else None
     return {
         'labels': [item.strftime('%b %d, %Y') for item in dates],
         'actual': [actual_by_date.get(item) for item in dates],
-        'forecast': [forecast_by_date.get(item) for item in dates],
+        'forecast': [
+            actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)
+            for item in dates
+        ],
     }
 
 
@@ -1140,7 +1148,13 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
 
     @staticmethod
     def _history_days_for_horizon(periods):
-        return min(max(periods, 90), 365)
+        if periods <= 7:
+            return 30
+        if periods <= 30:
+            return 90
+        if periods <= 90:
+            return 180
+        return 365
 
     @staticmethod
     def _range_label(range_key, periods):

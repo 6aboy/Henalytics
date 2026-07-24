@@ -259,6 +259,23 @@
             });
         }
 
+        function chartYBounds(datasets, floor = 0) {
+            const values = datasets
+                .flatMap((dataset) => dataset.data || [])
+                .filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)))
+                .map(Number);
+            if (!values.length) {
+                return { suggestedMin: floor, suggestedMax: 100 };
+            }
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const padding = Math.max((max - min) * 0.18, max * 0.04, 10);
+            return {
+                suggestedMin: Math.max(floor, Math.floor(min - padding)),
+                suggestedMax: Math.ceil(max + padding)
+            };
+        }
+
         function fillSeriesOptions() {
             seriesKeys.forEach((key) => {
                 const option = document.createElement('option');
@@ -284,34 +301,38 @@
         }
 
         fillSeriesOptions();
+        const actualForecastDatasets = [
+            {
+                label: 'Actual Revenue',
+                data: actualForecastPayload.actual,
+                borderColor: '#344054',
+                backgroundColor: 'rgba(52, 64, 84, 0.10)',
+                pointRadius: actualForecastPayload.labels.length > 140 ? 0 : 2,
+                spanGaps: false,
+                tension: 0.2
+            },
+            {
+                label: 'Forecast Revenue',
+                data: actualForecastPayload.forecast,
+                borderColor: '#05853e',
+                backgroundColor: 'rgba(5, 133, 62, 0.14)',
+                borderDash: [7, 5],
+                pointRadius: actualForecastPayload.labels.length > 140 ? 0 : 2,
+                spanGaps: false,
+                tension: 0.2
+            }
+        ];
+        const actualForecastBounds = chartYBounds(actualForecastDatasets);
         new Chart(document.getElementById('actualSalesForecastChart'), {
             type: 'line',
             data: {
                 labels: actualForecastPayload.labels,
-                datasets: [
-                    {
-                        label: 'Actual Revenue',
-                        data: actualForecastPayload.actual,
-                        borderColor: '#344054',
-                        backgroundColor: 'rgba(52, 64, 84, 0.10)',
-                        pointRadius: actualForecastPayload.labels.length > 140 ? 0 : 2,
-                        spanGaps: false,
-                        tension: 0.2
-                    },
-                    {
-                        label: 'Forecast Revenue',
-                        data: actualForecastPayload.forecast,
-                        borderColor: '#05853e',
-                        backgroundColor: 'rgba(5, 133, 62, 0.14)',
-                        borderDash: [7, 5],
-                        pointRadius: actualForecastPayload.labels.length > 140 ? 0 : 2,
-                        spanGaps: false,
-                        tension: 0.2
-                    }
-                ]
+                datasets: actualForecastDatasets
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { bottom: 10 } },
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { position: 'bottom' },
@@ -321,7 +342,21 @@
                         }
                     }
                 },
-                scales: { y: { beginAtZero: true } }
+                scales: {
+                    x: {
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: 12,
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        suggestedMin: actualForecastBounds.suggestedMin,
+                        suggestedMax: actualForecastBounds.suggestedMax
+                    }
+                }
             }
         });
 
