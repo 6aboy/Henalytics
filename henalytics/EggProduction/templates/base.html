@@ -56,26 +56,52 @@
                 </a>
             </nav>
 
-            <div class="sidebar-account">
-                <div class="account-avatar"></div>
-                <div class="account-copy">
-                    <div class="account-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-                    <div class="account-role">
-                        Role:
-                        {% if request.user.is_superuser %}
-                        Admin
-                        {% elif request.user.userprofile.display_role %}
-                        {{ request.user.userprofile.display_role }}
-                        {% else %}
-                        Staff
-                        {% endif %}
+            <div class="sidebar-account dropdown">
+                <button class="account-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                    aria-expanded="false" aria-label="Open account menu">
+                    <span class="account-avatar" aria-hidden="true"></span>
+                    <span class="account-copy">
+                        <span class="account-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <span class="account-role">
+                            {% if request.user.is_superuser %}
+                            Admin
+                            {% elif request.user.userprofile.display_role %}
+                            {{ request.user.userprofile.display_role }}
+                            {% else %}
+                            Staff
+                            {% endif %}
+                            &middot; UBAP
+                        </span>
+                    </span>
+                    <span class="account-chevron" aria-hidden="true"></span>
+                </button>
+
+                <div class="dropdown-menu account-dropdown dropdown-menu-end">
+                    <div class="account-dropdown-header">
+                        <div class="account-dropdown-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                        <div class="account-dropdown-meta">
+                            {% if request.user.is_superuser %}
+                            Admin
+                            {% elif request.user.userprofile.display_role %}
+                            {{ request.user.userprofile.display_role }}
+                            {% else %}
+                            Staff
+                            {% endif %}
+                            &middot; UBAP
+                        </div>
                     </div>
-                    <div class="account-meta">UBAP</div>
+                    <form method="post" action="{% url 'logout' %}" class="account-logout-form" data-swal-logout
+                        data-swal-title="Sign out?"
+                        data-swal-text="You will be returned to the login page."
+                        data-swal-confirm-text="Sign out"
+                        data-swal-cancel-text="Stay signed in">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item account-logout">
+                            <span class="logout-icon" aria-hidden="true"></span>
+                            <span>Logout</span>
+                        </button>
+                    </form>
                 </div>
-                <form method="post" action="{% url 'logout' %}" class="account-menu">
-                    {% csrf_token %}
-                    <button type="submit" aria-label="Logout">...</button>
-                </form>
             </div>
         </aside>
 
@@ -190,6 +216,25 @@
                     confirmButtonText: form.dataset.swalConfirmText || 'Yes, delete',
                     cancelButtonText: form.dataset.swalCancelText || 'Cancel',
                     confirmButtonColor: '#ed0909',
+                    cancelButtonColor: '#6c757d'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.dataset.swalSubmitting = 'true';
+                        form.submit();
+                    }
+                });
+            }
+
+            if (form.matches('[data-swal-logout]')) {
+                event.preventDefault();
+                Swal.fire({
+                    title: form.dataset.swalTitle || 'Sign out?',
+                    text: form.dataset.swalText || 'You will be returned to the login page.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: form.dataset.swalConfirmText || 'Sign out',
+                    cancelButtonText: form.dataset.swalCancelText || 'Cancel',
+                    confirmButtonColor: '#3360cf',
                     cancelButtonColor: '#6c757d'
                 }).then(function (result) {
                     if (result.isConfirmed) {

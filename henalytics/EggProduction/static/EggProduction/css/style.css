@@ -269,22 +269,41 @@ a {
 
 .sidebar-account {
     margin-top: auto;
-    min-height: 74px;
-    display: grid;
-    grid-template-columns: 42px 1fr 30px;
-    gap: 10px;
-    align-items: center;
-    padding: 12px 14px;
+    padding: 12px;
     border-top: 1px solid #e6e8ee;
     box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
 }
 
+.account-toggle {
+    width: 100%;
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 18px;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 9px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: inherit;
+    text-align: left;
+    background: transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.account-toggle:hover,
+.account-toggle:focus,
+.account-toggle.show {
+    border-color: #d8e1f4;
+    background: #f7f9ff;
+}
+
 .account-avatar {
-    width: 36px;
-    height: 36px;
-    border: 2px solid var(--hen-blue);
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(51, 96, 207, 0.22);
     border-radius: 50%;
     position: relative;
+    background: #edf3ff;
 }
 
 .account-avatar::before {
@@ -294,7 +313,7 @@ a {
     top: 7px;
     width: 12px;
     height: 12px;
-    border: 2px solid var(--hen-blue);
+    border: 1.8px solid var(--hen-blue);
     border-radius: 50%;
 }
 
@@ -302,19 +321,21 @@ a {
     content: "";
     position: absolute;
     left: 7px;
-    bottom: 6px;
+    bottom: 7px;
     width: 18px;
     height: 10px;
-    border: 2px solid var(--hen-blue);
+    border: 1.8px solid var(--hen-blue);
     border-radius: 50% 50% 0 0;
     border-bottom: 0;
 }
 
 .account-copy {
     min-width: 0;
+    display: block;
 }
 
 .account-name {
+    display: block;
     overflow: hidden;
     color: #182234;
     font-size: 0.88rem;
@@ -325,27 +346,113 @@ a {
 }
 
 .account-role {
+    display: block;
+    overflow: hidden;
     color: var(--hen-blue);
     font-size: 0.76rem;
     font-weight: 500;
     line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.account-meta {
-    color: #7a8494;
-    font-size: 0.68rem;
+.account-chevron {
+    position: relative;
+    width: 16px;
+    height: 16px;
+}
+
+.account-chevron::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #8a94a6;
+    border-bottom: 2px solid #8a94a6;
+    transform: rotate(45deg);
+}
+
+.account-dropdown {
+    width: 236px;
+    padding: 8px;
+    border: 1px solid #e2e8f4;
+    border-radius: 8px;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+}
+
+.account-dropdown-header {
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid #edf1f7;
+    margin-bottom: 6px;
+}
+
+.account-dropdown-name {
+    overflow: hidden;
+    color: #182234;
+    font-size: 0.9rem;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.account-menu button {
-    border: 0;
-    background: transparent;
+.account-dropdown-meta {
     color: var(--hen-blue);
-    font-size: 20px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    line-height: 1;
+    font-size: 0.76rem;
+    font-weight: 500;
+}
+
+.account-logout-form {
+    margin: 0;
+}
+
+.account-logout {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    min-height: 38px;
+    border-radius: 6px;
+    color: #b42318;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.account-logout:hover,
+.account-logout:focus {
+    color: #b42318;
+    background: #fff1f0;
+}
+
+.logout-icon {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+}
+
+.logout-icon::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 3px;
+    width: 9px;
+    height: 12px;
+    border: 1.8px solid currentColor;
+    border-right: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.logout-icon::after {
+    content: "";
+    position: absolute;
+    right: 1px;
+    top: 8px;
+    width: 11px;
+    height: 2px;
+    background: currentColor;
+    box-shadow: 4px -4px 0 -1px currentColor, 4px 4px 0 -1px currentColor;
 }
 
 .app-panel {
