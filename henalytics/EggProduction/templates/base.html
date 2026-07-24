@@ -250,6 +250,25 @@
                     }
                 });
             }
+
+            if (form.matches('[data-swal-forecast-clear]')) {
+                event.preventDefault();
+                Swal.fire({
+                    title: form.dataset.swalTitle || 'Clear generated forecasts?',
+                    text: form.dataset.swalText || 'This removes saved forecast output rows only.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: form.dataset.swalConfirmText || 'Clear forecasts',
+                    cancelButtonText: form.dataset.swalCancelText || 'Cancel',
+                    confirmButtonColor: '#ed0909',
+                    cancelButtonColor: '#6c757d'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        form.dataset.swalSubmitting = 'true';
+                        form.submit();
+                    }
+                });
+            }
         });
 
         $(function () {

@@ -59,6 +59,7 @@ urlpatterns = [
     path('harvest-forecasts/<int:pk>/', views.HarvestForecastDetailView.as_view(), name='harvest-forecast-detail'),
     path('sales-forecasts/', views.SalesForecastListView.as_view(), name='sales-forecast-list'),
     path('sales-forecasts/<int:pk>/', views.SalesForecastDetailView.as_view(), name='sales-forecast-detail'),
+    path('forecast-maintenance/clear/', views.ForecastMaintenanceClearView.as_view(), name='forecast-maintenance-clear'),
     path('model-versions/', views.ModelVersionListView.as_view(), name='model-version-list'),
     path('model-versions/<int:pk>/', views.ModelVersionDetailView.as_view(), name='model-version-detail'),
     

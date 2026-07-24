@@ -1109,6 +1109,38 @@ input[readonly].readonly-metric {
     font-weight: 600;
 }
 
+.forecast-maintenance-panel {
+    margin-bottom: 18px;
+    border-left: 4px solid #f79009;
+}
+
+.forecast-maintenance-panel summary {
+    cursor: pointer;
+    color: #344054;
+    font-size: 0.96rem;
+    font-weight: 800;
+}
+
+.forecast-maintenance-panel summary::marker {
+    color: var(--hen-blue);
+}
+
+.forecast-maintenance-form {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(140px, 0.7fr)) auto;
+    gap: 12px;
+    align-items: end;
+    margin-top: 16px;
+}
+
+.forecast-maintenance-form label {
+    display: block;
+    margin-bottom: 5px;
+    color: #5f6878;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
 .forecast-cards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1498,6 +1530,10 @@ select {
 
     .forecast-toolbar .btn {
         grid-column: 1 / -1;
+    }
+
+    .forecast-maintenance-form {
+        grid-template-columns: 1fr;
     }
 
     .forecast-cards {

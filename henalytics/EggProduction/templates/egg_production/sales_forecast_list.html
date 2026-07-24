@@ -37,6 +37,30 @@
     <button type="submit" class="btn btn-primary">Run ARIMA</button>
 </form>
 
+{% if user.is_superuser or user.userprofile.role == 'admin' or user.userprofile.role == 'manager' %}
+<details class="action-panel forecast-maintenance-panel">
+    <summary>Forecast Maintenance</summary>
+    <form method="post" action="{% url 'eggproduction:forecast-maintenance-clear' %}" class="forecast-maintenance-form"
+        data-swal-forecast-clear
+        data-swal-title="Clear generated sales forecasts?"
+        data-swal-text="This only removes saved forecast output rows. Historical sales transactions will not be deleted."
+        data-swal-confirm-text="Clear forecasts">
+        {% csrf_token %}
+        <input type="hidden" name="forecast_type" value="sales">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div>
+            <label for="clear_sales_date_from">Forecast From</label>
+            <input type="date" name="date_from" id="clear_sales_date_from" class="form-control">
+        </div>
+        <div>
+            <label for="clear_sales_date_to">Forecast To</label>
+            <input type="date" name="date_to" id="clear_sales_date_to" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-danger">Clear Forecast Rows</button>
+    </form>
+</details>
+{% endif %}
+
 <div class="forecast-cards">
     <div class="metric-card">
         <div class="metric-label">Predicted Revenue</div>
@@ -94,7 +118,10 @@
     <canvas id="salesForecastChart" height="110"></canvas>
 </div>
 
-{% if forecasts %}
+{% if table_forecasts %}
+{% if forecast_rows > forecast_table_limit %}
+<div class="alert alert-info">Showing the latest {{ forecast_table_limit }} forecast rows to keep this page responsive. Use Forecast Maintenance to clear old generated rows.</div>
+{% endif %}
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table js-data-table"
         data-export-title="Sales Forecasts"
@@ -110,7 +137,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for forecast in forecasts %}
+            {% for forecast in table_forecasts %}
             <tr>
                 <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>

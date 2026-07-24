@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse
 from django.http import QueryDict
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView, View
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -30,6 +30,9 @@ from .forms import SalesItemFormSet, SalesTransactionForm
 from .forecasting_service import ForecastingService
 
 logger = logging.getLogger(__name__)
+
+
+FORECAST_TABLE_LIMIT = 500
 
 
 def build_forecast_chart_payload(queryset, value_field):
@@ -932,6 +935,8 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
             'range_options': self._range_options(),
             'forecast_total': overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
             'forecast_rows': forecasts.count(),
+            'forecast_table_limit': FORECAST_TABLE_LIMIT,
+            'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
             'forecast_start': forecasts.order_by('forecast_date').first(),
             'forecast_end': forecasts.order_by('-forecast_date').first(),
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
@@ -972,6 +977,68 @@ class HarvestForecastDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'forecast'
 
 
+class ForecastMaintenanceClearView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return ManagerAccessMixin.test_func(self)
+
+    def post(self, request, *args, **kwargs):
+        forecast_type = request.POST.get('forecast_type', 'egg')
+        date_from = self._parse_date(request.POST.get('date_from'))
+        date_to = self._parse_date(request.POST.get('date_to'))
+        flock_id = request.POST.get('flock_id')
+        redirect_to = request.POST.get('next') or reverse_lazy('eggproduction:harvest-forecast-list')
+
+        if forecast_type == 'sales':
+            queryset = SalesForecast.objects.all()
+            label = 'sales forecast'
+        elif forecast_type == 'all':
+            egg_queryset = self._filter_forecast_range(HarvestForecast.objects.all(), date_from, date_to)
+            sales_queryset = self._filter_forecast_range(SalesForecast.objects.all(), date_from, date_to)
+            if flock_id:
+                egg_queryset = egg_queryset.filter(flock_id=flock_id)
+            egg_count = egg_queryset.count()
+            sales_count = sales_queryset.count()
+            egg_queryset.delete()
+            sales_queryset.delete()
+            self._delete_orphan_model_versions()
+            messages.success(request, f'Cleared {egg_count + sales_count} generated forecast rows.')
+            return redirect(redirect_to)
+        else:
+            queryset = HarvestForecast.objects.all()
+            label = 'egg forecast'
+            if flock_id:
+                queryset = queryset.filter(flock_id=flock_id)
+
+        queryset = self._filter_forecast_range(queryset, date_from, date_to)
+        deleted_count = queryset.count()
+        queryset.delete()
+        self._delete_orphan_model_versions()
+        messages.success(request, f'Cleared {deleted_count} generated {label} rows.')
+        return redirect(redirect_to)
+
+    @staticmethod
+    def _parse_date(value):
+        try:
+            return date.fromisoformat(value) if value else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _filter_forecast_range(queryset, date_from, date_to):
+        if date_from:
+            queryset = queryset.filter(forecast_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(forecast_date__lte=date_to)
+        return queryset
+
+    @staticmethod
+    def _delete_orphan_model_versions():
+        ModelVersion.objects.filter(
+            harvest_forecasts__isnull=True,
+            sales_forecasts__isnull=True,
+        ).delete()
+
+
 class SalesForecastListView(LoginRequiredMixin, ListView):
     model = SalesForecast
     template_name = 'egg_production/sales_forecast_list.html'
@@ -1006,6 +1073,8 @@ class SalesForecastListView(LoginRequiredMixin, ListView):
             'range_options': HarvestForecastListView._range_options(),
             'forecast_total': forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0,
             'forecast_rows': forecasts.count(),
+            'forecast_table_limit': FORECAST_TABLE_LIMIT,
+            'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
             'forecast_start': forecasts.order_by('forecast_date').first(),
             'forecast_end': forecasts.order_by('-forecast_date').first(),
             'forecast_peak': forecasts.order_by('-predicted_amount').first(),
