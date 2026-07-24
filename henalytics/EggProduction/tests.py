@@ -438,6 +438,37 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-export-enabled="true"')
         self.assertContains(response, 'class="no-export">Actions</th>')
 
+    def test_staff_cannot_access_analytics_pages(self):
+        urls = [
+            reverse('eggproduction:harvest-forecast-list'),
+            reverse('eggproduction:sales-forecast-list'),
+            reverse('eggproduction:model-version-list'),
+        ]
+
+        for url in urls:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 403)
+
+    def test_staff_sidebar_hides_analytics_link(self):
+        response = self.client.get(reverse('eggproduction:production-log-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Analytics')
+        self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
+
+    def test_admin_can_access_analytics_pages(self):
+        admin = User.objects.create_superuser(
+            username='analyticsadmin',
+            email='analytics@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('eggproduction:harvest-forecast-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Analytics')
+
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {
             'flock': self.flock.id,

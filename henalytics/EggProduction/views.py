@@ -993,7 +993,7 @@ class SalesItemDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
 
 # ======================== Forecast Views ========================
 
-class HarvestForecastListView(LoginRequiredMixin, ListView):
+class HarvestForecastListView(ManagerAccessMixin, ListView):
     model = HarvestForecast
     template_name = 'egg_production/harvest_forecast_list.html'
     context_object_name = 'forecasts'
@@ -1181,7 +1181,7 @@ class HarvestForecastListView(LoginRequiredMixin, ListView):
         return labels.get(range_key, f'Next {periods} Days')
 
 
-class HarvestForecastDetailView(LoginRequiredMixin, DetailView):
+class HarvestForecastDetailView(ManagerAccessMixin, DetailView):
     model = HarvestForecast
     template_name = 'egg_production/harvest_forecast_detail.html'
     context_object_name = 'forecast'
@@ -1319,7 +1319,7 @@ class TestingDataClearView(LoginRequiredMixin, UserPassesTestMixin, View):
         return redirect(redirect_to)
 
 
-class SalesForecastListView(LoginRequiredMixin, ListView):
+class SalesForecastListView(ManagerAccessMixin, ListView):
     model = SalesForecast
     template_name = 'egg_production/sales_forecast_list.html'
     context_object_name = 'forecasts'
@@ -1415,7 +1415,7 @@ class SalesForecastListView(LoginRequiredMixin, ListView):
         return context
 
 
-class SalesForecastDetailView(LoginRequiredMixin, DetailView):
+class SalesForecastDetailView(ManagerAccessMixin, DetailView):
     model = SalesForecast
     template_name = 'egg_production/sales_forecast_detail.html'
     context_object_name = 'forecast'
