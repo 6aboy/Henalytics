@@ -463,6 +463,10 @@ class TemplateRenderTest(TestCase):
         queued_messages = list(response.wsgi_request._messages)
         self.assertTrue(any('swal' in message.tags for message in queued_messages))
 
+        list_response = self.client.get(reverse('eggproduction:production-log-list'))
+        self.assertContains(list_response, 'alert-success swal')
+        self.assertContains(list_response, 'Egg production record created successfully.')
+
     def test_production_log_create_auto_calculates_flock_age(self):
         log_date = timezone.now().date()
         self.flock.date_started = log_date - timedelta(days=24)
