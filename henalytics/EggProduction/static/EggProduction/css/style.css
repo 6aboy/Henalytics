@@ -1152,6 +1152,21 @@ input[readonly].readonly-metric {
     font-weight: 700;
 }
 
+.errorlist {
+    margin: 6px 0 0;
+    padding: 0;
+    color: #b42318;
+    font-size: 0.84rem;
+    font-weight: 700;
+    list-style: none;
+}
+
+.sales-item-field.has-error select,
+.sales-item-field.has-error input {
+    border-color: #b42318;
+    box-shadow: 0 0 0 0.12rem rgba(180, 35, 24, 0.12);
+}
+
 .forecast-maintenance-panel {
     margin-bottom: 18px;
     border-left: 4px solid #f79009;

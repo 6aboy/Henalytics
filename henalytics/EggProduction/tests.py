@@ -569,6 +569,25 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(transaction.total_pieces, 90)
         self.assertEqual(transaction.items.first().unit_price, Decimal('7.00'))
 
+    def test_sales_transaction_missing_size_shows_red_field_error(self):
+        response = self.client.post(reverse('eggproduction:sales-transaction-create'), {
+            'flock': self.flock.id,
+            'sale_date': timezone.now().date(),
+            'notes': 'Missing size',
+            'items-TOTAL_FORMS': '1',
+            'items-INITIAL_FORMS': '0',
+            'items-MIN_NUM_FORMS': '1',
+            'items-MAX_NUM_FORMS': '1000',
+            'items-0-grade': '',
+            'items-0-quantity_pieces': '90',
+            'items-0-price_per_piece': '7.00',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'has-error')
+        self.assertContains(response, 'form-error')
+        self.assertContains(response, 'This field is required.')
+
 
 class SerializerTest(TestCase):
     def test_current_serializers_match_current_models(self):

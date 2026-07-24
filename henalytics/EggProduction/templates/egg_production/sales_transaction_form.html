@@ -58,20 +58,26 @@
                     {% for item_form in sales_item_formset.forms %}
                     <div class="sales-item-row">
                         {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
-                        <div class="sales-item-field">
+                        <div class="sales-item-field {% if item_form.grade.errors %}has-error{% endif %}">
                             <label for="{{ item_form.grade.id_for_label }}">Size</label>
                             {{ item_form.grade }}
-                            {{ item_form.grade.errors }}
+                            {% for error in item_form.grade.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                         <div class="sales-item-field">
                             <label for="{{ item_form.quantity_pieces.id_for_label }}">Quantity (pcs)</label>
                             {{ item_form.quantity_pieces }}
-                            {{ item_form.quantity_pieces.errors }}
+                            {% for error in item_form.quantity_pieces.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                         <div class="sales-item-field">
                             <label for="{{ item_form.price_per_piece.id_for_label }}">Price per Piece</label>
                             {{ item_form.price_per_piece }}
-                            {{ item_form.price_per_piece.errors }}
+                            {% for error in item_form.price_per_piece.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                         <div class="sales-item-total">
                             <span>Total Amount</span>
