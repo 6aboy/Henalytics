@@ -690,6 +690,51 @@ input[readonly].readonly-metric {
     box-shadow: none;
 }
 
+.production-form {
+    display: grid;
+    gap: 18px;
+}
+
+.form-section {
+    padding: 16px;
+    border: 1px solid #e4ebf7;
+    border-radius: 6px;
+    background: #fbfdff;
+}
+
+.form-section h2 {
+    margin: 0 0 14px;
+    color: var(--hen-blue);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.production-form-grid {
+    display: grid;
+    gap: 14px;
+    align-items: end;
+}
+
+.production-form-grid-main {
+    grid-template-columns: minmax(260px, 1.1fr) minmax(280px, 1fr);
+}
+
+.production-form-grid-inputs {
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+}
+
+.production-form-grid-metrics {
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+}
+
+.production-form .form-group {
+    margin-bottom: 0;
+}
+
+.compact-metric-field input {
+    min-height: 42px;
+}
+
 .detail-panel {
     max-width: 1080px;
     padding: 22px;
@@ -1837,6 +1882,12 @@ select {
         grid-template-columns: 1fr;
     }
 
+    .production-form-grid-main,
+    .production-form-grid-inputs,
+    .production-form-grid-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .maintenance-button-row,
     .testing-cleanup {
         justify-content: stretch;
@@ -1931,6 +1982,12 @@ select {
     }
 
     .forecast-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .production-form-grid-main,
+    .production-form-grid-inputs,
+    .production-form-grid-metrics {
         grid-template-columns: 1fr;
     }
 

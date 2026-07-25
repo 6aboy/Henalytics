@@ -11,25 +11,25 @@
             <h1>{% if form.instance.pk %}Edit Production Log{% else %}New Production Log{% endif %}</h1>
             <p class="form-intro">Flock age, live hens, hen percentages, and FCR are calculated automatically from the selected flock and log values.</p>
 
-            <form method="post" class="form mt-4">
+            <form method="post" class="form production-form">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
                 <div class="alert alert-danger">
                     {{ form.non_field_errors }}
                 </div>
                 {% endif %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
+
+                <section class="form-section">
+                    <h2>Log Info</h2>
+                    <div class="production-form-grid production-form-grid-main">
+                        <div class="form-group">
                             <label for="{{ form.flock.id_for_label }}">Flock *</label>
                             {{ form.flock }}
                             {% for error in form.flock.errors %}
                             <small class="form-error">{{ error }}</small>
                             {% endfor %}
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
                             <div class="date-input-action">
                                 {{ form.log_date }}
@@ -40,80 +40,63 @@
                             {% endfor %}
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label>Flock Age (Weeks)</label>
-                            <input type="text" id="ageWeeksPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_weeks }}{% else %}0{% endif %}" readonly>
-                            <small class="form-help">Auto-calculated</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label>Flock Age (Days)</label>
-                            <input type="text" id="ageDaysPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_days }}{% else %}0{% endif %}" readonly>
-                            <small class="form-help">Auto-calculated</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
+                <section class="form-section">
+                    <h2>Daily Inputs</h2>
+                    <div class="production-form-grid production-form-grid-inputs">
+                        <div class="form-group">
                             <label for="{{ form.dead_count.id_for_label }}">Dead Count</label>
                             {{ form.dead_count }}
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             <label for="{{ form.culled_count.id_for_label }}">Culled Count</label>
                             {{ form.culled_count }}
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             <label for="{{ form.feed_bags.id_for_label }}">Feed Bags</label>
                             {{ form.feed_bags }}
                         </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             <label for="{{ form.eggs_total.id_for_label }}">Eggs Total *</label>
                             {{ form.eggs_total }}
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
+                </section>
+
+                <section class="form-section">
+                    <h2>Calculated Metrics</h2>
+                    <div class="production-form-grid production-form-grid-metrics">
+                        <div class="form-group compact-metric-field">
+                            <label>Age Weeks</label>
+                            <input type="text" id="ageWeeksPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_weeks }}{% else %}0{% endif %}" readonly>
+                        </div>
+                        <div class="form-group compact-metric-field">
+                            <label>Age Days</label>
+                            <input type="text" id="ageDaysPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_days }}{% else %}0{% endif %}" readonly>
+                        </div>
+                        <div class="form-group compact-metric-field">
                             <label for="{{ form.pct_hen_day.id_for_label }}">% Hen Day</label>
                             {{ form.pct_hen_day }}
-                            <small class="form-help">Auto-calculated</small>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
+                        <div class="form-group compact-metric-field">
                             <label for="{{ form.pct_hen_housed.id_for_label }}">% Hen Housed</label>
                             {{ form.pct_hen_housed }}
-                            <small class="form-help">Auto-calculated</small>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
+                        <div class="form-group compact-metric-field">
                             <label for="{{ form.fcr.id_for_label }}">FCR</label>
                             {{ form.fcr }}
-                            <small class="form-help">Auto-calculated</small>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <div class="form-group mb-3 note-field">
-                    <label for="{{ form.remarks.id_for_label }}">Notes</label>
-                    {{ form.remarks }}
-                </div>
+                <section class="form-section">
+                    <h2>Notes</h2>
+                    <div class="form-group note-field">
+                        <label class="visually-hidden" for="{{ form.remarks.id_for_label }}">Notes</label>
+                        {{ form.remarks }}
+                    </div>
+                </section>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
                     <a href="{% url 'eggproduction:production-log-list' %}" class="btn btn-secondary">Cancel</a>
