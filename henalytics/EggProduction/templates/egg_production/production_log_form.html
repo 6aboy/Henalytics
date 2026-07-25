@@ -23,14 +23,14 @@
                     <h2>Log Info</h2>
                     <div class="production-form-grid production-form-grid-main">
                         <div class="form-group">
-                            <label for="{{ form.flock.id_for_label }}">Flock *</label>
+                            <label for="{{ form.flock.id_for_label }}">Flock</label>
                             {{ form.flock }}
                             {% for error in form.flock.errors %}
                             <small class="form-error">{{ error }}</small>
                             {% endfor %}
                         </div>
                         <div class="form-group">
-                            <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
+                            <label for="{{ form.log_date.id_for_label }}">Log Date</label>
                             <div class="date-input-action">
                                 {{ form.log_date }}
                                 <button type="button" class="btn btn-today" data-date-target="#{{ form.log_date.id_for_label }}">Today</button>
@@ -58,7 +58,7 @@
                             {{ form.feed_bags }}
                         </div>
                         <div class="form-group">
-                            <label for="{{ form.eggs_total.id_for_label }}">Eggs Total *</label>
+                            <label for="{{ form.eggs_total.id_for_label }}">Eggs Total</label>
                             {{ form.eggs_total }}
                         </div>
                     </div>
@@ -70,22 +70,27 @@
                         <div class="form-group compact-metric-field">
                             <label>Age Weeks</label>
                             <input type="text" id="ageWeeksPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_weeks }}{% else %}0{% endif %}" readonly>
+                            <small class="form-help">Log date - flock start / 7</small>
                         </div>
                         <div class="form-group compact-metric-field">
                             <label>Age Days</label>
                             <input type="text" id="ageDaysPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_days }}{% else %}0{% endif %}" readonly>
+                            <small class="form-help">Log date - flock start</small>
                         </div>
                         <div class="form-group compact-metric-field">
                             <label for="{{ form.pct_hen_day.id_for_label }}">% Hen Day</label>
                             {{ form.pct_hen_day }}
+                            <small class="form-help">Eggs / live hens x 100</small>
                         </div>
                         <div class="form-group compact-metric-field">
                             <label for="{{ form.pct_hen_housed.id_for_label }}">% Hen Housed</label>
                             {{ form.pct_hen_housed }}
+                            <small class="form-help">Eggs / initial hens x 100</small>
                         </div>
                         <div class="form-group compact-metric-field">
                             <label for="{{ form.fcr.id_for_label }}">FCR</label>
                             {{ form.fcr }}
+                            <small class="form-help">Feed kg / egg kg</small>
                         </div>
                     </div>
                 </section>
