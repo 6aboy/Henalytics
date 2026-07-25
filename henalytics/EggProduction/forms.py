@@ -24,6 +24,7 @@ class ProductionLogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         today = timezone.localdate()
+        self.fields['flock'].empty_label = 'Choose a Flock'
         self.fields['remarks'].label = 'Notes'
         self.fields['remarks'].widget.attrs.update({
             'class': 'form-control compact-note-input',
