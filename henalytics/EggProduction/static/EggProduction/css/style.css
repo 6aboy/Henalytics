@@ -220,12 +220,13 @@ a {
 
 .side-link:hover::after,
 .side-link.active::after {
-    background: #64748b;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36), 0 5px 12px rgba(15, 23, 42, 0.12);
 }
 
 .side-link:hover .side-img-icon,
 .side-link.active .side-img-icon {
+    filter: none;
     transform: scale(1.03);
 }
 
@@ -298,8 +299,8 @@ a {
 
 .account-summary:hover::after,
 .account-summary:focus-within::after {
-    background: #64748b;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36), 0 5px 12px rgba(15, 23, 42, 0.12);
 }
 
 .account-avatar {
@@ -385,6 +386,7 @@ a {
 
 .account-summary:hover .account-avatar-img,
 .account-summary:focus-within .account-avatar-img {
+    filter: none;
     transform: scale(1.03);
 }
 
