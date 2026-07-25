@@ -208,8 +208,8 @@ a {
 
 .side-link:hover .side-img-icon,
 .side-link.active .side-img-icon {
-    background: rgba(255, 255, 255, 0.18);
-    box-shadow: none;
+    background: var(--hen-blue-dark);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
     transform: scale(1.03);
 }
 
@@ -351,8 +351,8 @@ a {
 
 .account-summary:hover .account-avatar-img,
 .account-summary:focus-within .account-avatar-img {
-    background: rgba(255, 255, 255, 0.18);
-    box-shadow: none;
+    background: var(--hen-blue-dark);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
     transform: scale(1.03);
 }
 
