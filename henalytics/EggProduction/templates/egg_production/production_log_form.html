@@ -9,6 +9,7 @@
     <div class="row justify-content-center">
         <div class="col-md-10 action-panel">
             <h1>{% if form.instance.pk %}Edit Production Log{% else %}New Production Log{% endif %}</h1>
+            <p class="form-intro">Flock age, live hens, hen percentages, and FCR are calculated automatically from the selected flock and log values.</p>
 
             <form method="post" class="form mt-4">
                 {% csrf_token %}
@@ -46,14 +47,14 @@
                         <div class="form-group mb-3">
                             <label>Flock Age (Weeks)</label>
                             <input type="text" id="ageWeeksPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_weeks }}{% else %}0{% endif %}" readonly>
-                            <small class="form-help">Auto: log date minus flock start date</small>
+                            <small class="form-help">Auto-calculated</small>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label>Flock Age (Days)</label>
                             <input type="text" id="ageDaysPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.age_days }}{% else %}0{% endif %}" readonly>
-                            <small class="form-help">Saved automatically by the system</small>
+                            <small class="form-help">Auto-calculated</small>
                         </div>
                     </div>
                 </div>
@@ -80,40 +81,31 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_total.id_for_label }}">Eggs Total *</label>
                             {{ form.eggs_total }}
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group mb-3">
                             <label for="{{ form.pct_hen_day.id_for_label }}">% Hen Day</label>
                             {{ form.pct_hen_day }}
-                            <small class="form-help">Auto: eggs total / live hens x 100</small>
+                            <small class="form-help">Auto-calculated</small>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group mb-3">
                             <label for="{{ form.pct_hen_housed.id_for_label }}">% Hen Housed</label>
                             {{ form.pct_hen_housed }}
-                            <small class="form-help">Auto: eggs total / initial housed hens x 100</small>
+                            <small class="form-help">Auto-calculated</small>
                         </div>
                     </div>
-                </div>
-
-                <div class="auto-metric-note">
-                    Flock age is calculated automatically from the flock start date and log date. Live hen count is
-                    calculated from the flock's initial hen count minus cumulative dead and culled hens. FCR uses
-                    {{ feed_bag_kg }} kg per feed bag and {{ avg_egg_kg }} kg per egg.
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group mb-3">
                             <label for="{{ form.fcr.id_for_label }}">FCR</label>
                             {{ form.fcr }}
-                            <small class="form-help">Auto: feed kg / egg kg</small>
+                            <small class="form-help">Auto-calculated</small>
                         </div>
                     </div>
                 </div>
