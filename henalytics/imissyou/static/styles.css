@@ -3,8 +3,9 @@ html, body {
     margin: 0;
     padding: 0;
     background:
-        radial-gradient(circle at 30% 25%, rgba(255, 226, 184, 0.7), transparent 34%),
-        linear-gradient(135deg, #ff8f70 0%, #d94d5f 52%, #a83f62 100%);
+        radial-gradient(circle at 28% 24%, rgba(255, 226, 190, 0.56) 0 22%, rgba(255, 226, 190, 0) 48%),
+        radial-gradient(circle at 72% 76%, rgba(255, 177, 160, 0.36) 0 20%, rgba(255, 177, 160, 0) 46%),
+        linear-gradient(145deg, #ffad93 0%, #f88378 34%, #df6672 68%, #bd5574 100%);
     display: flex;
     justify-content: center;
     align-items: center;

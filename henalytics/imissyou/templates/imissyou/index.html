@@ -12,7 +12,7 @@
     <img class="about-img" src="{% static 'imissyou/img/about-img.jpg' %}" alt="" aria-hidden="true">
     <div class="message">I miss you</div>
     <audio id="about-song" src="{% static 'imissyou/audio/about-song.mp3' %}" preload="auto"
-        data-start-time="20"></audio>
+        data-start-time="24" data-gain="1.2"></audio>
     <button type="button" class="sound-fallback" hidden>Play sound</button>
 
     <script>
@@ -21,16 +21,100 @@
             var fallback = document.querySelector('.sound-fallback');
             var started = false;
             var startTime = Number(song.dataset.startTime || 0);
+            var gainAmount = Number(song.dataset.gain || 1);
+            var audioContext;
+            var mediaSource;
+            var gainNode;
+
+            function waitForMetadata() {
+                if (song.readyState >= 1) {
+                    return Promise.resolve();
+                }
+
+                return new Promise(function (resolve) {
+                    song.addEventListener('loadedmetadata', resolve, { once: true });
+                });
+            }
+
+            function prepareGain() {
+                if (gainAmount <= 1 || (!window.AudioContext && !window.webkitAudioContext)) {
+                    song.volume = Math.min(gainAmount, 1);
+                    return Promise.resolve();
+                }
+
+                audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+
+                if (!mediaSource) {
+                    mediaSource = audioContext.createMediaElementSource(song);
+                    gainNode = audioContext.createGain();
+                    mediaSource.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                }
+
+                song.volume = 1;
+                gainNode.gain.value = gainAmount;
+                return audioContext.resume();
+            }
+
+            function prepareGainSafely() {
+                return prepareGain().catch(function () {
+                    song.volume = 1;
+                });
+            }
+
+            function getTargetTime() {
+                if (Number.isFinite(song.duration)) {
+                    return Math.min(startTime, Math.max(song.duration - 0.1, 0));
+                }
+
+                return startTime;
+            }
+
+            function seekToStartTime() {
+                var targetTime = getTargetTime();
+
+                if (Math.abs(song.currentTime - targetTime) < 0.25) {
+                    return Promise.resolve();
+                }
+
+                return new Promise(function (resolve) {
+                    var fallbackTimer;
+
+                    function finishSeek() {
+                        window.clearTimeout(fallbackTimer);
+                        song.removeEventListener('canplay', finishSeek);
+                        song.removeEventListener('seeked', finishSeek);
+                        resolve();
+                    }
+
+                    song.pause();
+                    song.addEventListener('canplay', finishSeek, { once: true });
+                    song.addEventListener('seeked', finishSeek, { once: true });
+                    fallbackTimer = window.setTimeout(finishSeek, 1800);
+
+                    if (typeof song.fastSeek === 'function') {
+                        song.fastSeek(targetTime);
+                    } else {
+                        song.currentTime = targetTime;
+                    }
+                });
+            }
 
             function startSong() {
                 if (started) {
                     return Promise.resolve();
                 }
 
-                song.currentTime = startTime;
-                song.volume = 0.75;
-
-                return song.play().then(function () {
+                return waitForMetadata().then(function () {
+                    return seekToStartTime();
+                }).then(function () {
+                    return prepareGainSafely();
+                }).then(function () {
+                    return song.play();
+                }).then(function () {
+                    if (song.currentTime < getTargetTime() - 1) {
+                        song.currentTime = getTargetTime();
+                    }
                     started = true;
                     fallback.hidden = true;
                 });
@@ -41,8 +125,9 @@
             });
 
             song.addEventListener('ended', function () {
-                song.currentTime = startTime;
-                song.play().catch(function () {
+                seekToStartTime().then(function () {
+                    return song.play();
+                }).catch(function () {
                     fallback.hidden = false;
                 });
             });
