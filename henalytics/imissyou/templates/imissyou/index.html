@@ -1,12 +1,56 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>I Miss You</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
+
 <body>
+    <img class="about-img" src="{% static 'imissyou/img/about-img.jpg' %}" alt="" aria-hidden="true">
     <div class="message">I miss you</div>
+    <audio id="about-song" src="{% static 'imissyou/audio/about-song.mp3' %}" preload="auto"
+        data-start-time="20"></audio>
+    <button type="button" class="sound-fallback" hidden>Play sound</button>
+
+    <script>
+        (function () {
+            var song = document.getElementById('about-song');
+            var fallback = document.querySelector('.sound-fallback');
+            var started = false;
+            var startTime = Number(song.dataset.startTime || 0);
+
+            function startSong() {
+                if (started) {
+                    return Promise.resolve();
+                }
+
+                song.currentTime = startTime;
+                song.volume = 0.75;
+
+                return song.play().then(function () {
+                    started = true;
+                    fallback.hidden = true;
+                });
+            }
+
+            startSong().catch(function () {
+                fallback.hidden = false;
+            });
+
+            song.addEventListener('ended', function () {
+                song.currentTime = startTime;
+                song.play().catch(function () {
+                    fallback.hidden = false;
+                });
+            });
+            fallback.addEventListener('click', startSong);
+            document.addEventListener('pointerdown', startSong, { once: true });
+            document.addEventListener('keydown', startSong, { once: true });
+        })();
+    </script>
 </body>
+
 </html>
