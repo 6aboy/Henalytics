@@ -549,6 +549,14 @@ input[readonly].readonly-metric {
     font-weight: 700;
 }
 
+.form-intro {
+    margin: -4px 0 18px;
+    color: #68758c;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
 .auto-metric-note {
     margin: 4px 0 18px;
     padding: 10px 12px;

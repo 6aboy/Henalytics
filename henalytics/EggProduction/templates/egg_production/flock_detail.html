@@ -32,6 +32,9 @@
             <div class="detail-item"><span class="detail-label">Grading Logs</span><span class="detail-value">{{ grading_log_count }}</span></div>
             <div class="detail-item"><span class="detail-label">Sales</span><span class="detail-value">{{ sales_count }}</span></div>
         </div>
+        <div class="detail-note mt-3">
+            Flock age is based on the flock start date. Current hens are calculated from the initial hen count minus recorded dead and culled hens.
+        </div>
     </section>
 
     {% if flock.notes %}
