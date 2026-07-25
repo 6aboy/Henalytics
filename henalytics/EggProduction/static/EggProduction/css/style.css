@@ -1376,9 +1376,9 @@ input[readonly].readonly-metric {
 }
 
 .metric-card.featured {
-    color: #fff;
-    background: linear-gradient(90deg, var(--hen-blue), #5179e1);
-    border-color: transparent;
+    color: var(--hen-text);
+    background: #fff;
+    border-color: #edf1f7;
 }
 
 .metric-card-main {
@@ -1397,11 +1397,6 @@ input[readonly].readonly-metric {
     line-height: 1.25;
 }
 
-.metric-card.featured .metric-label,
-.metric-card.featured .metric-meta {
-    color: #fff;
-}
-
 .metric-value {
     margin-top: 8px;
     color: var(--hen-blue);
@@ -1411,7 +1406,6 @@ input[readonly].readonly-metric {
     overflow-wrap: anywhere;
 }
 
-.metric-card.featured .metric-value,
 .trend-up {
     color: var(--hen-green);
 }
@@ -1433,9 +1427,10 @@ input[readonly].readonly-metric {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #3360cf;
-    background: #eef4ff;
+    color: #fff;
+    background: var(--hen-blue);
     border-radius: 12px;
+    box-shadow: 0 8px 18px rgba(51, 96, 207, 0.24);
 }
 
 .metric-icon img,
@@ -1447,6 +1442,7 @@ input[readonly].readonly-metric {
 
 .metric-icon img {
     object-fit: contain;
+    filter: brightness(0) invert(1);
 }
 
 .metric-icon svg {
@@ -1458,28 +1454,27 @@ input[readonly].readonly-metric {
 }
 
 .metric-icon.success {
-    color: #05853e;
-    background: #eafaf1;
+    color: #fff;
+    background: #12a150;
+    box-shadow: 0 8px 18px rgba(18, 161, 80, 0.24);
 }
 
 .metric-icon.warning {
-    color: #b54708;
-    background: #fff4e5;
+    color: #fff;
+    background: #e88411;
+    box-shadow: 0 8px 18px rgba(232, 132, 17, 0.24);
 }
 
 .metric-icon.danger {
-    color: #d92d20;
-    background: #fff1f0;
+    color: #fff;
+    background: #d92d20;
+    box-shadow: 0 8px 18px rgba(217, 45, 32, 0.24);
 }
 
 .metric-icon.blue {
-    color: var(--hen-blue);
-    background: #eef4ff;
-}
-
-.metric-card.featured .metric-icon {
     color: #fff;
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--hen-blue);
+    box-shadow: 0 8px 18px rgba(51, 96, 207, 0.24);
 }
 
 .chart-card {
