@@ -165,11 +165,11 @@ a {
     box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
 }
 
-.account-toggle {
+.account-summary {
     width: 100%;
     min-height: 58px;
     display: grid;
-    grid-template-columns: 38px minmax(0, 1fr) 18px;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
     gap: 10px;
     align-items: center;
     padding: 8px 9px;
@@ -181,9 +181,8 @@ a {
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.account-toggle:hover,
-.account-toggle:focus,
-.account-toggle.show {
+.account-summary:hover,
+.account-summary:focus-within {
     border-color: #d8e1f4;
     background: #f7f9ff;
 }
@@ -255,103 +254,41 @@ a {
     white-space: nowrap;
 }
 
-.account-chevron {
-    position: relative;
-    width: 16px;
-    height: 16px;
-}
-
-.account-chevron::before {
-    content: "";
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid #8a94a6;
-    border-bottom: 2px solid #8a94a6;
-    transform: rotate(45deg);
-}
-
-.account-dropdown {
-    width: 236px;
-    padding: 8px;
-    border: 1px solid #e2e8f4;
-    border-radius: 8px;
-    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
-}
-
-.account-dropdown-header {
-    padding: 8px 10px 10px;
-    border-bottom: 1px solid #edf1f7;
-    margin-bottom: 6px;
-}
-
-.account-dropdown-name {
-    overflow: hidden;
-    color: #182234;
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.account-dropdown-meta {
-    color: var(--hen-blue);
-    font-size: 0.76rem;
-    font-weight: 500;
-}
-
 .account-logout-form {
     margin: 0;
 }
 
-.account-logout {
+.account-logout-inline {
     display: flex;
-    gap: 9px;
-    align-items: center;
-    min-height: 38px;
-    border-radius: 6px;
-    color: #b42318;
-    font-size: 0.9rem;
-    font-weight: 500;
+    justify-content: flex-end;
 }
 
-.account-logout:hover,
-.account-logout:focus {
+.account-logout-button {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    border: 1px solid #f0c5c1;
+    border-radius: 6px;
     color: #b42318;
+    background: #fff;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.account-logout-button:hover,
+.account-logout-button:focus {
+    color: #b42318;
+    border-color: #f3a6a0;
     background: #fff1f0;
 }
 
-.logout-icon {
-    position: relative;
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-}
-
-.logout-icon::before {
-    content: "";
-    position: absolute;
-    left: 2px;
-    top: 3px;
-    width: 9px;
-    height: 12px;
-    border: 1.8px solid currentColor;
-    border-right: 0;
-    border-radius: 3px 0 0 3px;
-}
-
-.logout-icon::after {
-    content: "";
-    position: absolute;
-    right: 1px;
-    top: 8px;
-    width: 11px;
-    height: 2px;
-    background: currentColor;
-    box-shadow: 4px -4px 0 -1px currentColor, 4px 4px 0 -1px currentColor;
+.logout-icon-img {
+    width: 19px;
+    height: 19px;
+    display: block;
+    object-fit: contain;
 }
 
 .app-panel {

@@ -64,9 +64,8 @@
                 </a>
             </nav>
 
-            <div class="sidebar-account dropdown">
-                <button class="account-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                    aria-expanded="false" aria-label="Open account menu">
+            <div class="sidebar-account">
+                <div class="account-summary">
                     <img class="account-avatar-img" src="{% static 'EggProduction/img/user-circle-duotone.svg' %}" alt=""
                         aria-hidden="true">
                     <span class="account-copy">
@@ -82,32 +81,14 @@
                             &middot; UBAP
                         </span>
                     </span>
-                    <span class="account-chevron" aria-hidden="true"></span>
-                </button>
-
-                <div class="dropdown-menu account-dropdown dropdown-menu-end">
-                    <div class="account-dropdown-header">
-                        <div class="account-dropdown-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-                        <div class="account-dropdown-meta">
-                            {% if request.user.is_superuser %}
-                            Admin
-                            {% elif request.user.userprofile.display_role %}
-                            {{ request.user.userprofile.display_role }}
-                            {% else %}
-                            Staff
-                            {% endif %}
-                            &middot; UBAP
-                        </div>
-                    </div>
-                    <form method="post" action="{% url 'logout' %}" class="account-logout-form" data-swal-logout
+                    <form method="post" action="{% url 'logout' %}" class="account-logout-form account-logout-inline" data-swal-logout
                         data-swal-title="Sign out?"
                         data-swal-text="You will be returned to the login page."
                         data-swal-confirm-text="Sign out"
                         data-swal-cancel-text="Stay signed in">
                         {% csrf_token %}
-                        <button type="submit" class="dropdown-item account-logout">
-                            <span class="logout-icon" aria-hidden="true"></span>
-                            <span>Logout</span>
+                        <button type="submit" class="account-logout-button" title="Logout" aria-label="Logout">
+                            <img class="logout-icon-img" src="{% static 'EggProduction/img/sign-out.svg' %}" alt="" aria-hidden="true">
                         </button>
                     </form>
                 </div>
@@ -170,7 +151,9 @@
                     text: alert.textContent.trim(),
                     icon: icon,
                     confirmButtonText: 'OK',
-                    confirmButtonColor: '#3360cf'
+                    confirmButtonColor: '#3360cf',
+                    timer: icon === 'success' || icon === 'info' ? 1600 : undefined,
+                    timerProgressBar: icon === 'success' || icon === 'info'
                 });
                 alert.remove();
             });

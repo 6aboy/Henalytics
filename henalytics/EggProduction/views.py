@@ -453,7 +453,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
     def get_period_bounds(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         period = self.request.GET.get('period', 'month')
         start = None
         end = today
@@ -500,7 +500,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
-            today = timezone.now().date()
+            today = timezone.localdate()
             last_7_days = today - timedelta(days=7)
             last_30_days = today - timedelta(days=30)
             period, date_from, date_to, period_label = self.get_period_bounds()
@@ -569,7 +569,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         except Exception as e:
             logger.exception("Dashboard error: %s", e)
             context.update({
-                'today': timezone.now().date(),
+                'today': timezone.localdate(),
                 'dashboard_period': 'month',
                 'dashboard_date_from': None,
                 'dashboard_date_to': None,
@@ -662,7 +662,7 @@ class ProductionLogListView(StaffAccessMixin, ListView):
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
         period = self.request.GET.get('period', 'all')
-        today = timezone.now().date()
+        today = timezone.localdate()
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
 
@@ -1078,7 +1078,7 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         if forecast_start_row:
             actual_chart_start = forecast_start_row.forecast_date - timedelta(days=self._history_days_for_horizon(selected_periods))
         else:
-            actual_chart_start = timezone.now().date() - timedelta(days=self._history_days_for_horizon(selected_periods))
+            actual_chart_start = timezone.localdate() - timedelta(days=self._history_days_for_horizon(selected_periods))
         chart_logs = production_logs.filter(log_date__gte=actual_chart_start)
         chart_grading_logs = grading_logs.filter(log_date__gte=actual_chart_start)
         actual_rows = (
@@ -1374,7 +1374,7 @@ class SalesForecastListView(ManagerAccessMixin, ListView):
         if forecast_start_row:
             actual_chart_start = forecast_start_row.forecast_date - timedelta(days=HarvestForecastListView._history_days_for_horizon(selected_periods))
         else:
-            actual_chart_start = timezone.now().date() - timedelta(days=HarvestForecastListView._history_days_for_horizon(selected_periods))
+            actual_chart_start = timezone.localdate() - timedelta(days=HarvestForecastListView._history_days_for_horizon(selected_periods))
         actual_sales_rows = (
             SalesItem.objects
             .filter(transaction__sale_date__gte=actual_chart_start)
@@ -1474,7 +1474,7 @@ class ProductionLogViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def today(self, request):
         """Get today's production logs"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         logs = self.queryset.filter(log_date=today)
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
@@ -1491,7 +1491,7 @@ class GradingLogViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def today(self, request):
         """Get today's grading logs"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         logs = self.queryset.filter(log_date=today)
         serializer = self.get_serializer(logs, many=True)
         return Response(serializer.data)
@@ -1511,7 +1511,7 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def today(self, request):
         """Get today's sales"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         sales = self.queryset.filter(sale_date=today).prefetch_related('items')
         serializer = self.get_serializer(sales, many=True)
         return Response(serializer.data)
@@ -1552,7 +1552,7 @@ class HarvestForecastViewSet(viewsets.ReadOnlyModelViewSet):
     def upcoming(self, request):
         """Get upcoming forecasts"""
         days = int(request.query_params.get('days', 30))
-        start_date = timezone.now().date()
+        start_date = timezone.localdate()
         end_date = start_date + timedelta(days=days)
         forecasts = self.queryset.filter(forecast_date__range=[start_date, end_date])
         serializer = self.get_serializer(forecasts, many=True)
@@ -1570,7 +1570,7 @@ class SalesForecastViewSet(viewsets.ReadOnlyModelViewSet):
     def upcoming(self, request):
         """Get upcoming sales forecasts"""
         days = int(request.query_params.get('days', 30))
-        start_date = timezone.now().date()
+        start_date = timezone.localdate()
         end_date = start_date + timedelta(days=days)
         forecasts = self.queryset.filter(forecast_date__range=[start_date, end_date])
         serializer = self.get_serializer(forecasts, many=True)

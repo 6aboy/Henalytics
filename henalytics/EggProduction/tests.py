@@ -362,6 +362,41 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-swal-delete-link')
         self.assertEqual(list(response.context['production_logs'])[0].flock_id, self.flock.id)
 
+    def test_production_log_today_filter_uses_local_date(self):
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=today,
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('84.27'),
+            pct_hen_housed=Decimal('83.33'),
+            entered_by=self.user,
+        )
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=yesterday,
+            age_weeks=30,
+            age_days=209,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=900,
+            pct_hen_day=Decimal('50.56'),
+            pct_hen_housed=Decimal('50.00'),
+            entered_by=self.user,
+        )
+
+        response = self.client.get(reverse('eggproduction:production-log-list'), {'period': 'today'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, today.strftime('%Y-%m-%d'))
+        self.assertContains(response, '<strong>1500</strong>')
+        self.assertNotContains(response, yesterday.strftime('%Y-%m-%d'))
+
     def test_dashboard_period_cards_total_eggs(self):
         ProductionLog.objects.create(
             flock=self.flock,
@@ -455,6 +490,17 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Analytics')
         self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
+
+    def test_sidebar_account_uses_direct_logout_button(self):
+        response = self.client.get(reverse('eggproduction:production-log-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'account-summary')
+        self.assertContains(response, 'account-logout-button')
+        self.assertContains(response, 'sign-out.svg')
+        self.assertContains(response, 'data-swal-logout')
+        self.assertNotContains(response, 'account-dropdown')
+        self.assertNotContains(response, 'data-bs-toggle="dropdown"')
 
     def test_admin_can_access_analytics_pages(self):
         admin = User.objects.create_superuser(
