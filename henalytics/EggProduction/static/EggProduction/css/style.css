@@ -7,6 +7,7 @@
     --hen-text: #101010;
     --hen-muted: #8a8a8a;
     --hen-shadow: 0 2px 9px rgba(0, 0, 0, 0.22);
+    --hen-number-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 * {
@@ -18,7 +19,28 @@ body {
     margin: 0;
     color: var(--hen-text);
     font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
     background: var(--hen-bg);
+}
+
+.numeric-text,
+.metric-value,
+.detail-value,
+.sales-item-total strong,
+.sales-grand-total strong,
+.table tbody td,
+.table tfoot th,
+.table tfoot td,
+[data-table-total],
+.mortality-card .value,
+.mortality-card .meta,
+.trend-up,
+.trend-down {
+    font-family: var(--hen-number-font);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    letter-spacing: 0;
 }
 
 a {
@@ -1365,9 +1387,8 @@ input[readonly].readonly-metric {
 .metric-value {
     margin-top: 2px;
     color: var(--hen-blue);
-    font-family: Georgia, "Times New Roman", serif;
     font-size: 40px;
-    font-weight: 900;
+    font-weight: 800;
     line-height: 1;
 }
 
@@ -1482,9 +1503,8 @@ input[readonly].readonly-metric {
 
 .mortality-card .value {
     color: var(--hen-blue);
-    font-family: Georgia, "Times New Roman", serif;
     font-size: 42px;
-    font-weight: 900;
+    font-weight: 800;
     line-height: 1;
 }
 
