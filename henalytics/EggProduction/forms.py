@@ -24,6 +24,11 @@ class ProductionLogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         today = timezone.localdate()
+        self.fields['remarks'].label = 'Notes'
+        self.fields['remarks'].widget.attrs.update({
+            'class': 'form-control compact-note-input',
+            'rows': 2,
+        })
         self.fields['log_date'].initial = self.initial.get('log_date') or today
         self.fields['log_date'].widget.input_type = 'date'
         self.fields['log_date'].widget.attrs['max'] = today.isoformat()
@@ -48,6 +53,13 @@ class SalesTransactionForm(forms.ModelForm):
     class Meta:
         model = SalesTransaction
         fields = ['flock', 'sale_date', 'or_number', 'notes']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['notes'].widget.attrs.update({
+            'class': 'form-control compact-note-input',
+            'rows': 2,
+        })
 
 
 class SalesItemForm(forms.ModelForm):

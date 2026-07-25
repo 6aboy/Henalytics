@@ -665,6 +665,19 @@ input[readonly].readonly-metric {
     margin-bottom: 18px;
 }
 
+.action-panel textarea,
+.compact-note-input,
+.note-field textarea {
+    width: 100%;
+    min-height: 58px;
+    max-height: 92px;
+    resize: vertical;
+}
+
+.note-field {
+    width: 100%;
+}
+
 .action-panel .alert {
     box-shadow: none;
 }

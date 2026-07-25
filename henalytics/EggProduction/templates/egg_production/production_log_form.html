@@ -118,8 +118,8 @@
                     </div>
                 </div>
 
-                <div class="form-group mb-3">
-                    <label for="{{ form.remarks.id_for_label }}">Remarks</label>
+                <div class="form-group mb-3 note-field">
+                    <label for="{{ form.remarks.id_for_label }}">Notes</label>
                     {{ form.remarks }}
                 </div>
 
@@ -146,7 +146,7 @@
     }
 
     textarea {
-        min-height: 100px;
+        min-height: 58px;
     }
 </style>
 {{ flock_initial_counts|json_script:"flock-initial-counts" }}
