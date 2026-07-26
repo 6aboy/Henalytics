@@ -9,59 +9,68 @@
     <a href="{% url 'eggproduction:sales-forecast-list' %}">Sales Forecasts</a>
 </div>
 
-<form method="post" class="forecast-toolbar action-panel">
-    {% csrf_token %}
-    <div>
-        <label for="flock_id">Flock</label>
-        <select name="flock_id" id="flock_id" class="form-select">
-            <option value="">All active flocks</option>
-            {% for flock in flocks %}
-            <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
-                House {{ flock.house_no }} - {{ flock.breed_strain }}
-            </option>
-            {% endfor %}
-        </select>
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Setup</h2>
+            <p>Choose the flock, forecast horizon, and whether the model should produce overall or size-level outputs.</p>
+        </div>
+        <span>Egg production</span>
     </div>
-    <div>
-        <label for="range">Forecast Horizon</label>
-        <select name="range" id="range" class="form-select">
-            {% for value,label in range_options %}
-            <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div>
-        <label for="scope">Scope</label>
-        <select name="scope" id="scope" class="form-select">
-            <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
-            <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
-        </select>
-    </div>
-    <div>
-        <label for="date_from">Custom Start</label>
-        <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
-    </div>
-    <div>
-        <label for="date_to">Custom End</label>
-        <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
-    </div>
-    <button type="submit" class="btn btn-primary">Generate Forecast</button>
-</form>
+    <form method="post" class="forecast-toolbar action-panel">
+        {% csrf_token %}
+        <div>
+            <label for="flock_id">Flock</label>
+            <select name="flock_id" id="flock_id" class="form-select">
+                <option value="">All active flocks</option>
+                {% for flock in flocks %}
+                <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
+                    House {{ flock.house_no }} - {{ flock.breed_strain }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="range">Forecast Horizon</label>
+            <select name="range" id="range" class="form-select">
+                {% for value,label in range_options %}
+                <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="scope">Scope</label>
+            <select name="scope" id="scope" class="form-select">
+                <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
+                <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
+            </select>
+        </div>
+        <div>
+            <label for="date_from">Custom Start</label>
+            <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
+        </div>
+        <div>
+            <label for="date_to">Custom End</label>
+            <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Forecast</button>
+    </form>
 
-<div class="forecast-method-strip">
-    <div>
-        <strong>{{ selected_range_label }}</strong>
-        <span>{{ selected_periods }} future daily point{{ selected_periods|pluralize }} shown in charts and tables.</span>
+    <div class="forecast-method-strip">
+        <div>
+            <strong>{{ selected_range_label }}</strong>
+            <span>{{ selected_periods }} future daily point{{ selected_periods|pluralize }} shown in charts and tables.</span>
+        </div>
+        <div>
+            <strong>{{ history_days }} Days History</strong>
+            <span>Recent actual records provide visual context before the forecast begins.</span>
+        </div>
+        <div>
+            <strong>Solid + Dashed Lines</strong>
+            <span>Solid is actual data. Dashed is forecast output.</span>
+        </div>
     </div>
-    <div>
-        <strong>{{ history_days }} Days History</strong>
-        <span>Recent actual records provide visual context before the forecast begins.</span>
-    </div>
-    <div>
-        <strong>Solid + Dashed Lines</strong>
-        <span>Solid is actual data. Dashed is forecast output.</span>
-    </div>
-</div>
+</section>
 
 {% if forecast_daily_points and forecast_daily_points < selected_periods %}
 <div class="alert alert-warning">
@@ -127,54 +136,80 @@
 </details>
 {% endif %}
 
-<div class="analytics-insight-grid">
-    {% for card in egg_insights.cards %}
-    <div class="analytics-insight-card {{ card.tone }}">
-        <div class="metric-label">{{ card.label }}</div>
-        <div class="metric-value">{{ card.value }}</div>
-        <div class="metric-meta">{{ card.meta }}</div>
-    </div>
-    {% endfor %}
-</div>
-
-<div class="action-panel analytics-conclusion">
-    <div>
-        <h2 class="detail-title">Machine Learning Interpretation</h2>
-        <div class="detail-subtitle">
-            Uses historical production records, grading records, hen performance indicators, and saved forecast rows.
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Model Signals</h2>
+            <p>High-level indicators that help explain whether future egg output and flock performance look healthy.</p>
         </div>
+        <span>Interpretation</span>
     </div>
-    <ul class="analytics-notes">
-        {% for note in egg_insights.notes %}
-        <li>{{ note }}</li>
+    <div class="analytics-insight-grid">
+        {% for card in egg_insights.cards %}
+        <div class="analytics-insight-card {{ card.tone }}">
+            <div class="metric-label">{{ card.label }}</div>
+            <div class="metric-value">{{ card.value }}</div>
+            <div class="metric-meta">{{ card.meta }}</div>
+        </div>
         {% endfor %}
-    </ul>
-</div>
-
-<div class="forecast-cards">
-    <div class="metric-card">
-        <div class="metric-label">Predicted Overall Eggs</div>
-        <div class="metric-value">{{ forecast_total|default:0 }}</div>
-        <div class="metric-meta">{{ selected_range_label }}</div>
     </div>
-    <div class="metric-card">
-        <div class="metric-label">Daily Forecast Points</div>
-        <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
-        <div class="metric-meta">
-            {% if forecast_start and forecast_end %}
-            {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
-            {% else %}
-            Generated by ARIMA / seasonal ARIMA
-            {% endif %}
+
+    <div class="action-panel analytics-conclusion">
+        <div>
+            <h2 class="detail-title">Machine Learning Interpretation</h2>
+            <div class="detail-subtitle">
+                Uses historical production records, grading records, hen performance indicators, and saved forecast rows.
+            </div>
+        </div>
+        <ul class="analytics-notes">
+            {% for note in egg_insights.notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Summary</h2>
+            <p>Condensed output from the latest generated forecast run for the selected future range.</p>
+        </div>
+        <span>{{ selected_range_label }}</span>
+    </div>
+    <div class="forecast-cards">
+        <div class="metric-card">
+            <div class="metric-label">Predicted Overall Eggs</div>
+            <div class="metric-value">{{ forecast_total|default:0 }}</div>
+            <div class="metric-meta">{{ selected_range_label }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Daily Forecast Points</div>
+            <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
+            <div class="metric-meta">
+                {% if forecast_start and forecast_end %}
+                {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
+                {% else %}
+                Generated by ARIMA / seasonal ARIMA
+                {% endif %}
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Forecast Categories</div>
+            <div class="metric-value">{{ forecast_categories|default:0 }}</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
         </div>
     </div>
-    <div class="metric-card">
-        <div class="metric-label">Forecast Categories</div>
-        <div class="metric-value">{{ forecast_categories|default:0 }}</div>
-        <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
-    </div>
-</div>
+</section>
 
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Visual Analysis</h2>
+            <p>Charts compare recent actual records against future forecast output and flock performance thresholds.</p>
+        </div>
+        <span>Charts</span>
+    </div>
 <div class="action-panel forecast-chart-card">
     <div class="detail-header">
         <div>
@@ -241,11 +276,20 @@
     </div>
     <canvas id="eggForecastChart" height="110"></canvas>
 </div>
+</section>
 
 {% if table_forecasts %}
 {% if forecast_rows > forecast_table_limit %}
 <div class="alert alert-info">Showing the first {{ forecast_table_limit }} rows within {{ selected_range_label }} to keep this page responsive.</div>
 {% endif %}
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Rows</h2>
+            <p>Detailed saved forecast records used for export, review, and traceability.</p>
+        </div>
+        <span>{{ forecast_rows }} row{{ forecast_rows|pluralize }}</span>
+    </div>
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table js-data-table"
         data-export-title="Egg Forecasts"
@@ -282,6 +326,7 @@
         </tbody>
     </table>
 </div>
+</section>
 {% else %}
 <div class="alert alert-info">No egg forecasts available.</div>
 {% endif %}

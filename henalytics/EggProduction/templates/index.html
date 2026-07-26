@@ -27,137 +27,170 @@
     <button type="submit" class="btn btn-info">Filter</button>
 </form>
 
-<section class="dashboard-grid">
-    <article class="metric-card featured">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Total Eggs</div>
-                <div class="metric-value">{{ period_egg_total }}</div>
-                <div class="metric-meta">{{ dashboard_period_label }} | {{ active_flocks }} active flock{{ active_flocks|pluralize }}</div>
-            </div>
-            <span class="metric-icon">
-                <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
-            </span>
+<section class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <h2>Current Summary</h2>
+            <p>Selected-period totals for production, revenue, feed use, and flock losses.</p>
         </div>
-    </article>
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Revenue</div>
-                <div class="metric-value">PHP {{ period_revenue|floatformat:0 }}</div>
-                <div class="metric-meta">{{ dashboard_period_label }}</div>
+        <span>{{ dashboard_period_label }}</span>
+    </div>
+    <div class="dashboard-grid">
+        <article class="metric-card featured">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Total Eggs</div>
+                    <div class="metric-value">{{ period_egg_total }}</div>
+                    <div class="metric-meta">{{ active_flocks }} active flock{{ active_flocks|pluralize }}</div>
+                </div>
+                <span class="metric-icon">
+                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
-            <span class="metric-icon success">
-                <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
-            </span>
-        </div>
-    </article>
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Feed Consumed</div>
-                <div class="metric-value">{{ period_feed_total }} bags</div>
-                <div class="metric-meta">{{ dashboard_period_label }}</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Revenue</div>
+                    <div class="metric-value">PHP {{ period_revenue|floatformat:0 }}</div>
+                    <div class="metric-meta">Sales value in selected range</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
-            <span class="metric-icon warning">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
-                    <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
-                    <path d="M8 12h8"></path>
-                </svg>
-            </span>
-        </div>
-    </article>
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Mortality + Cull</div>
-                <div class="metric-value">{{ period_losses }}</div>
-                <div class="metric-meta">{{ dashboard_period_label }}</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Feed Consumed</div>
+                    <div class="metric-value">{{ period_feed_total }} bags</div>
+                    <div class="metric-meta">Feed used in selected range</div>
+                </div>
+                <span class="metric-icon warning">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
+                        <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
+                        <path d="M8 12h8"></path>
+                    </svg>
+                </span>
             </div>
-            <span class="metric-icon danger">
-                <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
-            </span>
-        </div>
-    </article>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Mortality + Cull</div>
+                    <div class="metric-value">{{ period_losses }}</div>
+                    <div class="metric-meta">Recorded flock reductions</div>
+                </div>
+                <span class="metric-icon danger">
+                    <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+    </div>
 </section>
 
-<section class="dashboard-grid-secondary">
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Avg FCR (30d)</div>
-                <div class="metric-value">{{ avg_fcr_30d }}</div>
-                <div class="metric-meta">Stable</div>
-            </div>
-            <span class="metric-icon blue">
-                <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-            </span>
+<section class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <h2>Efficiency Indicators</h2>
+            <p>Recent operational signals for feed efficiency, laying performance, and egg quality.</p>
         </div>
-    </article>
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Avg Lay Rate</div>
-                <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
-                <div class="metric-meta">30-day average</div>
+        <span>Last 30 days</span>
+    </div>
+    <div class="dashboard-grid-secondary">
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Avg FCR</div>
+                    <div class="metric-value">{{ avg_fcr_30d }}</div>
+                    <div class="metric-meta">Feed kg / egg kg</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
-            <span class="metric-icon success">
-                <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-            </span>
-        </div>
-    </article>
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Feed Consumed (30d)</div>
-                <div class="metric-value">{{ feed_consumed_30d }} bags</div>
-                <div class="metric-meta">Last 30 days</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Avg Lay Rate</div>
+                    <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
+                    <div class="metric-meta">Hen-day production average</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
-            <span class="metric-icon warning">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
-                    <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
-                    <path d="M8 12h8"></path>
-                </svg>
-            </span>
-        </div>
-    </article>
-    <article class="metric-card">
-        <div class="metric-card-main">
-            <div>
-                <div class="metric-label">Cracked Egg Loss</div>
-                <div class="metric-value">{{ cracked_egg_loss }}%</div>
-                <div class="metric-meta">Loss rate</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Feed Consumed</div>
+                    <div class="metric-value">{{ feed_consumed_30d }} bags</div>
+                    <div class="metric-meta">Rolling 30-day usage</div>
+                </div>
+                <span class="metric-icon warning">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
+                        <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
+                        <path d="M8 12h8"></path>
+                    </svg>
+                </span>
             </div>
-            <span class="metric-icon danger">
-                <img src="{% static 'EggProduction/img/egg-crack-duotone.svg' %}" alt="" aria-hidden="true">
-            </span>
-        </div>
-    </article>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Cracked Egg Loss</div>
+                    <div class="metric-value">{{ cracked_egg_loss }}%</div>
+                    <div class="metric-meta">Quality loss rate</div>
+                </div>
+                <span class="metric-icon danger">
+                    <img src="{% static 'EggProduction/img/egg-crack-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+    </div>
 </section>
 
-<section class="dashboard-chart-grid">
-    <article class="chart-card egg-distribution-card">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-            <h3>Egg Size Distribution</h3>
-            <span class="metric-meta">30-day average</span>
+<section class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <h2>Production Composition</h2>
+            <p>Egg size mix helps reveal whether production is shifting toward larger or smaller grades.</p>
         </div>
-        <div class="donut-wrap">
-            <div class="donut" aria-label="Egg size distribution chart"></div>
-            <div class="legend">
-                <div class="legend-row"><span class="legend-swatch" style="background:#42ad86"></span><span>Large</span><strong>40%</strong></div>
-                <div class="legend-row"><span class="legend-swatch" style="background:#4bdd83"></span><span>Medium</span><strong>34%</strong></div>
-                <div class="legend-row"><span class="legend-swatch" style="background:#7db8f3"></span><span>XL</span><strong>9%</strong></div>
-                <div class="legend-row"><span class="legend-swatch" style="background:#175ec8"></span><span>Small</span><strong>11%</strong></div>
-                <div class="legend-row"><span class="legend-swatch" style="background:#36d2ba"></span><span>Other</span><strong>6%</strong></div>
+        <span>Size mix</span>
+    </div>
+    <div class="dashboard-chart-grid">
+        <article class="chart-card egg-distribution-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h3>Egg Size Distribution</h3>
+                <span class="metric-meta">30-day average</span>
             </div>
-        </div>
-    </article>
+            <div class="donut-wrap">
+                <div class="donut" aria-label="Egg size distribution chart"></div>
+                <div class="legend">
+                    <div class="legend-row"><span class="legend-swatch" style="background:#42ad86"></span><span>Large</span><strong>40%</strong></div>
+                    <div class="legend-row"><span class="legend-swatch" style="background:#4bdd83"></span><span>Medium</span><strong>34%</strong></div>
+                    <div class="legend-row"><span class="legend-swatch" style="background:#7db8f3"></span><span>XL</span><strong>9%</strong></div>
+                    <div class="legend-row"><span class="legend-swatch" style="background:#175ec8"></span><span>Small</span><strong>11%</strong></div>
+                    <div class="legend-row"><span class="legend-swatch" style="background:#36d2ba"></span><span>Other</span><strong>6%</strong></div>
+                </div>
+            </div>
+        </article>
+    </div>
 </section>
 
-<section class="mortality-section">
-    <div class="section-rule-title">Mortality Tracker</div>
+<section class="dashboard-section mortality-section">
+    <div class="section-heading">
+        <div>
+            <h2>Flock Loss Tracker</h2>
+            <p>Dead and culled hens are grouped by recent periods to help spot unusual flock health changes.</p>
+        </div>
+        <span>Mortality + culls</span>
+    </div>
     <div class="mortality-cards">
         <article class="mortality-card">
             <div class="label">Last 7 Days</div>
