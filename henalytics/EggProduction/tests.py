@@ -567,6 +567,36 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(log.age_days, 24)
         self.assertEqual(log.age_weeks, 3)
 
+    def test_production_log_can_be_recreated_after_delete_with_stale_metric_values(self):
+        log_date = timezone.localdate()
+        payload = {
+            'flock': self.flock.id,
+            'log_date': log_date,
+            'dead_count': 0,
+            'culled_count': 0,
+            'feed_bags': 12,
+            'eggs_total': 1200,
+            'pct_hen_day': '999.99',
+            'pct_hen_housed': '999.99',
+            'fcr': '999.999',
+            'remarks': '',
+        }
+
+        first_response = self.client.post(reverse('eggproduction:production-log-create'), payload)
+        self.assertEqual(first_response.status_code, 302)
+        first_log = ProductionLog.objects.get(flock=self.flock, log_date=log_date)
+
+        delete_response = self.client.post(reverse('eggproduction:production-log-delete', args=[first_log.pk]))
+        self.assertEqual(delete_response.status_code, 302)
+        self.assertFalse(ProductionLog.objects.filter(flock=self.flock, log_date=log_date).exists())
+
+        second_response = self.client.post(reverse('eggproduction:production-log-create'), payload)
+        self.assertEqual(second_response.status_code, 302)
+        second_log = ProductionLog.objects.get(flock=self.flock, log_date=log_date)
+        self.assertEqual(second_log.pct_hen_day, Decimal('66.67'))
+        self.assertEqual(second_log.pct_hen_housed, Decimal('66.67'))
+        self.assertEqual(second_log.fcr, Decimal('8.333'))
+
     def test_production_log_rejects_future_log_date(self):
         future_date = timezone.localdate() + timedelta(days=1)
 

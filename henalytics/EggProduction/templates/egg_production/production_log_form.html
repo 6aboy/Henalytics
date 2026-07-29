@@ -78,18 +78,18 @@
                             <small class="form-help">Log date - flock start</small>
                         </div>
                         <div class="form-group compact-metric-field">
-                            <label for="{{ form.pct_hen_day.id_for_label }}">% Hen Day</label>
-                            {{ form.pct_hen_day }}
+                            <label for="id_pct_hen_day">% Hen Day</label>
+                            <input type="text" id="id_pct_hen_day" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.pct_hen_day }}{% else %}0.00{% endif %}" readonly>
                             <small class="form-help">Eggs / live hens x 100</small>
                         </div>
                         <div class="form-group compact-metric-field">
-                            <label for="{{ form.pct_hen_housed.id_for_label }}">% Hen Housed</label>
-                            {{ form.pct_hen_housed }}
+                            <label for="id_pct_hen_housed">% Hen Housed</label>
+                            <input type="text" id="id_pct_hen_housed" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.pct_hen_housed }}{% else %}0.00{% endif %}" readonly>
                             <small class="form-help">Eggs / initial hens x 100</small>
                         </div>
                         <div class="form-group compact-metric-field">
-                            <label for="{{ form.fcr.id_for_label }}">FCR</label>
-                            {{ form.fcr }}
+                            <label for="id_fcr">FCR</label>
+                            <input type="text" id="id_fcr" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.fcr }}{% else %}0.000{% endif %}" readonly>
                             <small class="form-help">Feed kg / egg kg</small>
                         </div>
                     </div>
@@ -140,10 +140,10 @@
         var eggsField = document.getElementById('{{ form.eggs_total.id_for_label }}');
         var deadCountField = document.getElementById('{{ form.dead_count.id_for_label }}');
         var culledCountField = document.getElementById('{{ form.culled_count.id_for_label }}');
-        var henDayField = document.getElementById('{{ form.pct_hen_day.id_for_label }}');
-        var henHousedField = document.getElementById('{{ form.pct_hen_housed.id_for_label }}');
+        var henDayField = document.getElementById('id_pct_hen_day');
+        var henHousedField = document.getElementById('id_pct_hen_housed');
         var feedBagsField = document.getElementById('{{ form.feed_bags.id_for_label }}');
-        var fcrField = document.getElementById('{{ form.fcr.id_for_label }}');
+        var fcrField = document.getElementById('id_fcr');
         var countsElement = document.getElementById('flock-initial-counts');
         var flockInitialCounts = countsElement ? JSON.parse(countsElement.textContent) : {};
         var startsElement = document.getElementById('flock-start-dates');

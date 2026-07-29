@@ -695,6 +695,8 @@ class ProductionLogFormMixin:
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         for field_name in ('pct_hen_day', 'pct_hen_housed', 'fcr'):
+            if field_name not in form.fields:
+                continue
             form.fields[field_name].required = False
             form.fields[field_name].widget.attrs['readonly'] = True
             form.fields[field_name].widget.attrs['class'] = (
@@ -718,7 +720,6 @@ class ProductionLogFormMixin:
 
     def form_valid(self, form):
         form.instance.update_flock_age()
-        form.instance.update_laying_percentages()
         return super().form_valid(form)
 
 

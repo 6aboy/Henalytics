@@ -15,9 +15,6 @@ class ProductionLogForm(forms.ModelForm):
             'culled_count',
             'feed_bags',
             'eggs_total',
-            'pct_hen_day',
-            'pct_hen_housed',
-            'fcr',
             'remarks',
         ]
 
