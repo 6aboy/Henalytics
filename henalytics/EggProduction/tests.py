@@ -550,6 +550,8 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Database Egg Forecasting')
         self.assertContains(response, 'All active flocks')
         self.assertContains(response, 'Generate Forecast')
+        self.assertContains(response, 'data-swal-forecast-run')
+        self.assertContains(response, 'do not close the system')
 
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {

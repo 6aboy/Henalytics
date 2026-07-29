@@ -13,7 +13,10 @@
         <span>Database model</span>
     </div>
 
-    <form method="post" class="forecast-toolbar action-panel">
+    <form method="post" class="forecast-toolbar action-panel"
+        data-swal-forecast-run
+        data-swal-title="Generating forecast"
+        data-swal-text="Please wait and do not close the system while Henalytics trains the selected database series and saves the forecast rows.">
         {% csrf_token %}
         <div>
             <label for="flock_id">Flock</label>

@@ -297,6 +297,23 @@
                 });
             }
 
+            if (form.matches('[data-swal-forecast-run]')) {
+                event.preventDefault();
+                Swal.fire({
+                    title: form.dataset.swalTitle || 'Generating forecast',
+                    text: form.dataset.swalText || 'Please wait and do not close the system while the forecast is being generated.',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: function () {
+                        Swal.showLoading();
+                        form.dataset.swalSubmitting = 'true';
+                        form.submit();
+                    }
+                });
+            }
+
             if (form.matches('[data-swal-source-clear]')) {
                 event.preventDefault();
                 Swal.fire({
