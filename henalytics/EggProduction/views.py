@@ -93,6 +93,8 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
     last_actual_date = max(actual_by_date) if actual_by_date else None
     return {
         'labels': [item.strftime('%b %d, %Y') for item in dates],
+        'x_min': dates[0].strftime('%b %d, %Y') if dates else None,
+        'x_max': dates[-1].strftime('%b %d, %Y') if dates else None,
         'actual': [actual_by_date.get(item) for item in dates],
         'forecast': [
             actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)
@@ -567,6 +569,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             recent_losses_7d = ProductionLog.objects.filter(log_date__gte=last_7_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
+            hen_housed_rows = (
+                ProductionLog.objects
+                .filter(log_date__gte=last_30_days, flock__status='active')
+                .values('log_date')
+                .annotate(value=models.Avg('pct_hen_housed'))
+                .order_by('log_date')
+            )
+            hen_housed_payload = {
+                'labels': [row['log_date'].strftime('%b %d') for row in hen_housed_rows],
+                'actual': [float(row['value'] or 0) for row in hen_housed_rows],
+                'threshold': [60 for _row in hen_housed_rows],
+            }
 
             context.update({
                 'today': today,
@@ -589,6 +603,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'feed_consumed_30d': feed_consumed_30d,
                 'cracked_egg_loss': round(cracked_egg_loss, 1),
                 'recent_losses_7d': recent_losses_7d,
+                'hen_housed_payload_json': json.dumps(hen_housed_payload),
             })
         except Exception as e:
             logger.exception("Dashboard error: %s", e)
@@ -613,6 +628,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'feed_consumed_30d': 0,
                 'cracked_egg_loss': 0,
                 'recent_losses_7d': 0,
+                'hen_housed_payload_json': json.dumps({'labels': [], 'actual': [], 'threshold': []}),
             })
         return context
 

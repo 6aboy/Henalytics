@@ -239,6 +239,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { left: 0, right: 0, bottom: 8 } },
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
@@ -254,7 +255,19 @@
                     }
                 },
                 scales: {
-                    x: { ticks: { autoSkip: true, maxTicksLimit: 12 } },
+                    x: {
+                        offset: false,
+                        bounds: 'ticks',
+                        min: payload.x_min,
+                        max: payload.x_max,
+                        grid: { offset: false },
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: 12,
+                            maxRotation: 35,
+                            minRotation: 0
+                        }
+                    },
                     y: { beginAtZero: false }
                 }
             }

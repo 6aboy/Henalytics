@@ -1775,6 +1775,33 @@ input[readonly].readonly-metric {
     min-height: 250px;
 }
 
+.hen-housed-card {
+    min-height: 360px;
+}
+
+.dashboard-line-chart-wrap {
+    position: relative;
+    min-height: 280px;
+}
+
+#dashboardHenHousedChart {
+    width: 100% !important;
+    height: 280px !important;
+}
+
+.dashboard-chart-empty {
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #667085;
+    background: #f8fbff;
+    border: 1px dashed #cdd8ee;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
 .chart-card h3 {
     font-size: 1rem;
     font-weight: 800;

@@ -21,6 +21,7 @@ from .models import (
 )
 from .forecasting_service import ForecastingService
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
+from .views import build_actual_vs_forecast_payload
 
 
 def create_flock(**overrides):
@@ -434,6 +435,9 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['period_egg_total'], 1234)
         self.assertContains(response, 'Total Eggs')
+        self.assertContains(response, 'Actual Hen Housed vs Threshold')
+        self.assertContains(response, 'dashboardHenHousedChart')
+        self.assertIn('hen_housed_payload_json', response.context)
 
     def test_primary_detail_pages_render_real_values(self):
         log = ProductionLog.objects.create(
@@ -552,6 +556,18 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Generate Forecast')
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'do not close the system')
+        self.assertContains(response, 'bounds:')
+        self.assertContains(response, 'payload.x_max')
+
+    def test_actual_vs_forecast_payload_includes_chart_bounds(self):
+        today = timezone.localdate()
+        payload = build_actual_vs_forecast_payload(
+            [{'log_date': today, 'total': 1000}],
+            [{'forecast_date': today + timedelta(days=1), 'total': 1010, 'lower': 950, 'upper': 1070}],
+        )
+
+        self.assertEqual(payload['x_min'], today.strftime('%b %d, %Y'))
+        self.assertEqual(payload['x_max'], (today + timedelta(days=1)).strftime('%b %d, %Y'))
 
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {

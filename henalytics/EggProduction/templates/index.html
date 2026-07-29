@@ -158,26 +158,20 @@
 <section class="dashboard-section">
     <div class="section-heading">
         <div>
-            <h2>Production Composition</h2>
-            <p>Egg size mix helps reveal whether production is shifting toward larger or smaller grades.</p>
+            <h2>Hen Housed Performance</h2>
+            <p>Actual hen-housed production is tracked against the 60% warning threshold for flock usability.</p>
         </div>
-        <span>Size mix</span>
+        <span>Last 30 days</span>
     </div>
     <div class="dashboard-chart-grid">
-        <article class="chart-card egg-distribution-card">
+        <article class="chart-card hen-housed-card">
             <div class="d-flex justify-content-between align-items-start mb-3">
-                <h3>Egg Size Distribution</h3>
-                <span class="metric-meta">30-day average</span>
+                <h3>Actual Hen Housed vs Threshold</h3>
+                <span class="metric-meta">60% threshold</span>
             </div>
-            <div class="donut-wrap">
-                <div class="donut" aria-label="Egg size distribution chart"></div>
-                <div class="legend">
-                    <div class="legend-row"><span class="legend-swatch" style="background:#42ad86"></span><span>Large</span><strong>40%</strong></div>
-                    <div class="legend-row"><span class="legend-swatch" style="background:#4bdd83"></span><span>Medium</span><strong>34%</strong></div>
-                    <div class="legend-row"><span class="legend-swatch" style="background:#7db8f3"></span><span>XL</span><strong>9%</strong></div>
-                    <div class="legend-row"><span class="legend-swatch" style="background:#175ec8"></span><span>Small</span><strong>11%</strong></div>
-                    <div class="legend-row"><span class="legend-swatch" style="background:#36d2ba"></span><span>Other</span><strong>6%</strong></div>
-                </div>
+            <div class="dashboard-line-chart-wrap">
+                <div class="dashboard-chart-empty">No recent hen-housed records yet.</div>
+                <canvas id="dashboardHenHousedChart" height="110"></canvas>
             </div>
         </article>
     </div>
@@ -209,4 +203,71 @@
         </article>
     </div>
 </section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    (function () {
+        const payload = {{ hen_housed_payload_json|safe }};
+        const canvas = document.getElementById('dashboardHenHousedChart');
+        const empty = document.querySelector('.dashboard-chart-empty');
+        if (!canvas || !payload.labels.length) {
+            if (canvas) {
+                canvas.style.display = 'none';
+            }
+            return;
+        }
+        if (empty) {
+            empty.style.display = 'none';
+        }
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: payload.labels,
+                datasets: [
+                    {
+                        label: 'Actual Hen Housed %',
+                        data: payload.actual,
+                        borderColor: '#3360cf',
+                        backgroundColor: 'rgba(51, 96, 207, 0.12)',
+                        pointRadius: payload.labels.length > 45 ? 0 : 3,
+                        tension: 0.25,
+                        fill: true
+                    },
+                    {
+                        label: '60% Threshold',
+                        data: payload.threshold,
+                        borderColor: '#ed0909',
+                        borderDash: [7, 5],
+                        pointRadius: 0,
+                        tension: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y || 0).toFixed(2)}%`
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { autoSkip: true, maxTicksLimit: 12 } },
+                    y: {
+                        min: 0,
+                        max: 110,
+                        ticks: {
+                            callback: (value) => `${value}%`
+                        }
+                    }
+                }
+            }
+        });
+    })();
+</script>
 {% endblock %}
