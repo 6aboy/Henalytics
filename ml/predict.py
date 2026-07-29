@@ -72,6 +72,9 @@ def validate_future_exog(future_exog: pd.DataFrame, horizon: int) -> pd.DataFram
 
 
 def forecast(horizon: int = 30, future_exog: pd.DataFrame | None = None, model_name: str = MODEL_NAME) -> dict:
+    if horizon < 1:
+        raise PredictionError("Forecast horizon must be at least 1.")
+
     model, metadata = load_model_and_metadata(model_name)
     assumptions = None
     if future_exog is None:

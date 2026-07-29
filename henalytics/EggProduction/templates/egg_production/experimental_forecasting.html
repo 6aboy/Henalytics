@@ -32,14 +32,16 @@
     </div>
 
     <div class="experimental-forecast-grid">
-        <form method="post" class="action-panel experimental-forecast-panel">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="train">
+        <div class="action-panel experimental-forecast-panel">
             <h3>Train Model</h3>
-            <p>Uses the cleaned CSV, performs a chronological train-test split, then saves the SARIMAX artifact and metadata.</p>
+            <p>Training is done through a management command to keep heavy ML work outside browser requests.</p>
             <code>{{ training_command }}</code>
-            <button type="submit" class="btn btn-primary" {% if not dataset_exists %}disabled{% endif %}>Train SARIMAX</button>
-        </form>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="train">
+                <button type="submit" class="btn btn-secondary">Why command-based?</button>
+            </form>
+        </div>
 
         <form method="post" class="action-panel experimental-forecast-panel">
             {% csrf_token %}

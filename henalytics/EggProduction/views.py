@@ -1365,20 +1365,11 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
         context = self.get_context_data(range_key=range_key)
 
         if action == 'train':
-            try:
-                self._ensure_ml_import_path()
-                from ml.train import train_model
-
-                result = train_model()
-                messages.success(
-                    request,
-                    f'Experimental SARIMAX model trained. RMSE: {result.metrics["rmse"]:.2f}, MAE: {result.metrics["mae"]:.2f}.',
-                    extra_tags='swal',
-                )
-                context = self.get_context_data(range_key=range_key)
-            except Exception as exc:
-                logger.exception("Experimental training failed")
-                messages.error(request, f'Training failed: {exc}', extra_tags='swal')
+            messages.info(
+                request,
+                'Training is handled by the Django management command so it does not run inside a browser request.',
+                extra_tags='swal',
+            )
 
         if action == 'forecast':
             try:
@@ -1427,8 +1418,8 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
             'model_exists': model_path.exists(),
             'metadata_exists': metadata_path.exists(),
             'model_metadata': metadata,
-            'training_command': 'python ml/train.py',
-            'prediction_command': 'python ml/predict.py --horizon 30',
+            'training_command': 'python henalytics/manage.py train_sarimax',
+            'prediction_command': 'python henalytics/manage.py generate_experimental_forecast --horizon 30',
         }
 
     @staticmethod

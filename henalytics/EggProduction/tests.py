@@ -493,6 +493,7 @@ class TemplateRenderTest(TestCase):
 
     def test_staff_cannot_access_analytics_pages(self):
         urls = [
+            reverse('eggproduction:experimental-forecasting'),
             reverse('eggproduction:harvest-forecast-list'),
             reverse('eggproduction:sales-forecast-list'),
             reverse('eggproduction:model-version-list'),
@@ -507,6 +508,8 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Analytics')
+        self.assertNotContains(response, 'Forecasting')
+        self.assertNotContains(response, reverse('eggproduction:experimental-forecasting'))
         self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
 
     def test_sidebar_account_uses_direct_logout_button(self):
@@ -532,6 +535,21 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Analytics')
+
+    def test_admin_can_access_experimental_forecasting_page(self):
+        admin = User.objects.create_superuser(
+            username='forecastadmin',
+            email='forecast@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('eggproduction:experimental-forecasting'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Experimental SARIMAX Forecasting')
+        self.assertContains(response, 'python henalytics/manage.py train_sarimax')
+        self.assertContains(response, 'Run Forecast')
 
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {
