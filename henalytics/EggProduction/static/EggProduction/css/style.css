@@ -1543,7 +1543,8 @@ input[readonly].readonly-metric {
 
 #actualForecastChart,
 #actualSalesForecastChart,
-#experimentalForecastChart {
+#experimentalForecastChart,
+#databaseForecastChart {
     width: 100% !important;
     height: 340px !important;
 }

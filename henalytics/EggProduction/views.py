@@ -12,8 +12,6 @@ from django.conf import settings
 from datetime import date, timedelta
 import json
 import logging
-import sys
-from pathlib import Path
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -1360,97 +1358,116 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
     template_name = 'egg_production/experimental_forecasting.html'
 
     def post(self, request, *args, **kwargs):
-        action = request.POST.get('action')
         range_key = request.POST.get('range', 'month')
-        context = self.get_context_data(range_key=range_key)
+        flock_id = request.POST.get('flock_id', '')
+        scope = request.POST.get('scope', 'both')
+        periods = ForecastingService.periods_for_range(range_key)
+        include_sizes = scope == 'both'
+        errors = []
+        created_count = 0
 
-        if action == 'train':
-            messages.info(
-                request,
-                'Training is handled by the Django management command so it does not run inside a browser request.',
-                extra_tags='swal',
+        flocks = Flock.objects.filter(status='active').order_by('house_no')
+        if flock_id:
+            flocks = flocks.filter(pk=flock_id)
+
+        for flock in flocks:
+            result = ForecastingService.generate_egg_forecasts(
+                flock=flock,
+                periods=periods,
+                user=request.user,
+                include_sizes=include_sizes,
             )
+            created_count += result['created_count']
+            errors.extend([f'House {flock.house_no}: {error}' for error in result['errors']])
 
-        if action == 'forecast':
-            try:
-                context.update(self._build_prediction_context(range_key))
-                messages.success(request, 'Experimental forecast generated from the saved SARIMAX model.', extra_tags='swal')
-            except Exception as exc:
-                logger.exception("Experimental forecast failed")
-                messages.error(request, f'Forecast failed: {exc}', extra_tags='swal')
+        if created_count:
+            messages.success(request, f'Generated {created_count} database forecast rows.', extra_tags='swal')
+        if errors:
+            messages.warning(request, '; '.join(errors[:3]), extra_tags='swal')
 
-        return self.render_to_response(context)
+        query = QueryDict(mutable=True)
+        query['range'] = range_key
+        query['scope'] = scope
+        if flock_id:
+            query['flock_id'] = flock_id
+        return redirect(f'{reverse_lazy("eggproduction:experimental-forecasting")}?{query.urlencode()}')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        range_key = kwargs.get('range_key') or self.request.GET.get('range', 'month')
+        range_key = self.request.GET.get('range', 'month')
+        flock_id = self.request.GET.get('flock_id', '')
+        scope = self.request.GET.get('scope', 'both')
         range_label, horizon = EXPERIMENTAL_FORECAST_RANGES.get(range_key, EXPERIMENTAL_FORECAST_RANGES['month'])
-        status = self._artifact_status()
+        forecasts = HarvestForecast.objects.select_related('flock', 'model_version')
+        production_logs = ProductionLog.objects.select_related('flock')
+        if flock_id:
+            forecasts = forecasts.filter(flock_id=flock_id)
+            production_logs = production_logs.filter(flock_id=flock_id)
+        else:
+            forecasts = forecasts.filter(flock__status='active')
+            production_logs = production_logs.filter(flock__status='active')
+
+        first_forecast_date = forecasts.order_by('forecast_date').values_list('forecast_date', flat=True).first()
+        if first_forecast_date:
+            forecasts = forecasts.filter(forecast_date__lte=first_forecast_date + timedelta(days=horizon - 1))
+            actual_start = first_forecast_date - timedelta(days=self._history_days_for_horizon(horizon))
+        else:
+            actual_start = timezone.localdate() - timedelta(days=self._history_days_for_horizon(horizon))
+
+        chart_logs = production_logs.filter(log_date__gte=actual_start)
+        overall_forecasts = forecasts.filter(grade='overall')
+        actual_rows = (
+            chart_logs.values('log_date')
+            .annotate(total=models.Sum('eggs_total'))
+            .order_by('log_date')
+        )
+        forecast_rows = (
+            overall_forecasts.values('forecast_date')
+            .annotate(
+                total=models.Sum('predicted_qty'),
+                lower=models.Sum('lower_qty'),
+                upper=models.Sum('upper_qty'),
+            )
+            .order_by('forecast_date')
+        )
+        run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
+        latest_model = (
+            ModelVersion.objects
+            .filter(harvest_forecasts__in=forecasts)
+            .order_by('-trained_at', '-pk')
+            .distinct()
+            .first()
+        )
         context.update({
+            'flocks': Flock.objects.filter(status='active').order_by('house_no'),
+            'selected_flock_id': flock_id,
+            'selected_scope': scope,
             'range_options': EXPERIMENTAL_FORECAST_RANGES.items(),
             'selected_range': range_key,
             'selected_range_label': range_label,
             'selected_horizon': horizon,
-            **status,
-            'forecast_payload_json': json.dumps({'labels': [], 'forecast': [], 'lower': [], 'upper': []}),
-            'forecast_rows': [],
+            'history_days': self._history_days_for_horizon(horizon),
+            'forecast_total': overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
+            'forecast_rows': run_summary['rows'],
+            'forecast_daily_points': run_summary['daily_points'],
+            'forecast_categories': run_summary['categories'],
+            'forecast_start': run_summary['first_row'],
+            'forecast_end': run_summary['last_row'],
+            'forecast_peak': forecasts.order_by('-predicted_qty').first(),
+            'latest_model': latest_model,
+            'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
+            'forecast_table_limit': FORECAST_TABLE_LIMIT,
+            'forecast_payload_json': json.dumps(build_actual_vs_forecast_payload(actual_rows, forecast_rows)),
         })
         return context
 
     @staticmethod
-    def _artifact_status():
-        base_dir = Path(settings.BASE_DIR).parent
-        dataset_path = base_dir / 'ml' / 'data' / 'Egg_Production_Final_Cleaned.csv'
-        model_path = base_dir / 'ml' / 'models' / 'sarimax_clean_v1.pkl'
-        metadata_path = base_dir / 'ml' / 'models' / 'sarimax_clean_v1.metadata.json'
-        metadata = None
-        if metadata_path.exists():
-            try:
-                metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
-            except json.JSONDecodeError:
-                metadata = None
-
-        return {
-            'dataset_path': dataset_path,
-            'model_path': model_path,
-            'metadata_path': metadata_path,
-            'dataset_exists': dataset_path.exists(),
-            'model_exists': model_path.exists(),
-            'metadata_exists': metadata_path.exists(),
-            'model_metadata': metadata,
-            'training_command': 'python henalytics/manage.py train_sarimax',
-            'prediction_command': 'python henalytics/manage.py generate_experimental_forecast --horizon 30',
-        }
-
-    @staticmethod
-    def _build_prediction_context(range_key):
-        ExperimentalForecastingView._ensure_ml_import_path()
-        from ml.predict import forecast
-
-        range_label, horizon = EXPERIMENTAL_FORECAST_RANGES.get(range_key, EXPERIMENTAL_FORECAST_RANGES['month'])
-        result = forecast(horizon=horizon)
-        rows = result['forecasts']
-        payload = {
-            'labels': [row['date'] for row in rows],
-            'forecast': [round(row['predicted_pieces'], 2) for row in rows],
-            'lower': [round(row['lower_bound'], 2) for row in rows],
-            'upper': [round(row['upper_bound'], 2) for row in rows],
-        }
-        return {
-            'selected_range': range_key,
-            'selected_range_label': range_label,
-            'selected_horizon': horizon,
-            'forecast_payload_json': json.dumps(payload),
-            'forecast_rows': rows,
-            'forecast_assumptions': result.get('assumptions'),
-        }
-
-    @staticmethod
-    def _ensure_ml_import_path():
-        project_root = Path(settings.BASE_DIR).parent
-        project_root_text = str(project_root)
-        if project_root_text not in sys.path:
-            sys.path.insert(0, project_root_text)
+    def _history_days_for_horizon(horizon):
+        if horizon <= 7:
+            return 30
+        if horizon <= 30:
+            return 60
+        return 120
 
 
 class SalesForecastListView(ManagerAccessMixin, ListView):

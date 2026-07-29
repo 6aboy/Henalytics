@@ -536,7 +536,7 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Analytics')
 
-    def test_admin_can_access_experimental_forecasting_page(self):
+    def test_admin_can_access_database_forecasting_page(self):
         admin = User.objects.create_superuser(
             username='forecastadmin',
             email='forecast@example.com',
@@ -547,9 +547,9 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:experimental-forecasting'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Experimental SARIMAX Forecasting')
-        self.assertContains(response, 'python henalytics/manage.py train_sarimax')
-        self.assertContains(response, 'Run Forecast')
+        self.assertContains(response, 'Database Egg Forecasting')
+        self.assertContains(response, 'All active flocks')
+        self.assertContains(response, 'Generate Forecast')
 
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {

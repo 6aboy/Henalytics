@@ -1,88 +1,123 @@
 {% extends 'base.html' %}
 
-{% block title %}Experimental Forecasting - Henalytics{% endblock %}
+{% block title %}Database Forecasting - Henalytics{% endblock %}
 {% block page_title %}Forecasting{% endblock %}
 
 {% block content %}
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Experimental SARIMAX Forecasting</h2>
-            <p>Train and test the cleaned CSV-based egg production model before connecting it to the main Analytics module.</p>
+            <h2>Database Egg Forecasting</h2>
+            <p>Generate forecasts from saved daily production and grading records in the Henalytics database.</p>
         </div>
-        <span>Draft model</span>
+        <span>Database model</span>
     </div>
 
-    <div class="forecast-cards">
-        <div class="metric-card">
-            <div class="metric-label">Cleaned Dataset</div>
-            <div class="metric-value">{{ dataset_exists|yesno:"Ready,Missing" }}</div>
-            <div class="metric-meta">`ml/data/Egg_Production_Final_Cleaned.csv`</div>
+    <form method="post" class="forecast-toolbar action-panel">
+        {% csrf_token %}
+        <div>
+            <label for="flock_id">Flock</label>
+            <select name="flock_id" id="flock_id" class="form-select">
+                <option value="">All active flocks</option>
+                {% for flock in flocks %}
+                <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
+                    House {{ flock.house_no }} - {{ flock.breed_strain }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
-        <div class="metric-card">
-            <div class="metric-label">Saved Model</div>
-            <div class="metric-value">{{ model_exists|yesno:"Ready,Missing" }}</div>
-            <div class="metric-meta">`ml/models/sarimax_clean_v1.pkl`</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Selected Horizon</div>
-            <div class="metric-value">{{ selected_horizon }}</div>
-            <div class="metric-meta">{{ selected_range_label }} future daily points</div>
-        </div>
-    </div>
-
-    <div class="experimental-forecast-grid">
-        <div class="action-panel experimental-forecast-panel">
-            <h3>Train Model</h3>
-            <p>Training is done through a management command to keep heavy ML work outside browser requests.</p>
-            <code>{{ training_command }}</code>
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="train">
-                <button type="submit" class="btn btn-secondary">Why command-based?</button>
-            </form>
-        </div>
-
-        <form method="post" class="action-panel experimental-forecast-panel">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="forecast">
-            <h3>Run Forecast</h3>
-            <p>Loads the saved model and generates a future egg production forecast using the selected horizon.</p>
+        <div>
             <label for="range">Forecast Horizon</label>
             <select name="range" id="range" class="form-select">
                 {% for value,option in range_options %}
                 <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ option.0 }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-primary" {% if not model_exists or not metadata_exists %}disabled{% endif %}>Run Forecast</button>
-        </form>
+        </div>
+        <div>
+            <label for="scope">Scope</label>
+            <select name="scope" id="scope" class="form-select">
+                <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
+                <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Forecast</button>
+    </form>
+
+    <div class="forecast-method-strip">
+        <div>
+            <strong>{{ selected_range_label }}</strong>
+            <span>{{ selected_horizon }} future daily point{{ selected_horizon|pluralize }} from database records.</span>
+        </div>
+        <div>
+            <strong>{{ history_days }} Days History</strong>
+            <span>Recent actual records are shown before the forecast starts.</span>
+        </div>
+        <div>
+            <strong>SARIMA + Features</strong>
+            <span>Uses production history and safe poultry inputs such as age, live hens, mortality, culls, and feed.</span>
+        </div>
     </div>
 </section>
 
-{% if model_metadata %}
+{% if forecast_daily_points and forecast_daily_points < selected_horizon %}
+<div class="alert alert-warning">
+    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points }} future day{{ forecast_daily_points|pluralize }}.
+    Click Generate Forecast with this horizon to create the full range.
+</div>
+{% endif %}
+
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Summary</h2>
+            <p>Latest saved forecast run from database production records.</p>
+        </div>
+        <span>{% if forecast_start and forecast_end %}{{ forecast_start.forecast_date|date:"M d" }} - {{ forecast_end.forecast_date|date:"M d, Y" }}{% else %}No run yet{% endif %}</span>
+    </div>
+    <div class="forecast-cards">
+        <div class="metric-card">
+            <div class="metric-label">Forecast Eggs</div>
+            <div class="metric-value">{{ forecast_total|floatformat:0 }}</div>
+            <div class="metric-meta">Total expected eggs in selected horizon</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Daily Points</div>
+            <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
+            <div class="metric-meta">{{ selected_range_label }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Categories</div>
+            <div class="metric-value">{{ forecast_categories|default:0 }}</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
+        </div>
+    </div>
+</section>
+
+{% if latest_model %}
 <section class="analytics-section">
     <div class="section-heading">
         <div>
             <h2>Model Validation</h2>
-            <p>Backtest metrics from the saved experimental model, useful for explaining trustworthiness during defense.</p>
+            <p>Backtest metrics from the latest generated database forecast model.</p>
         </div>
-        <span>{{ model_metadata.model_version }}</span>
+        <span>{{ latest_model.arima_order|default:"ARIMA" }}</span>
     </div>
     <div class="forecast-cards">
         <div class="metric-card">
             <div class="metric-label">RMSE</div>
-            <div class="metric-value">{{ model_metadata.rmse|floatformat:2 }}</div>
-            <div class="metric-meta">Average error scale in egg pieces</div>
+            <div class="metric-value">{{ latest_model.rmse|default:"N/A" }}</div>
+            <div class="metric-meta">Average error scale in egg count</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">MAE</div>
-            <div class="metric-value">{{ model_metadata.mae|floatformat:2 }}</div>
+            <div class="metric-value">{{ latest_model.mae|default:"N/A" }}</div>
             <div class="metric-meta">Typical absolute daily error</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">MAPE</div>
-            <div class="metric-value">{{ model_metadata.mape|floatformat:2 }}%</div>
-            <div class="metric-meta">{{ model_metadata.observation_count }} observations</div>
+            <div class="metric-value">{% if latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
+            <div class="metric-meta">{{ latest_model.training_rows|default:0 }} training rows</div>
         </div>
     </div>
 </section>
@@ -91,76 +126,56 @@
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Forecast Chart</h2>
-            <p>Dashed blue line shows the expected forecast. The light band shows the 95% confidence interval.</p>
+            <h2>Actual Production vs Forecast</h2>
+            <p>Solid dark line shows saved production logs. Dashed blue line shows generated future forecast rows.</p>
         </div>
         <span>{{ selected_range_label }}</span>
     </div>
     <div class="action-panel forecast-chart-card">
-        {% if forecast_rows %}
-        <canvas id="experimentalForecastChart" height="110"></canvas>
+        {% if forecast_daily_points %}
+        <canvas id="databaseForecastChart" height="110"></canvas>
         {% else %}
         <div class="alert alert-info mb-0">
-            {% if not dataset_exists %}
-            Add the cleaned CSV to `ml/data/Egg_Production_Final_Cleaned.csv`, then train the model.
-            {% elif not model_exists %}
-            Train the experimental model first, then run a forecast.
-            {% else %}
-            Choose a horizon and click Run Forecast to preview the model output.
-            {% endif %}
+            No database forecast rows yet. Choose a flock and horizon, then click Generate Forecast.
         </div>
         {% endif %}
     </div>
 </section>
 
-{% if forecast_assumptions %}
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Forecast Assumptions</h2>
-            <p>These future predictor values are used because real future flock conditions are not known yet.</p>
-        </div>
-        <span>Default inputs</span>
-    </div>
-    <div class="forecast-method-strip">
-        {% for label,value in forecast_assumptions.items %}
-        <div>
-            <strong>{{ label }}</strong>
-            <span>{{ value }}</span>
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if forecast_rows %}
+{% if table_forecasts %}
 <section class="analytics-section">
     <div class="section-heading">
         <div>
             <h2>Forecast Rows</h2>
-            <p>Detailed experimental forecast output from the saved SARIMAX model.</p>
+            <p>Saved database forecast records used for review and traceability.</p>
         </div>
-        <span>{{ forecast_rows|length }} rows</span>
+        <span>{{ forecast_rows }} row{{ forecast_rows|pluralize }}</span>
     </div>
     <div class="table-responsive table-card">
-        <table class="table table-striped table-hover">
+        <table class="table table-striped table-hover js-data-table" data-export-enabled="true" data-export-title="Database Egg Forecasts">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Predicted Pieces</th>
-                    <th>Lower 95%</th>
-                    <th>Upper 95%</th>
-                    <th>Model Version</th>
+                    <th>Forecast Date</th>
+                    <th>Flock</th>
+                    <th>Size</th>
+                    <th>Predicted Eggs</th>
+                    <th>Lower Range</th>
+                    <th>Upper Range</th>
+                    <th>Model</th>
+                    <th>MAPE</th>
                 </tr>
             </thead>
             <tbody>
-                {% for row in forecast_rows %}
+                {% for forecast in table_forecasts %}
                 <tr>
-                    <td>{{ row.date }}</td>
-                    <td>{{ row.predicted_pieces|floatformat:0 }}</td>
-                    <td>{{ row.lower_bound|floatformat:0 }}</td>
-                    <td>{{ row.upper_bound|floatformat:0 }}</td>
-                    <td>{{ row.model_version }}</td>
+                    <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
+                    <td>House {{ forecast.flock.house_no }}</td>
+                    <td>{{ forecast.get_grade_display }}</td>
+                    <td><strong>{{ forecast.predicted_qty }}</strong></td>
+                    <td>{{ forecast.lower_qty|default:"N/A" }}</td>
+                    <td>{{ forecast.upper_qty|default:"N/A" }}</td>
+                    <td>{{ forecast.model_version.arima_order|default:"ARIMA" }}</td>
+                    <td>{% if forecast.model_version.mape %}{{ forecast.model_version.mape }}%{% else %}N/A{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -173,7 +188,7 @@
 <script>
     (function () {
         const payload = {{ forecast_payload_json|safe }};
-        const canvas = document.getElementById('experimentalForecastChart');
+        const canvas = document.getElementById('databaseForecastChart');
         if (!canvas || !payload.labels.length) {
             return;
         }
@@ -184,7 +199,7 @@
                 labels: payload.labels,
                 datasets: [
                     {
-                        label: 'Lower 95%',
+                        label: 'Forecast Lower Range',
                         data: payload.lower,
                         borderColor: 'rgba(51, 96, 207, 0)',
                         backgroundColor: 'rgba(51, 96, 207, 0)',
@@ -192,7 +207,7 @@
                         fill: false
                     },
                     {
-                        label: 'Expected Range',
+                        label: 'Forecast Expected Range',
                         data: payload.upper,
                         borderColor: 'rgba(51, 96, 207, 0)',
                         backgroundColor: 'rgba(51, 96, 207, 0.14)',
@@ -200,12 +215,20 @@
                         fill: '-1'
                     },
                     {
-                        label: 'Forecast Pieces',
+                        label: 'Actual Eggs',
+                        data: payload.actual,
+                        borderColor: '#344054',
+                        backgroundColor: 'rgba(52, 64, 84, 0.10)',
+                        pointRadius: payload.labels.length > 120 ? 0 : 2,
+                        tension: 0.2
+                    },
+                    {
+                        label: 'Forecast Eggs',
                         data: payload.forecast,
                         borderColor: '#3360cf',
                         backgroundColor: 'rgba(51, 96, 207, 0.12)',
                         borderDash: [7, 5],
-                        pointRadius: payload.labels.length > 80 ? 0 : 2,
+                        pointRadius: payload.labels.length > 120 ? 0 : 2,
                         tension: 0.2
                     }
                 ]
@@ -218,7 +241,7 @@
                     legend: {
                         position: 'bottom',
                         labels: {
-                            filter: (item) => item.text !== 'Lower 95%'
+                            filter: (item) => item.text !== 'Forecast Lower Range'
                         }
                     },
                     tooltip: {
