@@ -1543,10 +1543,14 @@ input[readonly].readonly-metric {
 
 #actualForecastChart,
 #actualSalesForecastChart,
-#experimentalForecastChart,
-#databaseForecastChart {
+#experimentalForecastChart {
     width: 100% !important;
     height: 340px !important;
+}
+
+.plotly-forecast-chart {
+    width: 100%;
+    min-height: 430px;
 }
 
 .experimental-forecast-grid {

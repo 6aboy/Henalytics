@@ -93,8 +93,11 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
     last_actual_date = max(actual_by_date) if actual_by_date else None
     return {
         'labels': [item.strftime('%b %d, %Y') for item in dates],
+        'iso_labels': [item.isoformat() for item in dates],
         'x_min': dates[0].strftime('%b %d, %Y') if dates else None,
         'x_max': dates[-1].strftime('%b %d, %Y') if dates else None,
+        'x_min_iso': dates[0].isoformat() if dates else None,
+        'x_max_iso': dates[-1].isoformat() if dates else None,
         'actual': [actual_by_date.get(item) for item in dates],
         'forecast': [
             actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)

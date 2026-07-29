@@ -556,7 +556,14 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Generate Forecast')
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'do not close the system')
-        self.assertContains(response, 'bounds:')
+        self.assertContains(response, 'cdn.plot.ly')
+        self.assertContains(response, 'Plotly.newPlot')
+        self.assertContains(response, 'scrollZoom: true')
+        self.assertContains(response, "dragmode: 'pan'")
+        self.assertContains(response, 'showspikes: true')
+        self.assertContains(response, "tickformat: '%b %d'")
+        self.assertContains(response, "standoff: 18")
+        self.assertNotContains(response, 'rangeselector')
         self.assertContains(response, 'payload.x_max')
 
     def test_actual_vs_forecast_payload_includes_chart_bounds(self):
@@ -568,6 +575,8 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(payload['x_min'], today.strftime('%b %d, %Y'))
         self.assertEqual(payload['x_max'], (today + timedelta(days=1)).strftime('%b %d, %Y'))
+        self.assertEqual(payload['x_min_iso'], today.isoformat())
+        self.assertEqual(payload['x_max_iso'], (today + timedelta(days=1)).isoformat())
 
     def test_production_log_create_auto_calculates_percentages(self):
         response = self.client.post(reverse('eggproduction:production-log-create'), {
