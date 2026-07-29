@@ -142,7 +142,7 @@ def train_model(dataset_path: Path = DATA_PATH, model_name: str = MODEL_NAME) ->
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     model_path = MODEL_DIR / f"{model_name}.pkl"
     metadata_path = MODEL_DIR / f"{model_name}.metadata.json"
-    final_model.save(model_path)
+    final_model.save(str(model_path))
 
     metadata = {
         "model_name": model_name,

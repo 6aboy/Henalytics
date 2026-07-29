@@ -1542,9 +1542,56 @@ input[readonly].readonly-metric {
 }
 
 #actualForecastChart,
-#actualSalesForecastChart {
+#actualSalesForecastChart,
+#experimentalForecastChart {
     width: 100% !important;
     height: 340px !important;
+}
+
+.experimental-forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: stretch;
+}
+
+.experimental-forecast-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 230px;
+}
+
+.experimental-forecast-panel h3 {
+    margin: 0;
+    color: var(--hen-blue);
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.experimental-forecast-panel p {
+    margin: 0;
+    color: #667085;
+    font-size: 0.92rem;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.experimental-forecast-panel code,
+.metric-meta code {
+    display: block;
+    padding: 10px 12px;
+    color: #344054;
+    background: #f3f6fb;
+    border: 1px solid #dfe7f5;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    white-space: normal;
+}
+
+.experimental-forecast-panel .btn {
+    margin-top: auto;
+    align-self: flex-start;
 }
 
 .forecast-chart-card .detail-header {

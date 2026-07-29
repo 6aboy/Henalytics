@@ -1,0 +1,35 @@
+{
+  "model_name": "sarimax_clean_v1",
+  "model_version": "sarimax_clean_v1",
+  "dataset_filename": "Egg_Production_Final_Cleaned.csv",
+  "dataset_hash": "9fbffd29d74f758996fe7eb73a43aab3a640f87cccdb291fb10015eb3026425c",
+  "target_column": "Pieces",
+  "exogenous_columns": [
+    "Bird No.",
+    "Dead",
+    "Cull",
+    "FEED (bags)"
+  ],
+  "training_date_range": {
+    "start": "2024-11-02",
+    "end": "2025-08-29"
+  },
+  "observation_count": 301,
+  "order": [
+    1,
+    1,
+    1
+  ],
+  "seasonal_order": [
+    1,
+    0,
+    1,
+    7
+  ],
+  "mae": 43.78111218112535,
+  "rmse": 48.09817006752493,
+  "mape": 2.7562412723039396,
+  "training_timestamp": "2026-07-29T19:15:03.488508+00:00",
+  "python_version": "3.14.2",
+  "statsmodels_version": "0.14.6"
+}

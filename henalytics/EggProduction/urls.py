@@ -55,6 +55,7 @@ urlpatterns = [
     path('sales-items/<int:pk>/delete/', views.SalesItemDeleteView.as_view(), name='sales-item-delete'),
     
     # Forecast Views
+    path('forecasting/', views.ExperimentalForecastingView.as_view(), name='experimental-forecasting'),
     path('harvest-forecasts/', views.HarvestForecastListView.as_view(), name='harvest-forecast-list'),
     path('harvest-forecasts/<int:pk>/', views.HarvestForecastDetailView.as_view(), name='harvest-forecast-detail'),
     path('sales-forecasts/', views.SalesForecastListView.as_view(), name='sales-forecast-list'),

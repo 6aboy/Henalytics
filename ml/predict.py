@@ -9,7 +9,10 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAXResults
 
-from train import DATA_PATH, DATE_COLUMN, EXOG_COLUMNS, MODEL_DIR, MODEL_NAME, load_clean_dataset
+try:
+    from .train import DATA_PATH, DATE_COLUMN, EXOG_COLUMNS, MODEL_DIR, MODEL_NAME, load_clean_dataset
+except ImportError:
+    from train import DATA_PATH, DATE_COLUMN, EXOG_COLUMNS, MODEL_DIR, MODEL_NAME, load_clean_dataset
 
 
 class PredictionError(ValueError):
@@ -27,7 +30,7 @@ def load_model_and_metadata(model_name: str = MODEL_NAME):
     if not metadata_path.exists():
         raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
 
-    model = SARIMAXResults.load(model_path)
+    model = SARIMAXResults.load(str(model_path))
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     missing = [column for column in EXOG_COLUMNS if column not in metadata.get("exogenous_columns", [])]
     if missing:

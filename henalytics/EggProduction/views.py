@@ -12,6 +12,8 @@ from django.conf import settings
 from datetime import date, timedelta
 import json
 import logging
+import sys
+from pathlib import Path
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -33,6 +35,12 @@ logger = logging.getLogger(__name__)
 
 
 FORECAST_TABLE_LIMIT = 500
+EXPERIMENTAL_FORECAST_RANGES = {
+    'week': ('7 Days', 7),
+    'three_weeks': ('3 Weeks', 21),
+    'month': ('1 Month', 30),
+    'three_months': ('3 Months', 90),
+}
 
 
 def build_forecast_chart_payload(queryset, value_field):
@@ -1346,6 +1354,112 @@ class TestingDataClearView(LoginRequiredMixin, UserPassesTestMixin, View):
         ForecastMaintenanceClearView._delete_orphan_model_versions()
         messages.success(request, f'Cleared {production_count} production logs, {grading_count} grading logs, and {forecast_count} egg forecast rows.')
         return redirect(redirect_to)
+
+
+class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
+    template_name = 'egg_production/experimental_forecasting.html'
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action')
+        range_key = request.POST.get('range', 'month')
+        context = self.get_context_data(range_key=range_key)
+
+        if action == 'train':
+            try:
+                self._ensure_ml_import_path()
+                from ml.train import train_model
+
+                result = train_model()
+                messages.success(
+                    request,
+                    f'Experimental SARIMAX model trained. RMSE: {result.metrics["rmse"]:.2f}, MAE: {result.metrics["mae"]:.2f}.',
+                    extra_tags='swal',
+                )
+                context = self.get_context_data(range_key=range_key)
+            except Exception as exc:
+                logger.exception("Experimental training failed")
+                messages.error(request, f'Training failed: {exc}', extra_tags='swal')
+
+        if action == 'forecast':
+            try:
+                context.update(self._build_prediction_context(range_key))
+                messages.success(request, 'Experimental forecast generated from the saved SARIMAX model.', extra_tags='swal')
+            except Exception as exc:
+                logger.exception("Experimental forecast failed")
+                messages.error(request, f'Forecast failed: {exc}', extra_tags='swal')
+
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        range_key = kwargs.get('range_key') or self.request.GET.get('range', 'month')
+        range_label, horizon = EXPERIMENTAL_FORECAST_RANGES.get(range_key, EXPERIMENTAL_FORECAST_RANGES['month'])
+        status = self._artifact_status()
+        context.update({
+            'range_options': EXPERIMENTAL_FORECAST_RANGES.items(),
+            'selected_range': range_key,
+            'selected_range_label': range_label,
+            'selected_horizon': horizon,
+            **status,
+            'forecast_payload_json': json.dumps({'labels': [], 'forecast': [], 'lower': [], 'upper': []}),
+            'forecast_rows': [],
+        })
+        return context
+
+    @staticmethod
+    def _artifact_status():
+        base_dir = Path(settings.BASE_DIR).parent
+        dataset_path = base_dir / 'ml' / 'data' / 'Egg_Production_Final_Cleaned.csv'
+        model_path = base_dir / 'ml' / 'models' / 'sarimax_clean_v1.pkl'
+        metadata_path = base_dir / 'ml' / 'models' / 'sarimax_clean_v1.metadata.json'
+        metadata = None
+        if metadata_path.exists():
+            try:
+                metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+            except json.JSONDecodeError:
+                metadata = None
+
+        return {
+            'dataset_path': dataset_path,
+            'model_path': model_path,
+            'metadata_path': metadata_path,
+            'dataset_exists': dataset_path.exists(),
+            'model_exists': model_path.exists(),
+            'metadata_exists': metadata_path.exists(),
+            'model_metadata': metadata,
+            'training_command': 'python ml/train.py',
+            'prediction_command': 'python ml/predict.py --horizon 30',
+        }
+
+    @staticmethod
+    def _build_prediction_context(range_key):
+        ExperimentalForecastingView._ensure_ml_import_path()
+        from ml.predict import forecast
+
+        range_label, horizon = EXPERIMENTAL_FORECAST_RANGES.get(range_key, EXPERIMENTAL_FORECAST_RANGES['month'])
+        result = forecast(horizon=horizon)
+        rows = result['forecasts']
+        payload = {
+            'labels': [row['date'] for row in rows],
+            'forecast': [round(row['predicted_pieces'], 2) for row in rows],
+            'lower': [round(row['lower_bound'], 2) for row in rows],
+            'upper': [round(row['upper_bound'], 2) for row in rows],
+        }
+        return {
+            'selected_range': range_key,
+            'selected_range_label': range_label,
+            'selected_horizon': horizon,
+            'forecast_payload_json': json.dumps(payload),
+            'forecast_rows': rows,
+            'forecast_assumptions': result.get('assumptions'),
+        }
+
+    @staticmethod
+    def _ensure_ml_import_path():
+        project_root = Path(settings.BASE_DIR).parent
+        project_root_text = str(project_root)
+        if project_root_text not in sys.path:
+            sys.path.insert(0, project_root_text)
 
 
 class SalesForecastListView(ManagerAccessMixin, ListView):

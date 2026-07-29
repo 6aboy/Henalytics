@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block title %}Experimental Forecasting - Henalytics{% endblock %}
+{% block page_title %}Forecasting{% endblock %}
+
+{% block content %}
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Experimental SARIMAX Forecasting</h2>
+            <p>Train and test the cleaned CSV-based egg production model before connecting it to the main Analytics module.</p>
+        </div>
+        <span>Draft model</span>
+    </div>
+
+    <div class="forecast-cards">
+        <div class="metric-card">
+            <div class="metric-label">Cleaned Dataset</div>
+            <div class="metric-value">{{ dataset_exists|yesno:"Ready,Missing" }}</div>
+            <div class="metric-meta">`ml/data/Egg_Production_Final_Cleaned.csv`</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Saved Model</div>
+            <div class="metric-value">{{ model_exists|yesno:"Ready,Missing" }}</div>
+            <div class="metric-meta">`ml/models/sarimax_clean_v1.pkl`</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Selected Horizon</div>
+            <div class="metric-value">{{ selected_horizon }}</div>
+            <div class="metric-meta">{{ selected_range_label }} future daily points</div>
+        </div>
+    </div>
+
+    <div class="experimental-forecast-grid">
+        <form method="post" class="action-panel experimental-forecast-panel">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="train">
+            <h3>Train Model</h3>
+            <p>Uses the cleaned CSV, performs a chronological train-test split, then saves the SARIMAX artifact and metadata.</p>
+            <code>{{ training_command }}</code>
+            <button type="submit" class="btn btn-primary" {% if not dataset_exists %}disabled{% endif %}>Train SARIMAX</button>
+        </form>
+
+        <form method="post" class="action-panel experimental-forecast-panel">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="forecast">
+            <h3>Run Forecast</h3>
+            <p>Loads the saved model and generates a future egg production forecast using the selected horizon.</p>
+            <label for="range">Forecast Horizon</label>
+            <select name="range" id="range" class="form-select">
+                {% for value,option in range_options %}
+                <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ option.0 }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary" {% if not model_exists or not metadata_exists %}disabled{% endif %}>Run Forecast</button>
+        </form>
+    </div>
+</section>
+
+{% if model_metadata %}
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Model Validation</h2>
+            <p>Backtest metrics from the saved experimental model, useful for explaining trustworthiness during defense.</p>
+        </div>
+        <span>{{ model_metadata.model_version }}</span>
+    </div>
+    <div class="forecast-cards">
+        <div class="metric-card">
+            <div class="metric-label">RMSE</div>
+            <div class="metric-value">{{ model_metadata.rmse|floatformat:2 }}</div>
+            <div class="metric-meta">Average error scale in egg pieces</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">MAE</div>
+            <div class="metric-value">{{ model_metadata.mae|floatformat:2 }}</div>
+            <div class="metric-meta">Typical absolute daily error</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">MAPE</div>
+            <div class="metric-value">{{ model_metadata.mape|floatformat:2 }}%</div>
+            <div class="metric-meta">{{ model_metadata.observation_count }} observations</div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Chart</h2>
+            <p>Dashed blue line shows the expected forecast. The light band shows the 95% confidence interval.</p>
+        </div>
+        <span>{{ selected_range_label }}</span>
+    </div>
+    <div class="action-panel forecast-chart-card">
+        {% if forecast_rows %}
+        <canvas id="experimentalForecastChart" height="110"></canvas>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            {% if not dataset_exists %}
+            Add the cleaned CSV to `ml/data/Egg_Production_Final_Cleaned.csv`, then train the model.
+            {% elif not model_exists %}
+            Train the experimental model first, then run a forecast.
+            {% else %}
+            Choose a horizon and click Run Forecast to preview the model output.
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% if forecast_assumptions %}
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Assumptions</h2>
+            <p>These future predictor values are used because real future flock conditions are not known yet.</p>
+        </div>
+        <span>Default inputs</span>
+    </div>
+    <div class="forecast-method-strip">
+        {% for label,value in forecast_assumptions.items %}
+        <div>
+            <strong>{{ label }}</strong>
+            <span>{{ value }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if forecast_rows %}
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Forecast Rows</h2>
+            <p>Detailed experimental forecast output from the saved SARIMAX model.</p>
+        </div>
+        <span>{{ forecast_rows|length }} rows</span>
+    </div>
+    <div class="table-responsive table-card">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Predicted Pieces</th>
+                    <th>Lower 95%</th>
+                    <th>Upper 95%</th>
+                    <th>Model Version</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in forecast_rows %}
+                <tr>
+                    <td>{{ row.date }}</td>
+                    <td>{{ row.predicted_pieces|floatformat:0 }}</td>
+                    <td>{{ row.lower_bound|floatformat:0 }}</td>
+                    <td>{{ row.upper_bound|floatformat:0 }}</td>
+                    <td>{{ row.model_version }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    (function () {
+        const payload = {{ forecast_payload_json|safe }};
+        const canvas = document.getElementById('experimentalForecastChart');
+        if (!canvas || !payload.labels.length) {
+            return;
+        }
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: payload.labels,
+                datasets: [
+                    {
+                        label: 'Lower 95%',
+                        data: payload.lower,
+                        borderColor: 'rgba(51, 96, 207, 0)',
+                        backgroundColor: 'rgba(51, 96, 207, 0)',
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: 'Expected Range',
+                        data: payload.upper,
+                        borderColor: 'rgba(51, 96, 207, 0)',
+                        backgroundColor: 'rgba(51, 96, 207, 0.14)',
+                        pointRadius: 0,
+                        fill: '-1'
+                    },
+                    {
+                        label: 'Forecast Pieces',
+                        data: payload.forecast,
+                        borderColor: '#3360cf',
+                        backgroundColor: 'rgba(51, 96, 207, 0.12)',
+                        borderDash: [7, 5],
+                        pointRadius: payload.labels.length > 80 ? 0 : 2,
+                        tension: 0.2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            filter: (item) => item.text !== 'Lower 95%'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${Math.round(context.parsed.y || 0).toLocaleString()} eggs`
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { autoSkip: true, maxTicksLimit: 12 } },
+                    y: { beginAtZero: false }
+                }
+            }
+        });
+    })();
+</script>
+{% endblock %}
