@@ -40,10 +40,9 @@ class ForecastingService:
     SEASONAL_ORDERS = ((1, 0, 1, SEASONAL_PERIOD), (0, 1, 1, SEASONAL_PERIOD))
     HORIZONS = {
         'week': 7,
+        'three_weeks': 21,
         'month': 30,
         'three_months': 90,
-        'six_months': 180,
-        'year': 365,
     }
     EGG_GRADE_FIELDS = {
         'xl': 'eggs_aa',
@@ -60,8 +59,6 @@ class ForecastingService:
         'culled_count',
         'hen_count',
         'feed_bags',
-        'pct_hen_day',
-        'pct_hen_housed',
     )
 
     @classmethod

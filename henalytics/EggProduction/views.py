@@ -1158,10 +1158,9 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
     def _range_options():
         return [
             ('week', '1 Week'),
+            ('three_weeks', '3 Weeks'),
             ('month', '1 Month'),
             ('three_months', '3 Months'),
-            ('six_months', '6 Months'),
-            ('year', '1 Year'),
             ('custom', 'Custom'),
         ]
 
@@ -1203,10 +1202,9 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
     def _range_label(range_key, periods):
         labels = {
             'week': 'Next 7 Days',
+            'three_weeks': 'Next 3 Weeks',
             'month': 'Next 30 Days',
             'three_months': 'Next 3 Months',
-            'six_months': 'Next 6 Months',
-            'year': 'Next 1 Year',
             'custom': f'Custom Horizon ({periods} days)',
         }
         return labels.get(range_key, f'Next {periods} Days')

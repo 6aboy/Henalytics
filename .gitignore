@@ -10,3 +10,9 @@ env/
 
 *.log
 
+ml/.venv/
+ml/__pycache__/
+ml/**/*.pyc
+ml/notebooks/.ipynb_checkpoints/
+ml/models/*.tmp
+ml/models/*.log
