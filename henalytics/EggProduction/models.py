@@ -99,6 +99,9 @@ class ModelVersion(models.Model):
     triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     r2_score = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True)
     rmse = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mae = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mape = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    baseline_rmse = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     aic_score = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     arima_order = models.CharField(max_length=20, null=True, blank=True, help_text="Format: (p,d,q)")
     pkl_path = models.CharField(max_length=255, null=True, blank=True)
@@ -338,6 +341,8 @@ class HarvestForecast(models.Model):
     forecast_date = models.DateField()
     grade = models.CharField('egg size', max_length=20, choices=FORECAST_CATEGORY_CHOICES)
     predicted_qty = models.IntegerField(validators=[MinValueValidator(0)])
+    lower_qty = models.IntegerField(validators=[MinValueValidator(0)], null=True, blank=True)
+    upper_qty = models.IntegerField(validators=[MinValueValidator(0)], null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

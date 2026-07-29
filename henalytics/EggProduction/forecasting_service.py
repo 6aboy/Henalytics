@@ -163,6 +163,9 @@ class ForecastingService:
                     triggered_by=user,
                     r2_score=cls._decimal_or_none(result['r_squared'], 4, min_value=-9.9999, max_value=9.9999),
                     rmse=cls._decimal_or_none(result['rmse'], 2),
+                    mae=cls._decimal_or_none(result.get('mae'), 2),
+                    mape=cls._decimal_or_none(result.get('mape'), 2),
+                    baseline_rmse=cls._decimal_or_none(result.get('baseline_rmse'), 2),
                     aic_score=cls._decimal_or_none(result['aic_score'], 2),
                     arima_order=str(result['order']),
                     training_rows=len(prepared['series']),
@@ -173,6 +176,8 @@ class ForecastingService:
                 start_date = result['start_date']
                 for index, raw_value in enumerate(result['forecasted_values'], start=1):
                     forecast_date = start_date + timedelta(days=index - 1)
+                    lower_value = result.get('lower_values', [None] * periods)[index - 1]
+                    upper_value = result.get('upper_values', [None] * periods)[index - 1]
                     if model_kind == 'sales':
                         amount = cls._decimal_money(max(float(raw_value), 0))
                         forecast = SalesForecast.objects.create(
@@ -189,6 +194,8 @@ class ForecastingService:
                             forecast_date=forecast_date,
                             grade=grade,
                             predicted_qty=max(0, int(round(float(raw_value)))),
+                            lower_qty=cls._int_or_none(lower_value),
+                            upper_qty=cls._int_or_none(upper_value),
                         )
                     created_ids.append(forecast.id)
 
@@ -224,27 +231,40 @@ class ForecastingService:
             return {'success': False, 'error': 'ARIMA could not fit this series'}
 
         future_exog = cls._future_exog(exog, periods)
-        forecast_values = np.asarray(best['model'].forecast(steps=periods, exog=future_exog), dtype=float)
-        rmse, r_squared = cls._score_series(prepared, best['spec'])
-        fallback = cls._fallback_forecast_if_needed(
-            series,
-            forecast_values,
+        forecast_values, lower_values, upper_values = cls._forecast_values_with_intervals(
+            best['model'],
             periods,
-            rmse,
-            forecast_start_date=forecast_start_date,
+            future_exog=future_exog,
         )
-        if fallback is not None:
-            return fallback
-
+        metrics = cls._score_series(prepared, best['spec'])
         return {
             'success': True,
             'forecasted_values': forecast_values,
+            'lower_values': lower_values,
+            'upper_values': upper_values,
             'order': cls._format_model_spec(best['spec'], uses_exog=exog is not None),
             'aic_score': float(best['model'].aic),
-            'rmse': rmse,
-            'r_squared': r_squared,
+            'rmse': metrics['rmse'],
+            'mae': metrics['mae'],
+            'mape': metrics['mape'],
+            'baseline_rmse': metrics['baseline_rmse'],
+            'r_squared': metrics['r_squared'],
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
+
+    @classmethod
+    def _forecast_values_with_intervals(cls, fitted_model, periods, future_exog=None):
+        forecast_result = fitted_model.get_forecast(steps=periods, exog=future_exog)
+        forecast_values = np.asarray(forecast_result.predicted_mean, dtype=float)
+        try:
+            confidence = np.asarray(forecast_result.conf_int(alpha=0.20), dtype=float)
+            lower_values = np.maximum(confidence[:, 0], 0)
+            upper_values = np.maximum(confidence[:, 1], lower_values)
+        except Exception:
+            logger.debug("Forecast interval calculation failed", exc_info=True)
+            lower_values = np.full(periods, np.nan)
+            upper_values = np.full(periods, np.nan)
+        return forecast_values, lower_values, upper_values
 
     @classmethod
     def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None):
@@ -274,9 +294,14 @@ class ForecastingService:
         return {
             'success': True,
             'forecasted_values': baseline_values,
+            'lower_values': cls._interval_from_rmse(baseline_values, baseline_rmse),
+            'upper_values': cls._interval_from_rmse(baseline_values, baseline_rmse, upper=True),
             'order': 'seasonal naive baseline (7-day)',
             'aic_score': None,
             'rmse': baseline_rmse,
+            'mae': None,
+            'mape': None,
+            'baseline_rmse': baseline_rmse,
             'r_squared': baseline_r2,
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
@@ -324,9 +349,14 @@ class ForecastingService:
         return {
             'success': True,
             'forecasted_values': trend_values,
+            'lower_values': cls._interval_from_rmse(trend_values, trend_rmse if trend_rmse is not None else model_rmse),
+            'upper_values': cls._interval_from_rmse(trend_values, trend_rmse if trend_rmse is not None else model_rmse, upper=True),
             'order': 'trend-adjusted ARIMA fallback',
             'aic_score': None,
             'rmse': trend_rmse if trend_rmse is not None else model_rmse,
+            'mae': None,
+            'mape': None,
+            'baseline_rmse': None,
             'r_squared': trend_r2,
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
@@ -359,6 +389,23 @@ class ForecastingService:
         return repeated.astype(float)
 
     @classmethod
+    def _seasonal_naive_from_train(cls, train_values, periods):
+        train_values = np.asarray(train_values, dtype=float)
+        window = train_values[-cls.SEASONAL_PERIOD:] if len(train_values) >= cls.SEASONAL_PERIOD else train_values[-1:]
+        return np.resize(window, periods).astype(float)
+
+    @staticmethod
+    def _interval_from_rmse(values, rmse, upper=False):
+        values = np.asarray(values, dtype=float)
+        if rmse is None:
+            padding = np.maximum(values * 0.12, 1)
+        else:
+            padding = max(float(rmse) * 1.28, 1)
+        if upper:
+            return values + padding
+        return np.maximum(values - padding, 0)
+
+    @classmethod
     def _score_seasonal_naive(cls, series):
         values = series.to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
@@ -379,17 +426,32 @@ class ForecastingService:
         exog = prepared['exog']
         values = series.to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
+        empty = {
+            'rmse': None,
+            'mae': None,
+            'mape': None,
+            'baseline_rmse': None,
+            'r_squared': None,
+        }
         try:
             train_exog = exog.iloc[:-test_size] if exog is not None else None
             test_exog = exog.iloc[-test_size:] if exog is not None else None
             model = cls._fit_model(values[:-test_size], spec, exog=train_exog)
             predictions = np.asarray(model.forecast(steps=test_size, exog=test_exog), dtype=float)
-            rmse = float(np.sqrt(mean_squared_error(values[-test_size:], predictions)))
-            r_squared = float(r2_score(values[-test_size:], predictions)) if test_size > 1 else None
-            return rmse, r_squared
+            actual = values[-test_size:]
+            metrics = cls._prediction_metrics(actual, predictions)
+            baseline_predictions = cls._seasonal_naive_from_train(values[:-test_size], test_size)
+            baseline_metrics = cls._prediction_metrics(actual, baseline_predictions)
+            return {
+                'rmse': metrics['rmse'],
+                'mae': metrics['mae'],
+                'mape': metrics['mape'],
+                'baseline_rmse': baseline_metrics['rmse'],
+                'r_squared': metrics['r2'],
+            }
         except Exception:
             logger.debug("ARIMA scoring failed", exc_info=True)
-            return None, None
+            return empty
 
     @classmethod
     def _evaluate_series_map(cls, series_map, allow_seasonal=False, use_exog=False):
@@ -519,12 +581,15 @@ class ForecastingService:
 
     @classmethod
     def _candidate_model_specs(cls, series_length, allow_seasonal):
-        specs = [{'order': order, 'seasonal_order': None} for order in cls.DEFAULT_ORDERS]
+        nonseasonal_specs = [{'order': order, 'seasonal_order': None} for order in cls.DEFAULT_ORDERS]
         if allow_seasonal and series_length >= cls.SEASONAL_PERIOD * 4:
+            specs = []
             for order in cls.DEFAULT_ORDERS[:3]:
                 for seasonal_order in cls.SEASONAL_ORDERS:
                     specs.append({'order': order, 'seasonal_order': seasonal_order})
-        return specs
+            specs.extend(nonseasonal_specs)
+            return specs
+        return nonseasonal_specs
 
     @staticmethod
     def _format_model_spec(spec, uses_exog=False):
@@ -550,8 +615,12 @@ class ForecastingService:
             return None
 
         df['date'] = pd.to_datetime(df['date'])
-        df['value'] = df['value'].fillna(0).astype(float)
-        aggregations = {'value': 'sum'}
+        df['value'] = pd.to_numeric(df['value'], errors='coerce')
+        observed_count = int(df['value'].notna().sum())
+        if observed_count < cls.MIN_POINTS:
+            return None
+
+        aggregations = {'value': lambda values: values.sum(min_count=1)}
         if use_exog:
             for field_name in cls.EGG_FEATURE_FIELDS:
                 if field_name in df.columns:
@@ -562,7 +631,7 @@ class ForecastingService:
         df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
         df = df.interpolate(method='time').ffill().bfill()
 
-        if len(df) < cls.MIN_POINTS:
+        if len(df) < cls.MIN_POINTS or df['value'].isna().all():
             return None
 
         exog = None
@@ -695,3 +764,14 @@ class ForecastingService:
             return None
         quantizer = Decimal('1') if places == 0 else Decimal(f'0.{"0" * (places - 1)}1')
         return Decimal(str(value)).quantize(quantizer, rounding=ROUND_HALF_UP)
+
+    @staticmethod
+    def _int_or_none(value):
+        if value is None:
+            return None
+        try:
+            if np.isnan(value):
+                return None
+        except TypeError:
+            pass
+        return max(0, int(round(float(value))))

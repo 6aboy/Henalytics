@@ -172,6 +172,43 @@
 <section class="analytics-section">
     <div class="section-heading">
         <div>
+            <h2>Model Validation</h2>
+            <p>Backtesting compares the seasonal ARIMA forecast against unseen historical records and a simple seasonal baseline.</p>
+        </div>
+        <span>Trust check</span>
+    </div>
+    <div class="forecast-cards">
+        <div class="metric-card">
+            <div class="metric-label">Model Used</div>
+            <div class="metric-value">{% if latest_model %}SARIMA{% else %}N/A{% endif %}</div>
+            <div class="metric-meta">{% if latest_model %}{{ latest_model.arima_order|default:"Seasonal ARIMA" }}{% else %}Generate a forecast first{% endif %}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Backtest Error</div>
+            <div class="metric-value">{% if latest_model and latest_model.rmse %}{{ latest_model.rmse }}{% else %}N/A{% endif %}</div>
+            <div class="metric-meta">
+                RMSE{% if latest_model and latest_model.mae %} | MAE {{ latest_model.mae }}{% endif %}{% if latest_model and latest_model.mape %} | MAPE {{ latest_model.mape }}%{% endif %}
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Baseline Check</div>
+            <div class="metric-value">
+                {% if latest_model and latest_model.baseline_rmse and latest_model.rmse %}
+                    {% if latest_model.rmse < latest_model.baseline_rmse %}Better{% else %}Watch{% endif %}
+                {% else %}
+                    N/A
+                {% endif %}
+            </div>
+            <div class="metric-meta">
+                {% if latest_model and latest_model.baseline_rmse %}Baseline RMSE {{ latest_model.baseline_rmse }}{% else %}Needs enough history{% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
             <h2>Forecast Summary</h2>
             <p>Condensed output from the latest generated forecast run for the selected future range.</p>
         </div>
@@ -300,8 +337,11 @@
                 <th>Flock</th>
                 <th>Size</th>
                 <th>Predicted Qty</th>
+                <th>Lower Range</th>
+                <th>Upper Range</th>
                 <th>Model Order</th>
                 <th>RMSE</th>
+                <th>MAPE</th>
                 <th>R2</th>
                 <th>Created</th>
                 <th class="no-export">Actions</th>
@@ -314,8 +354,11 @@
                 <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
                 <td><strong>{{ forecast.predicted_qty }}</strong></td>
+                <td>{{ forecast.lower_qty|default:"N/A" }}</td>
+                <td>{{ forecast.upper_qty|default:"N/A" }}</td>
                 <td>{{ forecast.model_version.arima_order|default:"ARIMA" }}</td>
                 <td>{{ forecast.model_version.rmse|default:"N/A" }}</td>
+                <td>{% if forecast.model_version.mape %}{{ forecast.model_version.mape }}%{% else %}N/A{% endif %}</td>
                 <td>{{ forecast.model_version.r2_score|default:"N/A" }}</td>
                 <td>{{ forecast.created_at|date:"Y-m-d" }}</td>
                 <td class="no-export">
@@ -379,7 +422,33 @@
             });
         }
 
+        const intervalDatasets = actualForecastPayload.upper && actualForecastPayload.upper.some((value) => value !== null)
+            ? [
+                {
+                    label: 'Forecast Lower Range',
+                    data: actualForecastPayload.lower,
+                    borderColor: 'rgba(51, 96, 207, 0)',
+                    backgroundColor: 'rgba(51, 96, 207, 0)',
+                    pointRadius: 0,
+                    spanGaps: false,
+                    tension: 0.2,
+                    fill: false
+                },
+                {
+                    label: 'Forecast Expected Range',
+                    data: actualForecastPayload.upper,
+                    borderColor: 'rgba(51, 96, 207, 0)',
+                    backgroundColor: 'rgba(51, 96, 207, 0.13)',
+                    pointRadius: 0,
+                    spanGaps: false,
+                    tension: 0.2,
+                    fill: '-1'
+                }
+            ]
+            : [];
+
         const actualForecastDatasets = [
+            ...intervalDatasets,
             {
                 label: 'Actual Eggs',
                 data: actualForecastPayload.actual,
@@ -413,7 +482,12 @@
                 layout: { padding: { bottom: 10 } },
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { position: 'bottom' },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            filter: (item) => item.text !== 'Forecast Lower Range'
+                        }
+                    },
                     tooltip: {
                         callbacks: {
                             label: (context) => `${context.dataset.label}: ${Math.round(context.parsed.y || 0).toLocaleString()} eggs`

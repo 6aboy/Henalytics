@@ -129,7 +129,7 @@ class SalesTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(ModelVersion)
 class ModelVersionAdmin(admin.ModelAdmin):
-    list_display = ('model_type', 'trained_at', 'r2_score', 'rmse', 'is_active')
+    list_display = ('model_type', 'trained_at', 'r2_score', 'rmse', 'mae', 'mape', 'is_active')
     list_filter = ('model_type', 'trained_at', 'is_active')
     search_fields = ('triggered_by__username',)
     readonly_fields = ('created_at', 'trained_at')
@@ -138,7 +138,7 @@ class ModelVersionAdmin(admin.ModelAdmin):
             'fields': ('model_type', 'trained_at', 'triggered_by')
         }),
         ('Performance Metrics', {
-            'fields': ('r2_score', 'rmse', 'aic_score')
+            'fields': ('r2_score', 'rmse', 'mae', 'mape', 'baseline_rmse', 'aic_score')
         }),
         ('ARIMA Configuration', {
             'fields': ('arima_order', 'training_rows')
@@ -151,7 +151,7 @@ class ModelVersionAdmin(admin.ModelAdmin):
 
 @admin.register(HarvestForecast)
 class HarvestForecastAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'forecast_date', 'grade', 'predicted_qty', 'model_version')
+    list_display = ('flock', 'forecast_date', 'grade', 'predicted_qty', 'lower_qty', 'upper_qty', 'model_version')
     list_filter = ('flock', 'forecast_date', 'grade', 'model_version')
     search_fields = ('flock__house_no',)
     date_hierarchy = 'forecast_date'

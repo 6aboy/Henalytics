@@ -80,7 +80,8 @@ class ModelVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModelVersion
         fields = ['id', 'model_type', 'trained_at', 'triggered_by', 'triggered_by_username',
-                 'r2_score', 'rmse', 'aic_score', 'arima_order', 'pkl_path', 'is_active',
+                 'r2_score', 'rmse', 'mae', 'mape', 'baseline_rmse', 'aic_score',
+                 'arima_order', 'pkl_path', 'is_active',
                  'training_rows', 'created_at']
         read_only_fields = ['created_at']
 
@@ -92,7 +93,7 @@ class HarvestForecastSerializer(serializers.ModelSerializer):
     class Meta:
         model = HarvestForecast
         fields = ['id', 'flock', 'flock_detail', 'model_version', 'model_version_detail',
-                 'forecast_date', 'grade', 'predicted_qty', 'created_at']
+                 'forecast_date', 'grade', 'predicted_qty', 'lower_qty', 'upper_qty', 'created_at']
         read_only_fields = ['created_at']
 
 

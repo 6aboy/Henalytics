@@ -73,6 +73,16 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
         row['forecast_date']: float(row['total'] or 0)
         for row in forecast_rows
     }
+    lower_by_date = {
+        row['forecast_date']: float(row['lower'] or 0)
+        for row in forecast_rows
+        if 'lower' in row and row['lower'] is not None
+    }
+    upper_by_date = {
+        row['forecast_date']: float(row['upper'] or 0)
+        for row in forecast_rows
+        if 'upper' in row and row['upper'] is not None
+    }
     dates = sorted(set(actual_by_date) | set(forecast_by_date))
     last_actual_date = max(actual_by_date) if actual_by_date else None
     return {
@@ -80,6 +90,14 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
         'actual': [actual_by_date.get(item) for item in dates],
         'forecast': [
             actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)
+            for item in dates
+        ],
+        'lower': [
+            actual_by_date.get(item) if item == last_actual_date else lower_by_date.get(item)
+            for item in dates
+        ],
+        'upper': [
+            actual_by_date.get(item) if item == last_actual_date else upper_by_date.get(item)
             for item in dates
         ],
     }
@@ -1089,7 +1107,11 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         )
         forecast_rows = (
             overall_forecasts.values('forecast_date')
-            .annotate(total=models.Sum('predicted_qty'))
+            .annotate(
+                total=models.Sum('predicted_qty'),
+                lower=models.Sum('lower_qty'),
+                upper=models.Sum('upper_qty'),
+            )
             .order_by('forecast_date')
         )
         actual_forecast_payload = build_actual_vs_forecast_payload(actual_rows, forecast_rows)
@@ -1097,6 +1119,13 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         size_mix_payload = build_size_mix_payload(chart_grading_logs, forecasts)
         egg_insights = build_egg_insights(production_logs, grading_logs, forecasts)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
+        latest_model = (
+            ModelVersion.objects
+            .filter(harvest_forecasts__in=forecasts)
+            .order_by('-trained_at', '-pk')
+            .distinct()
+            .first()
+        )
         context.update({
             'flocks': Flock.objects.filter(status='active').order_by('house_no'),
             'selected_flock_id': flock_id,
@@ -1116,6 +1145,7 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
             'forecast_end': run_summary['last_row'],
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
             'run_summary': run_summary,
+            'latest_model': latest_model,
             'chart_payload_json': json.dumps(chart_payload),
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'hen_payload_json': json.dumps(hen_payload),

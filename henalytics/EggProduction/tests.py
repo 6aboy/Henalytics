@@ -289,6 +289,24 @@ class ForecastModelTest(TestCase):
         self.assertIn('rmse', results[0]['arima'])
         self.assertIn('rmse', results[0]['baseline'])
 
+    def test_missing_forecast_dates_are_interpolated_not_zero_filled(self):
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(11):
+            if day == 5:
+                continue
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': 1000 + (day * 10),
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows)
+        missing_date = start_date + timedelta(days=5)
+
+        self.assertIsNotNone(prepared)
+        self.assertEqual(prepared['series'].loc[str(missing_date)], 1050)
+        self.assertNotEqual(prepared['series'].loc[str(missing_date)], 0)
+
 
 class APIAuthenticationTest(APITestCase):
     def test_api_requires_authentication(self):
