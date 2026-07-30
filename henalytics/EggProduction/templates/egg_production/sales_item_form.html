@@ -10,7 +10,7 @@
             <h1>{% if form.instance.pk %}Edit Sales Item{% else %}Add Sales Item{% endif %}</h1>
 
             <div class="alert alert-info mb-4">
-                <strong>Transaction:</strong> {{ transaction.sale_date|date:"Y-m-d" }} - House {{ transaction.flock.house_no }}
+                <strong>Transaction:</strong> {{ transaction.sale_date|date:"M d, Y" }} - House {{ transaction.flock.house_no }}
             </div>
 
             <form method="post" class="form">
@@ -42,7 +42,7 @@
 
                 <div class="sales-grand-total">
                     <span>Total Amount</span>
-                    <strong id="sales-item-total">PHP 0.00</strong>
+                    <strong id="sales-item-total">₱0.00</strong>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -73,7 +73,7 @@
         var totalTarget = document.getElementById('sales-item-total');
 
         function money(value) {
-            return 'PHP ' + Number(value || 0).toLocaleString(undefined, {
+            return '₱' + Number(value || 0).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });

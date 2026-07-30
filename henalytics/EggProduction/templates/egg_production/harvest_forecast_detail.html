@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Egg Forecast - {{ forecast.forecast_date|date:"Y-m-d" }}</h1>
+    <h1 class="mb-4">Egg Forecast - {{ forecast.forecast_date|date:"M d, Y" }}</h1>
 
     <div class="row">
         <div class="col-md-8">
@@ -25,7 +25,7 @@
             <div class="card">
                 <div class="card-header">Created</div>
                 <div class="card-body">
-                    <p>{{ forecast.created_at|date:"Y-m-d H:i" }}</p>
+                    <p>{{ forecast.created_at|date:"M d, Y g:i A" }}</p>
                 </div>
             </div>
         </div>

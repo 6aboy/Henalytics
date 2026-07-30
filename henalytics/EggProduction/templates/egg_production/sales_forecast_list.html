@@ -158,7 +158,7 @@
     <div class="forecast-cards">
         <div class="metric-card">
             <div class="metric-label">Predicted Revenue</div>
-            <div class="metric-value">PHP {{ forecast_total|floatformat:2 }}</div>
+            <div class="metric-value">₱{{ forecast_total|floatformat:2 }}</div>
             <div class="metric-meta">{{ selected_range_label }}</div>
         </div>
         <div class="metric-card">
@@ -175,7 +175,7 @@
         <div class="metric-card">
             <div class="metric-label">Forecast Categories</div>
             <div class="metric-value">{{ forecast_categories|default:0 }}</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: PHP {{ forecast_peak.predicted_amount|floatformat:2 }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: ₱{{ forecast_peak.predicted_amount|floatformat:2 }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
         </div>
     </div>
 </section>
@@ -267,11 +267,11 @@
         <tbody>
             {% for forecast in table_forecasts %}
             <tr>
-                <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
+                <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
-                <td><strong>PHP {{ forecast.predicted_amount|floatformat:2 }}</strong></td>
+                <td><strong>₱{{ forecast.predicted_amount|floatformat:2 }}</strong></td>
                 <td>{{ forecast.model_version.get_model_type_display }}</td>
-                <td>{{ forecast.created_at|date:"Y-m-d" }}</td>
+                <td>{{ forecast.created_at|date:"M d, Y" }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:sales-forecast-detail' forecast.pk %}" class="btn btn-sm btn-info">View</a>
                 </td>
@@ -383,7 +383,7 @@
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
-                            label: (context) => `${context.dataset.label}: PHP ${Number(context.parsed.y || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            label: (context) => `${context.dataset.label}: ₱${Number(context.parsed.y || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         }
                     }
                 },
@@ -421,7 +421,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: (context) => `${context.dataset.label}: PHP ${Number(context.parsed.y).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                label: (context) => `${context.dataset.label}: ₱${Number(context.parsed.y).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                             }
                         }
                     },

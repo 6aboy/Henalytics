@@ -6,7 +6,7 @@
     <div class="detail-header">
         <div>
             <h2 class="detail-title">Egg Production Record</h2>
-            <div class="detail-subtitle">House {{ production.flock.house_no }} | {{ production.record_date|date:"Y-m-d" }}</div>
+            <div class="detail-subtitle">House {{ production.flock.house_no }} | {{ production.record_date|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
             <a href="{% url 'eggproduction:staff-egg-edit' production.pk %}" class="btn btn-warning">Edit</a>

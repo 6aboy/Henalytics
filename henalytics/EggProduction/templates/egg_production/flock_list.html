@@ -30,7 +30,7 @@
             <tr>
                 <td><strong>House {{ flock.house_no }}</strong></td>
                 <td>{{ flock.table_age_weeks }}w {{ flock.table_age_days }}d</td>
-                <td>{{ flock.date_started|date:"Y-m-d" }}</td>
+                <td>{{ flock.date_started|date:"M d, Y" }}</td>
                 <td>
                     <strong>{{ flock.table_current_population }}</strong>
                     <small class="table-subtext">from {{ flock.initial_hen_count }}</small>

@@ -9,7 +9,7 @@
     <div class="detail-header">
         <div>
             <h2 class="detail-title">Production Log</h2>
-            <div class="detail-subtitle">House {{ production_log.flock.house_no }} | {{ production_log.log_date|date:"Y-m-d" }}</div>
+            <div class="detail-subtitle">House {{ production_log.flock.house_no }} | {{ production_log.log_date|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
             <a href="{% url 'eggproduction:production-log-edit' production_log.pk %}" class="btn btn-warning">Edit</a>
@@ -38,7 +38,7 @@
             <div class="detail-item"><span class="detail-label">Dead</span><span class="detail-value">{{ production_log.dead_count }}</span></div>
             <div class="detail-item"><span class="detail-label">Culled</span><span class="detail-value">{{ production_log.culled_count }}</span></div>
             <div class="detail-item"><span class="detail-label">Entered By</span><span class="detail-value">{{ entered_by_name }}</span></div>
-            <div class="detail-item"><span class="detail-label">Updated</span><span class="detail-value">{{ production_log.updated_at|date:"Y-m-d H:i" }}</span></div>
+            <div class="detail-item"><span class="detail-label">Updated</span><span class="detail-value">{{ production_log.updated_at|date:"M d, Y g:i A" }}</span></div>
         </div>
     </section>
 

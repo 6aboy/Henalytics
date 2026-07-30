@@ -350,7 +350,7 @@
         <tbody>
             {% for forecast in table_forecasts %}
             <tr>
-                <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
+                <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                 <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
                 <td><strong>{{ forecast.predicted_qty }}</strong></td>
@@ -360,7 +360,7 @@
                 <td>{{ forecast.model_version.rmse|default:"N/A" }}</td>
                 <td>{% if forecast.model_version.mape %}{{ forecast.model_version.mape }}%{% else %}N/A{% endif %}</td>
                 <td>{{ forecast.model_version.r2_score|default:"N/A" }}</td>
-                <td>{{ forecast.created_at|date:"Y-m-d" }}</td>
+                <td>{{ forecast.created_at|date:"M d, Y" }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:harvest-forecast-detail' forecast.pk %}" class="btn btn-sm btn-info">View</a>
                 </td>

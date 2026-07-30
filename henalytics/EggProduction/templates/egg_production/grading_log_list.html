@@ -34,7 +34,7 @@
             <tbody>
                 {% for log in grading_logs %}
                 <tr>
-                    <td>{{ log.grading_date|date:"Y-m-d" }}</td>
+                    <td>{{ log.grading_date|date:"M d, Y" }}</td>
                     <td><a href="{% url 'eggproduction:flock-detail' log.flock.pk %}">House {{ log.flock.house_no }}</a>
                     </td>
                     <td>{{ log.age_weeks }}</td>

@@ -184,7 +184,7 @@
             <tbody>
                 {% for forecast in table_forecasts %}
                 <tr>
-                    <td>{{ forecast.forecast_date|date:"Y-m-d" }}</td>
+                    <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                     <td>House {{ forecast.flock.house_no }}</td>
                     <td>{{ forecast.get_grade_display }}</td>
                     <td><strong>{{ forecast.predicted_qty }}</strong></td>

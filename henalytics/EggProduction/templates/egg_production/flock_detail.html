@@ -9,7 +9,7 @@
     <div class="detail-header">
         <div>
             <h2 class="detail-title">House {{ flock.house_no }}</h2>
-            <div class="detail-subtitle">{{ flock.breed_strain }} | Started {{ flock.date_started|date:"Y-m-d" }}</div>
+            <div class="detail-subtitle">{{ flock.breed_strain }} | Started {{ flock.date_started|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
             {% if user.is_staff or user.is_superuser %}
@@ -61,7 +61,7 @@
                 <tbody>
                     {% for log in production_logs %}
                     <tr>
-                        <td>{{ log.log_date|date:"Y-m-d" }}</td>
+                        <td>{{ log.log_date|date:"M d, Y" }}</td>
                         <td>{{ log.hen_count }}</td>
                         <td>{{ log.eggs_total }}</td>
                         <td>{{ log.pct_hen_day }}%</td>
@@ -94,7 +94,7 @@
                 <tbody>
                     {% for log in grading_logs %}
                     <tr>
-                        <td>{{ log.log_date|date:"Y-m-d" }}</td>
+                        <td>{{ log.log_date|date:"M d, Y" }}</td>
                         <td>{{ log.eggs_total }}</td>
                         <td>{{ log.eggs_aa }}</td>
                         <td>{{ log.eggs_a }}</td>
