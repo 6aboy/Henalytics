@@ -13,11 +13,7 @@
 
             <form method="post" class="form production-form">
                 {% csrf_token %}
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger">
-                    {{ form.non_field_errors }}
-                </div>
-                {% endif %}
+                {% include 'egg_production/includes/form_errors.html' %}
 
                 <section class="form-section">
                     <h2>Log Info</h2>
@@ -48,18 +44,30 @@
                         <div class="form-group">
                             <label for="{{ form.dead_count.id_for_label }}">Dead Count</label>
                             {{ form.dead_count }}
+                            {% for error in form.dead_count.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             <label for="{{ form.culled_count.id_for_label }}">Culled Count</label>
                             {{ form.culled_count }}
+                            {% for error in form.culled_count.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             <label for="{{ form.feed_bags.id_for_label }}">Feed Bags</label>
                             {{ form.feed_bags }}
+                            {% for error in form.feed_bags.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                         <div class="form-group">
                             <label for="{{ form.eggs_total.id_for_label }}">Eggs Total</label>
                             {{ form.eggs_total }}
+                            {% for error in form.eggs_total.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                 </section>
@@ -100,6 +108,9 @@
                     <div class="form-group note-field">
                         <label class="visually-hidden" for="{{ form.remarks.id_for_label }}">Notes</label>
                         {{ form.remarks }}
+                        {% for error in form.remarks.errors %}
+                        <small class="form-error">{{ error }}</small>
+                        {% endfor %}
                     </div>
                 </section>
 

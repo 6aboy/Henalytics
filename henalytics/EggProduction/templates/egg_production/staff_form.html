@@ -6,18 +6,52 @@
     <h4 class="mb-3">{% if form.instance.pk %}Edit Egg Production{% else %}Create Egg Production{% endif %}</h4>
     <form method="post">
         {% csrf_token %}
+        {% include 'egg_production/includes/form_errors.html' %}
         <div class="row g-3">
-            <div class="col-md-4">{{ form.flock.label_tag }}{{ form.flock }}</div>
-            <div class="col-md-4">{{ form.record_date.label_tag }}{{ form.record_date }}</div>
-            <div class="col-md-4">{{ form.collection_time.label_tag }}{{ form.collection_time }}</div>
-            <div class="col-md-3">{{ form.eggs_collected.label_tag }}{{ form.eggs_collected }}</div>
-            <div class="col-md-3">{{ form.broken_eggs.label_tag }}{{ form.broken_eggs }}</div>
-            <div class="col-md-3">{{ form.defective_eggs.label_tag }}{{ form.defective_eggs }}</div>
-            <div class="col-md-3">{{ form.good_eggs.label_tag }}{{ form.good_eggs }}</div>
-            <div class="col-md-4">{{ form.eggs_per_hen.label_tag }}{{ form.eggs_per_hen }}</div>
-            <div class="col-md-4">{{ form.hen_day_production.label_tag }}{{ form.hen_day_production }}</div>
-            <div class="col-md-4">{{ form.hen_housed_production.label_tag }}{{ form.hen_housed_production }}</div>
-            <div class="col-12 note-field">{{ form.notes.label_tag }}{{ form.notes }}</div>
+            <div class="col-md-4 form-group">
+                {{ form.flock.label_tag }}{{ form.flock }}
+                {% for error in form.flock.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-4 form-group">
+                {{ form.record_date.label_tag }}{{ form.record_date }}
+                {% for error in form.record_date.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-4 form-group">
+                {{ form.collection_time.label_tag }}{{ form.collection_time }}
+                {% for error in form.collection_time.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-3 form-group">
+                {{ form.eggs_collected.label_tag }}{{ form.eggs_collected }}
+                {% for error in form.eggs_collected.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-3 form-group">
+                {{ form.broken_eggs.label_tag }}{{ form.broken_eggs }}
+                {% for error in form.broken_eggs.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-3 form-group">
+                {{ form.defective_eggs.label_tag }}{{ form.defective_eggs }}
+                {% for error in form.defective_eggs.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-3 form-group">
+                {{ form.good_eggs.label_tag }}{{ form.good_eggs }}
+                {% for error in form.good_eggs.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-4 form-group">
+                {{ form.eggs_per_hen.label_tag }}{{ form.eggs_per_hen }}
+                {% for error in form.eggs_per_hen.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-4 form-group">
+                {{ form.hen_day_production.label_tag }}{{ form.hen_day_production }}
+                {% for error in form.hen_day_production.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-md-4 form-group">
+                {{ form.hen_housed_production.label_tag }}{{ form.hen_housed_production }}
+                {% for error in form.hen_housed_production.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="col-12 form-group note-field">
+                {{ form.notes.label_tag }}{{ form.notes }}
+                {% for error in form.notes.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            </div>
         </div>
 
         <div class="mt-3">

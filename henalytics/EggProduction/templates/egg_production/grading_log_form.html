@@ -12,20 +12,27 @@
 
             <form method="post" class="form mt-4">
                 {% csrf_token %}
+                {% include 'egg_production/includes/form_errors.html' %}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="{{ form.flock.id_for_label }}">Flock *</label>
+                            <label for="{{ form.flock.id_for_label }}">Flock</label>
                             {{ form.flock }}
+                            {% for error in form.flock.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="{{ form.log_date.id_for_label }}">Log Date *</label>
+                            <label for="{{ form.log_date.id_for_label }}">Log Date</label>
                             <div class="date-input-action">
                                 {{ form.log_date }}
                                 <button type="button" class="btn btn-today" data-date-target="#{{ form.log_date.id_for_label }}">Today</button>
                             </div>
+                            {% for error in form.log_date.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -33,14 +40,20 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.age_weeks.id_for_label }}">Age (Weeks) *</label>
+                            <label for="{{ form.age_weeks.id_for_label }}">Age (Weeks)</label>
                             {{ form.age_weeks }}
+                            {% for error in form.age_weeks.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="{{ form.eggs_total.id_for_label }}">Total Eggs *</label>
+                            <label for="{{ form.eggs_total.id_for_label }}">Total Eggs</label>
                             {{ form.eggs_total }}
+                            {% for error in form.eggs_total.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -51,18 +64,27 @@
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_aa.id_for_label }}">Grade AA</label>
                             {{ form.eggs_aa }}
+                            {% for error in form.eggs_aa.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_a.id_for_label }}">Grade A</label>
                             {{ form.eggs_a }}
+                            {% for error in form.eggs_a.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_b.id_for_label }}">Grade B</label>
                             {{ form.eggs_b }}
+                            {% for error in form.eggs_b.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -72,18 +94,27 @@
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_small.id_for_label }}">Small Eggs</label>
                             {{ form.eggs_small }}
+                            {% for error in form.eggs_small.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_broken.id_for_label }}">Broken Eggs</label>
                             {{ form.eggs_broken }}
+                            {% for error in form.eggs_broken.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="{{ form.eggs_decode.id_for_label }}">Decoded Eggs</label>
                             {{ form.eggs_decode }}
+                            {% for error in form.eggs_decode.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -91,6 +122,9 @@
                 <div class="form-group mb-3">
                     <label for="{{ form.eggs_source.id_for_label }}">Egg Source</label>
                     {{ form.eggs_source }}
+                    {% for error in form.eggs_source.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">

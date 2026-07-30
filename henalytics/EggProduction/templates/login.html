@@ -10,25 +10,21 @@
             <img src="{% static 'EggProduction/img/logo-login.png' %}" alt="Henalytics" class="mb-3 logo-img">
             <form method="post" action="{% url 'login' %}">
                 {% csrf_token %}
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger">{{ form.non_field_errors|striptags }}</div>
-                {% elif form.errors %}
-                <div class="alert alert-danger">Please correct the errors below.</div>
-                {% endif %}
-                <div class="mb-3 text-start">
+                {% include 'egg_production/includes/form_errors.html' %}
+                <div class="mb-3 text-start form-group">
                     <label class="form-label">Username</label>
                     <input name="username" value="{{ form.username.value|default_if_none:'' }}"
-                        class="form-control {% if form.username.errors %}is-invalid{% endif %}" required autofocus>
+                        class="form-control" required autofocus>
                     {% for err in form.username.errors %}
-                    <div class="invalid-feedback">{{ err }}</div>
+                    <small class="form-error">{{ err }}</small>
                     {% endfor %}
                 </div>
-                <div class="mb-3 text-start">
+                <div class="mb-3 text-start form-group">
                     <label class="form-label">Password</label>
                     <input name="password" type="password"
-                        class="form-control {% if form.password.errors %}is-invalid{% endif %}" required>
+                        class="form-control" required>
                     {% for err in form.password.errors %}
-                    <div class="invalid-feedback">{{ err }}</div>
+                    <small class="form-error">{{ err }}</small>
                     {% endfor %}
                 </div>
                 <button class="btn btn-primary w-50">Login</button>

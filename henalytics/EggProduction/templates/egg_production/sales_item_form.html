@@ -15,19 +15,29 @@
 
             <form method="post" class="form">
                 {% csrf_token %}
+                {% include 'egg_production/includes/form_errors.html' %}
                 <div class="form-group mb-3">
-                    <label for="{{ form.grade.id_for_label }}">Size *</label>
+                    <label for="{{ form.grade.id_for_label }}">Size</label>
                     {{ form.grade }}
+                    {% for error in form.grade.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.quantity_pieces.id_for_label }}">Quantity (pcs) *</label>
+                    <label for="{{ form.quantity_pieces.id_for_label }}">Quantity (pcs)</label>
                     {{ form.quantity_pieces }}
+                    {% for error in form.quantity_pieces.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="{{ form.price_per_piece.id_for_label }}">Price per Piece *</label>
+                    <label for="{{ form.price_per_piece.id_for_label }}">Price per Piece</label>
                     {{ form.price_per_piece }}
+                    {% for error in form.price_per_piece.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="sales-grand-total">

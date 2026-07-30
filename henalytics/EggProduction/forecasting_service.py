@@ -53,11 +53,11 @@ class ForecastingService:
         'pewee': 'eggs_decode',
     }
     EGG_FEATURE_FIELDS = (
-        'age_weeks',
-        'age_days',
+        # Notebook-aligned SARIMAX predictors: Bird No., Dead, Cull, and FEED (bags).
+        # Calculated percentages are excluded because they are derived from the target.
+        'hen_count',
         'dead_count',
         'culled_count',
-        'hen_count',
         'feed_bags',
     )
 
@@ -234,6 +234,17 @@ class ForecastingService:
             future_exog=future_exog,
         )
         metrics = cls._score_series(prepared, best['spec'])
+        fallback = cls._fallback_forecast_if_needed(
+            series,
+            forecast_values,
+            periods,
+            metrics['rmse'],
+            forecast_start_date=forecast_start_date,
+            exog=exog,
+        )
+        if fallback is not None:
+            return fallback
+
         return {
             'success': True,
             'forecasted_values': forecast_values,
@@ -264,12 +275,16 @@ class ForecastingService:
         return forecast_values, lower_values, upper_values
 
     @classmethod
-    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None):
+    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None, exog=None):
         if not len(forecast_values):
             return None
 
         recent = series.tail(min(60, len(series))).to_numpy(dtype=float)
         recent_mean = float(np.mean(recent)) if len(recent) else 0
+        unreasonable = cls._forecast_is_unreasonable(recent, forecast_values, exog)
+        if unreasonable:
+            return cls._trend_seasonal_guard(series, periods, model_rmse, forecast_start_date)
+
         trend_fallback = cls._trend_forecast_if_model_is_flat(series, forecast_values, periods, model_rmse, forecast_start_date)
         if trend_fallback is not None:
             return trend_fallback
@@ -296,6 +311,60 @@ class ForecastingService:
             'order': 'seasonal naive baseline (7-day)',
             'aic_score': None,
             'rmse': baseline_rmse,
+            'mae': None,
+            'mape': None,
+            'baseline_rmse': baseline_rmse,
+            'r_squared': baseline_r2,
+            'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
+        }
+
+    @staticmethod
+    def _forecast_is_unreasonable(recent, forecast_values, exog=None):
+        if not len(recent) or not len(forecast_values):
+            return False
+
+        recent_max = float(np.max(recent))
+        recent_mean = float(np.mean(recent))
+        forecast_max = float(np.max(forecast_values))
+        recent_limit = max(recent_max * 1.25, recent_mean * 1.35)
+        if forecast_max > recent_limit:
+            return True
+
+        if exog is not None and 'hen_count' in exog.columns:
+            live_hens = float(exog['hen_count'].iloc[-1])
+            if live_hens > 0 and forecast_max > live_hens * 1.02:
+                return True
+
+        return False
+
+    @classmethod
+    def _trend_seasonal_guard(cls, series, periods, model_rmse, forecast_start_date=None):
+        values = series.to_numpy(dtype=float)
+        window_size = min(45, len(values))
+        recent = values[-window_size:]
+        x_values = np.arange(window_size, dtype=float)
+        slope, _intercept = np.polyfit(x_values, recent, 1)
+        steps = np.arange(1, periods + 1, dtype=float)
+        damping = np.linspace(0.80, 0.35, periods)
+        trend_values = recent[-1] + (slope * steps * damping)
+
+        seasonal = values[-cls.SEASONAL_PERIOD:] if len(values) >= cls.SEASONAL_PERIOD else values[-1:]
+        seasonal_offsets = seasonal - np.mean(seasonal)
+        guarded_values = trend_values + np.resize(seasonal_offsets, periods)
+        recent_floor = max(float(np.min(recent)) * 0.80, 0)
+        recent_ceiling = float(np.max(recent)) * 1.10
+        guarded_values = np.clip(guarded_values, recent_floor, recent_ceiling)
+
+        baseline_rmse, baseline_r2 = cls._score_seasonal_naive(series)
+        interval_rmse = baseline_rmse if baseline_rmse is not None else model_rmse
+        return {
+            'success': True,
+            'forecasted_values': guarded_values,
+            'lower_values': cls._interval_from_rmse(guarded_values, interval_rmse),
+            'upper_values': cls._interval_from_rmse(guarded_values, interval_rmse, upper=True),
+            'order': 'bounded trend + weekly seasonality guard',
+            'aic_score': None,
+            'rmse': interval_rmse,
             'mae': None,
             'mape': None,
             'baseline_rmse': baseline_rmse,
@@ -657,14 +726,10 @@ class ForecastingService:
         return (
             ProductionLog.objects.filter(flock=flock)
             .values(
-                'age_weeks',
-                'age_days',
+                'hen_count',
                 'dead_count',
                 'culled_count',
-                'hen_count',
                 'feed_bags',
-                'pct_hen_day',
-                'pct_hen_housed',
                 date=models.F('log_date'),
             )
             .annotate(value=models.Sum('eggs_total'))
@@ -687,14 +752,10 @@ class ForecastingService:
             row['log_date']: row
             for row in ProductionLog.objects.filter(flock=flock).values(
                 'log_date',
-                'age_weeks',
-                'age_days',
+                'hen_count',
                 'dead_count',
                 'culled_count',
-                'hen_count',
                 'feed_bags',
-                'pct_hen_day',
-                'pct_hen_housed',
             )
         }
         for grade, field_name in cls.EGG_GRADE_FIELDS.items():

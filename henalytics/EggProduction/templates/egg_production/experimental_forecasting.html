@@ -7,10 +7,10 @@
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Database Egg Forecasting</h2>
-            <p>Generate forecasts from saved daily production and grading records in the Henalytics database.</p>
+            <h2>Overall Egg Forecasting</h2>
+            <p>Generate notebook-style SARIMAX forecasts for total daily egg pieces from saved database records.</p>
         </div>
-        <span>Database model</span>
+        <span>Overall pieces</span>
     </div>
 
     <form method="post" class="forecast-toolbar action-panel"
@@ -37,13 +37,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div>
-            <label for="scope">Scope</label>
-            <select name="scope" id="scope" class="form-select">
-                <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
-                <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
-            </select>
-        </div>
+        <input type="hidden" name="scope" value="overall">
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
     </form>
 
@@ -57,8 +51,8 @@
             <span>Recent actual records are shown before the forecast starts.</span>
         </div>
         <div>
-            <strong>SARIMA + Features</strong>
-            <span>Uses production history and safe poultry inputs such as age, live hens, mortality, culls, and feed.</span>
+            <strong>SARIMAX Time Series</strong>
+            <span>Uses a 7-day cycle with Bird No., Dead, Cull, and FEED (bags) as extra predictors.</span>
         </div>
     </div>
 </section>
@@ -90,10 +84,29 @@
             <div class="metric-meta">{{ selected_range_label }}</div>
         </div>
         <div class="metric-card">
-            <div class="metric-label">Categories</div>
-            <div class="metric-value">{{ forecast_categories|default:0 }}</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
+            <div class="metric-label">Forecast Target</div>
+            <div class="metric-value">Overall</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} eggs{% else %}Egg pieces only{% endif %}</div>
         </div>
+    </div>
+</section>
+
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Chart Reading</h2>
+            <p>Quick interpretation of what the latest overall egg forecast is showing.</p>
+        </div>
+        <span>{{ selected_range_label }}</span>
+    </div>
+    <div class="analytics-insight-grid">
+        {% for card in forecast_insights %}
+        <div class="analytics-insight-card {{ card.tone }}">
+            <div class="metric-label">{{ card.label }}</div>
+            <div class="metric-value">{{ card.value }}</div>
+            <div class="metric-meta">{{ card.meta }}</div>
+        </div>
+        {% endfor %}
     </div>
 </section>
 
@@ -160,7 +173,7 @@
                 <tr>
                     <th>Forecast Date</th>
                     <th>Flock</th>
-                    <th>Size</th>
+                    <th>Target</th>
                     <th>Predicted Eggs</th>
                     <th>Lower Range</th>
                     <th>Upper Range</th>

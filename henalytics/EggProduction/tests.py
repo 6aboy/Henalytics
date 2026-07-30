@@ -308,6 +308,37 @@ class ForecastModelTest(TestCase):
         self.assertEqual(prepared['series'].loc[str(missing_date)], 1050)
         self.assertNotEqual(prepared['series'].loc[str(missing_date)], 0)
 
+    def test_egg_sarimax_features_match_notebook_predictors(self):
+        self.assertEqual(
+            ForecastingService.EGG_FEATURE_FIELDS,
+            ('hen_count', 'dead_count', 'culled_count', 'feed_bags'),
+        )
+        self.assertEqual(ForecastingService.SEASONAL_PERIOD, 7)
+
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(12):
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': 1300 + day,
+                'hen_count': 1780 - day,
+                'dead_count': day % 2,
+                'culled_count': day % 3,
+                'feed_bags': 12,
+                'age_weeks': 30,
+                'age_days': 210 + day,
+                'pct_hen_day': Decimal('78.00'),
+                'pct_hen_housed': Decimal('77.00'),
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True)
+
+        self.assertIsNotNone(prepared)
+        self.assertEqual(
+            list(prepared['exog'].columns),
+            ['hen_count', 'dead_count', 'culled_count', 'feed_bags'],
+        )
+
 
 class APIAuthenticationTest(APITestCase):
     def test_api_requires_authentication(self):
@@ -342,6 +373,32 @@ class TemplateRenderTest(TestCase):
         self.user = User.objects.create_user(username='staffer', password='pass12345', is_staff=True)
         self.flock = create_flock()
         self.client.force_login(self.user)
+
+    def test_flock_list_uses_correct_table_columns(self):
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=self.flock.date_started + timedelta(days=30),
+            age_weeks=0,
+            age_days=0,
+            hen_count=1780,
+            dead_count=2,
+            culled_count=3,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('0.00'),
+            pct_hen_housed=Decimal('0.00'),
+            entered_by=self.user,
+        )
+
+        response = self.client.get(reverse('eggproduction:flock-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Flock Management')
+        self.assertContains(response, '<th>Age</th>', html=True)
+        self.assertContains(response, '4w 30d')
+        self.assertContains(response, '3 | 2')
+        self.assertContains(response, '12')
+        self.assertNotContains(response, 'Lohmann Brown')
 
     def test_production_log_list_renders_with_filter(self):
         other_flock = create_flock(house_no=2, date_started=timezone.now().date() - timedelta(days=1))
@@ -435,9 +492,10 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['period_egg_total'], 1234)
         self.assertContains(response, 'Total Eggs')
-        self.assertContains(response, 'Actual Hen Housed vs Threshold')
-        self.assertContains(response, 'dashboardHenHousedChart')
-        self.assertIn('hen_housed_payload_json', response.context)
+        self.assertContains(response, 'Production Notebook')
+        self.assertContains(response, 'dashboardNotebookChart')
+        self.assertContains(response, 'notebook-bookmark')
+        self.assertIn('dashboard_charts_payload_json', response.context)
 
     def test_primary_detail_pages_render_real_values(self):
         log = ProductionLog.objects.create(
@@ -551,9 +609,15 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:experimental-forecasting'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Database Egg Forecasting')
+        self.assertContains(response, 'Overall Egg Forecasting')
+        self.assertContains(response, 'notebook-style SARIMAX forecasts')
         self.assertContains(response, 'All active flocks')
         self.assertContains(response, 'Generate Forecast')
+        self.assertContains(response, 'value="overall"')
+        self.assertNotContains(response, 'Overall and per size')
+        self.assertContains(response, 'Chart Reading')
+        self.assertContains(response, 'Forecast Direction')
+        self.assertContains(response, 'Expected Average')
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'do not close the system')
         self.assertContains(response, 'cdn.plot.ly')

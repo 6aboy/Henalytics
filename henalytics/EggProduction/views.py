@@ -327,6 +327,107 @@ def build_egg_insights(logs, grading_logs, forecasts):
     }
 
 
+def build_overall_forecast_insights(actual_rows, forecast_rows):
+    actual_values = [float(row['total'] or 0) for row in actual_rows]
+    forecast_values = [float(row['total'] or 0) for row in forecast_rows]
+
+    recent_actual_avg = average(actual_values[-7:])
+    first_forecast_avg = average(forecast_values[:7])
+    last_forecast_avg = average(forecast_values[-7:])
+    forecast_change = percent_change(first_forecast_avg, last_forecast_avg)
+    actual_to_forecast_change = percent_change(recent_actual_avg, first_forecast_avg)
+
+    if not forecast_values:
+        return [
+            {
+                'label': 'Forecast Direction',
+                'tone': 'neutral',
+                'value': 'No Run',
+                'meta': 'Generate a forecast to read the future trend.',
+            },
+            {
+                'label': 'Expected Average',
+                'tone': 'neutral',
+                'value': 'N/A',
+                'meta': 'No future forecast points yet.',
+            },
+            {
+                'label': 'Chart Signal',
+                'tone': 'neutral',
+                'value': 'Pending',
+                'meta': 'The system needs forecast rows before giving a chart interpretation.',
+            },
+        ]
+
+    if forecast_change is None:
+        direction = {
+            'label': 'Forecast Direction',
+            'tone': 'neutral',
+            'value': 'Stable',
+            'meta': 'Forecast movement cannot be compared yet.',
+        }
+    elif forecast_change <= -5:
+        direction = {
+            'label': 'Forecast Direction',
+            'tone': 'danger',
+            'value': 'Declining',
+            'meta': f'Expected eggs drop by {abs(forecast_change):.1f}% across this horizon.',
+        }
+    elif forecast_change >= 5:
+        direction = {
+            'label': 'Forecast Direction',
+            'tone': 'good',
+            'value': 'Improving',
+            'meta': f'Expected eggs rise by {forecast_change:.1f}% across this horizon.',
+        }
+    else:
+        direction = {
+            'label': 'Forecast Direction',
+            'tone': 'neutral',
+            'value': 'Mostly Flat',
+            'meta': f'Expected eggs change by only {forecast_change:.1f}% across this horizon.',
+        }
+
+    forecast_avg = average(forecast_values)
+    average_card = {
+        'label': 'Expected Average',
+        'tone': 'neutral',
+        'value': f'{forecast_avg:,.0f}' if forecast_avg is not None else 'N/A',
+        'meta': 'Average eggs per day in the selected forecast range.',
+    }
+
+    if actual_to_forecast_change is None:
+        signal = {
+            'label': 'Chart Signal',
+            'tone': 'neutral',
+            'value': 'No Baseline',
+            'meta': 'More recent actual records are needed for comparison.',
+        }
+    elif actual_to_forecast_change <= -8:
+        signal = {
+            'label': 'Chart Signal',
+            'tone': 'warning',
+            'value': 'Lower Than Recent',
+            'meta': f'Forecast starts {abs(actual_to_forecast_change):.1f}% below the recent actual average.',
+        }
+    elif actual_to_forecast_change >= 8:
+        signal = {
+            'label': 'Chart Signal',
+            'tone': 'good',
+            'value': 'Above Recent',
+            'meta': f'Forecast starts {actual_to_forecast_change:.1f}% above the recent actual average.',
+        }
+    else:
+        signal = {
+            'label': 'Chart Signal',
+            'tone': 'neutral',
+            'value': 'Close To Recent',
+            'meta': f'Forecast starts within {abs(actual_to_forecast_change):.1f}% of the recent actual average.',
+        }
+
+    return [direction, average_card, signal]
+
+
 def build_forecast_run_summary(forecasts, value_field):
     model_ids = list(forecasts.values_list('model_version_id', flat=True).distinct())
     model_count = len(model_ids)
@@ -572,17 +673,61 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             recent_losses_7d = ProductionLog.objects.filter(log_date__gte=last_7_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            hen_housed_rows = (
+            chart_rows = list(
                 ProductionLog.objects
-                .filter(log_date__gte=last_30_days, flock__status='active')
+                .filter(flock__status='active')
                 .values('log_date')
-                .annotate(value=models.Avg('pct_hen_housed'))
+                .annotate(
+                    eggs=models.Sum('eggs_total'),
+                    hen_housed=models.Avg('pct_hen_housed'),
+                    hen_day=models.Avg('pct_hen_day'),
+                    feed=models.Sum('feed_bags'),
+                    losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
+                )
                 .order_by('log_date')
             )
-            hen_housed_payload = {
-                'labels': [row['log_date'].strftime('%b %d') for row in hen_housed_rows],
-                'actual': [float(row['value'] or 0) for row in hen_housed_rows],
-                'threshold': [60 for _row in hen_housed_rows],
+            dashboard_chart_payload = {
+                'labels': [row['log_date'].strftime('%b %d, %Y') for row in chart_rows],
+                'iso_labels': [row['log_date'].isoformat() for row in chart_rows],
+                'charts': {
+                    'eggs': {
+                        'title': 'Egg Production Trend',
+                        'description': 'Daily total eggs recorded in the database.',
+                        'unit': 'eggs',
+                        'color': '#3360cf',
+                        'values': [float(row['eggs'] or 0) for row in chart_rows],
+                    },
+                    'hen_housed': {
+                        'title': 'Hen Housed Performance',
+                        'description': 'Daily hen-housed percentage compared with the 60% warning threshold.',
+                        'unit': '%',
+                        'color': '#12a150',
+                        'values': [float(row['hen_housed'] or 0) for row in chart_rows],
+                        'threshold': [60 for _row in chart_rows],
+                        'threshold_label': '60% threshold',
+                    },
+                    'hen_day': {
+                        'title': 'Hen Day Laying Rate',
+                        'description': 'Daily hen-day percentage from production records.',
+                        'unit': '%',
+                        'color': '#7c3aed',
+                        'values': [float(row['hen_day'] or 0) for row in chart_rows],
+                    },
+                    'feed': {
+                        'title': 'Feed Consumption',
+                        'description': 'Daily feed bags recorded in the database.',
+                        'unit': 'bags',
+                        'color': '#e88411',
+                        'values': [float(row['feed'] or 0) for row in chart_rows],
+                    },
+                    'losses': {
+                        'title': 'Mortality and Cull Trend',
+                        'description': 'Daily dead and culled hens from production records.',
+                        'unit': 'hens',
+                        'color': '#d92d20',
+                        'values': [float(row['losses'] or 0) for row in chart_rows],
+                    },
+                },
             }
 
             context.update({
@@ -606,7 +751,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'feed_consumed_30d': feed_consumed_30d,
                 'cracked_egg_loss': round(cracked_egg_loss, 1),
                 'recent_losses_7d': recent_losses_7d,
-                'hen_housed_payload_json': json.dumps(hen_housed_payload),
+                'dashboard_charts_payload_json': json.dumps(dashboard_chart_payload),
+                'hen_housed_payload_json': json.dumps(dashboard_chart_payload['charts']['hen_housed']),
             })
         except Exception as e:
             logger.exception("Dashboard error: %s", e)
@@ -631,6 +777,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'feed_consumed_30d': 0,
                 'cracked_egg_loss': 0,
                 'recent_losses_7d': 0,
+                'dashboard_charts_payload_json': json.dumps({'labels': [], 'iso_labels': [], 'charts': {}}),
                 'hen_housed_payload_json': json.dumps({'labels': [], 'actual': [], 'threshold': []}),
             })
         return context
@@ -643,6 +790,38 @@ class FlockListView(LoginRequiredMixin, ListView):
     template_name = 'egg_production/flock_list.html'
     context_object_name = 'flocks'
     ordering = ['-date_started']
+
+    def get_queryset(self):
+        flocks = list(super().get_queryset())
+        today = timezone.localdate()
+        for flock in flocks:
+            latest_log = (
+                ProductionLog.objects
+                .filter(flock=flock)
+                .order_by('-log_date', '-pk')
+                .first()
+            )
+            totals = ProductionLog.objects.filter(flock=flock).aggregate(
+                dead=models.Sum('dead_count'),
+                culled=models.Sum('culled_count'),
+                feed=models.Sum('feed_bags'),
+            )
+            age_days = (
+                latest_log.age_days
+                if latest_log
+                else max((today - flock.date_started).days, 0)
+            )
+            flock.table_age_weeks = age_days // 7
+            flock.table_age_days = age_days
+            flock.table_current_population = (
+                latest_log.hen_count
+                if latest_log
+                else flock.initial_hen_count
+            )
+            flock.table_dead_count = totals['dead'] or 0
+            flock.table_culled_count = totals['culled'] or 0
+            flock.table_feed_bags = totals['feed'] or 0
+        return flocks
 
 
 class FlockCreateView(ManagerAccessMixin, CreateView):
@@ -1379,9 +1558,8 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         range_key = request.POST.get('range', 'month')
         flock_id = request.POST.get('flock_id', '')
-        scope = request.POST.get('scope', 'both')
+        scope = 'overall'
         periods = ForecastingService.periods_for_range(range_key)
-        include_sizes = scope == 'both'
         errors = []
         created_count = 0
 
@@ -1394,7 +1572,7 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
                 flock=flock,
                 periods=periods,
                 user=request.user,
-                include_sizes=include_sizes,
+                include_sizes=False,
             )
             created_count += result['created_count']
             errors.extend([f'House {flock.house_no}: {error}' for error in result['errors']])
@@ -1415,7 +1593,7 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         range_key = self.request.GET.get('range', 'month')
         flock_id = self.request.GET.get('flock_id', '')
-        scope = self.request.GET.get('scope', 'both')
+        scope = 'overall'
         range_label, horizon = EXPERIMENTAL_FORECAST_RANGES.get(range_key, EXPERIMENTAL_FORECAST_RANGES['month'])
         forecasts = HarvestForecast.objects.select_related('flock', 'model_version')
         production_logs = ProductionLog.objects.select_related('flock')
@@ -1426,6 +1604,7 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
             forecasts = forecasts.filter(flock__status='active')
             production_logs = production_logs.filter(flock__status='active')
 
+        forecasts = forecasts.filter(grade='overall')
         first_forecast_date = forecasts.order_by('forecast_date').values_list('forecast_date', flat=True).first()
         if first_forecast_date:
             forecasts = forecasts.filter(forecast_date__lte=first_forecast_date + timedelta(days=horizon - 1))
@@ -1434,7 +1613,7 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
             actual_start = timezone.localdate() - timedelta(days=self._history_days_for_horizon(horizon))
 
         chart_logs = production_logs.filter(log_date__gte=actual_start)
-        overall_forecasts = forecasts.filter(grade='overall')
+        overall_forecasts = forecasts
         actual_rows = (
             chart_logs.values('log_date')
             .annotate(total=models.Sum('eggs_total'))
@@ -1449,6 +1628,7 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
             )
             .order_by('forecast_date')
         )
+        forecast_insights = build_overall_forecast_insights(actual_rows, forecast_rows)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
         latest_model = (
             ModelVersion.objects
@@ -1473,6 +1653,7 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
             'forecast_start': run_summary['first_row'],
             'forecast_end': run_summary['last_row'],
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
+            'forecast_insights': forecast_insights,
             'latest_model': latest_model,
             'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
             'forecast_table_limit': FORECAST_TABLE_LIMIT,

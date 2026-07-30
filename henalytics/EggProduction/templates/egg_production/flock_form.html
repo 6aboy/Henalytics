@@ -13,20 +13,21 @@
 
             <form method="post" class="form mt-4">
                 {% csrf_token %}
+                {% include 'egg_production/includes/form_errors.html' %}
                 <div class="form-group mb-3">
                     <label for="{{ form.house_no.id_for_label }}">House Number</label>
                     {{ form.house_no }}
-                    {% if form.house_no.errors %}
-                    <div class="text-danger">{{ form.house_no.errors }}</div>
-                    {% endif %}
+                    {% for error in form.house_no.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="{{ form.breed_strain.id_for_label }}">Breed/Strain</label>
                     {{ form.breed_strain }}
-                    {% if form.breed_strain.errors %}
-                    <div class="text-danger">{{ form.breed_strain.errors }}</div>
-                    {% endif %}
+                    {% for error in form.breed_strain.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3">
@@ -35,33 +36,33 @@
                         {{ form.date_started }}
                         <button type="button" class="btn btn-today" data-date-target="#{{ form.date_started.id_for_label }}">Today</button>
                     </div>
-                    {% if form.date_started.errors %}
-                    <div class="text-danger">{{ form.date_started.errors }}</div>
-                    {% endif %}
+                    {% for error in form.date_started.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="{{ form.initial_hen_count.id_for_label }}">Initial Hen Count</label>
                     {{ form.initial_hen_count }}
-                    {% if form.initial_hen_count.errors %}
-                    <div class="text-danger">{{ form.initial_hen_count.errors }}</div>
-                    {% endif %}
+                    {% for error in form.initial_hen_count.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="{{ form.status.id_for_label }}">Status</label>
                     {{ form.status }}
-                    {% if form.status.errors %}
-                    <div class="text-danger">{{ form.status.errors }}</div>
-                    {% endif %}
+                    {% for error in form.status.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="form-group mb-3 note-field">
                     <label for="{{ form.notes.id_for_label }}">Notes</label>
                     {{ form.notes }}
-                    {% if form.notes.errors %}
-                    <div class="text-danger">{{ form.notes.errors }}</div>
-                    {% endif %}
+                    {% for error in form.notes.errors %}
+                    <small class="form-error">{{ error }}</small>
+                    {% endfor %}
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
