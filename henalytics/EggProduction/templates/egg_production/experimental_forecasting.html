@@ -42,19 +42,23 @@
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
     </form>
 
-    <div class="forecast-method-strip">
-        <div>
-            <strong>{{ selected_range_label }}</strong>
-            <span>{{ selected_horizon|intcomma }} future daily point{{ selected_horizon|pluralize }} from database records.</span>
+    <div class="action-panel forecast-chart-card">
+        <div class="detail-header">
+            <div>
+                <h2 class="detail-title">Actual Production vs Forecast</h2>
+                <div class="detail-subtitle">
+                    Solid dark line shows saved production logs. Dashed blue line shows generated future forecast rows.
+                </div>
+            </div>
+            <span class="forecast-range-pill">{{ selected_range_label }}</span>
         </div>
-        <div>
-            <strong>{{ history_days|intcomma }} Days History</strong>
-            <span>Recent actual records are shown before the forecast starts.</span>
+        {% if forecast_daily_points %}
+        <div id="databaseForecastChart" class="plotly-forecast-chart" aria-label="Database egg production forecast chart"></div>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            No database forecast rows yet. Choose a flock and horizon, then click Generate Forecast.
         </div>
-        <div>
-            <strong>SARIMAX Time Series</strong>
-            <span>Uses a 7-day cycle with Bird No., Dead, Cull, and FEED (bags) as extra predictors.</span>
-        </div>
+        {% endif %}
     </div>
 </section>
 
@@ -139,25 +143,6 @@
     </div>
 </section>
 {% endif %}
-
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Actual Production vs Forecast</h2>
-            <p>Solid dark line shows saved production logs. Dashed blue line shows generated future forecast rows.</p>
-        </div>
-        <span>{{ selected_range_label }}</span>
-    </div>
-    <div class="action-panel forecast-chart-card">
-        {% if forecast_daily_points %}
-        <div id="databaseForecastChart" class="plotly-forecast-chart" aria-label="Database egg production forecast chart"></div>
-        {% else %}
-        <div class="alert alert-info mb-0">
-            No database forecast rows yet. Choose a flock and horizon, then click Generate Forecast.
-        </div>
-        {% endif %}
-    </div>
-</section>
 
 {% if table_forecasts %}
 <section class="analytics-section">
