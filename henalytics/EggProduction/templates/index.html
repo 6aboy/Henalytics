@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Dashboard - Henalytics{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -40,8 +40,8 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Total Eggs</div>
-                    <div class="metric-value">{{ period_egg_total }}</div>
-                    <div class="metric-meta">{{ active_flocks }} active flock{{ active_flocks|pluralize }}</div>
+                    <div class="metric-value">{{ period_egg_total|intcomma }}</div>
+                    <div class="metric-meta">{{ active_flocks|intcomma }} active flock{{ active_flocks|pluralize }}</div>
                 </div>
                 <span class="metric-icon">
                     <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
@@ -52,7 +52,7 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Revenue</div>
-                    <div class="metric-value">₱{{ period_revenue|floatformat:0 }}</div>
+                    <div class="metric-value">₱ {{ period_revenue|floatformat:0|intcomma }}</div>
                     <div class="metric-meta">Sales value in selected range</div>
                 </div>
                 <span class="metric-icon success">
@@ -64,7 +64,7 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Feed Consumed</div>
-                    <div class="metric-value">{{ period_feed_total }} bags</div>
+                    <div class="metric-value">{{ period_feed_total|intcomma }} bags</div>
                     <div class="metric-meta">Feed used in selected range</div>
                 </div>
                 <span class="metric-icon warning">
@@ -80,7 +80,7 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Mortality + Cull</div>
-                    <div class="metric-value">{{ period_losses }}</div>
+                    <div class="metric-value">{{ period_losses|intcomma }}</div>
                     <div class="metric-meta">Recorded flock reductions</div>
                 </div>
                 <span class="metric-icon danger">
@@ -128,7 +128,7 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Feed Consumed</div>
-                    <div class="metric-value">{{ feed_consumed_30d }} bags</div>
+                    <div class="metric-value">{{ feed_consumed_30d|intcomma }} bags</div>
                     <div class="metric-meta">Rolling 30-day usage</div>
                 </div>
                 <span class="metric-icon warning">

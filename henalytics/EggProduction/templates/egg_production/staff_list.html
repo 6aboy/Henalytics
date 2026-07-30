@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -23,8 +23,8 @@
             <tbody>
                 {% for p in productions %}
                 <tr>
-                    <td>{{ p.eggs_collected }}</td>
-                    <td>{{ p.good_eggs }}</td>
+                    <td>{{ p.eggs_collected|intcomma }}</td>
+                    <td>{{ p.good_eggs|intcomma }}</td>
                     <td>{{ p.hen_day_production }}</td>
                     <td>{{ p.hen_housed_production }}</td>
                     <td>{{ p.eggs_per_hen }}</td>
@@ -46,14 +46,14 @@
 
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            Showing {{ productions.start_index }} to {{ productions.end_index }} of {{ productions.paginator.count }}
+            Showing {{ productions.start_index|intcomma }} to {{ productions.end_index|intcomma }} of {{ productions.paginator.count|intcomma }}
             entries
         </div>
         <div>
             {% if productions.has_previous %}
             <a href="?page={{ productions.previous_page_number }}" class="btn btn-outline-secondary btn-sm">Previous</a>
             {% endif %}
-            <span class="mx-2">Page {{ productions.number }} of {{ productions.paginator.num_pages }}</span>
+            <span class="mx-2">Page {{ productions.number|intcomma }} of {{ productions.paginator.num_pages|intcomma }}</span>
             {% if productions.has_next %}
             <a href="?page={{ productions.next_page_number }}" class="btn btn-outline-secondary btn-sm">Next</a>
             {% endif %}

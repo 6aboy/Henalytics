@@ -470,7 +470,7 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, today.strftime('%b %d, %Y'))
-        self.assertContains(response, '<strong>1500</strong>')
+        self.assertContains(response, '<strong>1,500</strong>')
         self.assertNotContains(response, yesterday.strftime('%b %d, %Y'))
 
     def test_dashboard_period_cards_total_eggs(self):
@@ -780,7 +780,7 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:sales-transaction-list'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '₱400.00')
+        self.assertContains(response, '₱ 400.00')
 
     def test_sales_transaction_create_saves_item_rows(self):
         response = self.client.post(reverse('eggproduction:sales-transaction-create'), {

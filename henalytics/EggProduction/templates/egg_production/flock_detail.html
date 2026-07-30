@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Flock {{ flock.house_no }} - Henalytics{% endblock %}
 {% block page_title %}Flock Details{% endblock %}
@@ -25,12 +25,12 @@
         <div class="detail-grid">
             <div class="detail-item"><span class="detail-label">House</span><span class="detail-value">{{ flock.house_no }}</span></div>
             <div class="detail-item"><span class="detail-label">Breed/Strain</span><span class="detail-value">{{ flock.breed_strain }}</span></div>
-            <div class="detail-item"><span class="detail-label">Initial Hens</span><span class="detail-value">{{ flock.initial_hen_count }}</span></div>
-            <div class="detail-item"><span class="detail-label">Current Hens</span><span class="detail-value">{{ current_hen_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Initial Hens</span><span class="detail-value">{{ flock.initial_hen_count|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Current Hens</span><span class="detail-value">{{ current_hen_count|intcomma }}</span></div>
             <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">{{ flock.get_status_display }}</span></div>
-            <div class="detail-item"><span class="detail-label">Production Logs</span><span class="detail-value">{{ production_log_count }}</span></div>
-            <div class="detail-item"><span class="detail-label">Grading Logs</span><span class="detail-value">{{ grading_log_count }}</span></div>
-            <div class="detail-item"><span class="detail-label">Sales</span><span class="detail-value">{{ sales_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Production Logs</span><span class="detail-value">{{ production_log_count|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Grading Logs</span><span class="detail-value">{{ grading_log_count|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Sales</span><span class="detail-value">{{ sales_count|intcomma }}</span></div>
         </div>
         <div class="detail-note mt-3">
             Flock age is based on the flock start date. Current hens are calculated from the initial hen count minus recorded dead and culled hens.
@@ -62,8 +62,8 @@
                     {% for log in production_logs %}
                     <tr>
                         <td>{{ log.log_date|date:"M d, Y" }}</td>
-                        <td>{{ log.hen_count }}</td>
-                        <td>{{ log.eggs_total }}</td>
+                        <td>{{ log.hen_count|intcomma }}</td>
+                        <td>{{ log.eggs_total|intcomma }}</td>
                         <td>{{ log.pct_hen_day }}%</td>
                         <td>{{ log.fcr|default:"N/A" }}</td>
                     </tr>
@@ -95,11 +95,11 @@
                     {% for log in grading_logs %}
                     <tr>
                         <td>{{ log.log_date|date:"M d, Y" }}</td>
-                        <td>{{ log.eggs_total }}</td>
-                        <td>{{ log.eggs_aa }}</td>
-                        <td>{{ log.eggs_a }}</td>
-                        <td>{{ log.eggs_b }}</td>
-                        <td>{{ log.eggs_small }}</td>
+                        <td>{{ log.eggs_total|intcomma }}</td>
+                        <td>{{ log.eggs_aa|intcomma }}</td>
+                        <td>{{ log.eggs_a|intcomma }}</td>
+                        <td>{{ log.eggs_b|intcomma }}</td>
+                        <td>{{ log.eggs_small|intcomma }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

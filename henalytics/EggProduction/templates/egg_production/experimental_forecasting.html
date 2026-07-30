@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Database Forecasting - Henalytics{% endblock %}
 {% block page_title %}Forecasting{% endblock %}
@@ -44,10 +45,10 @@
     <div class="forecast-method-strip">
         <div>
             <strong>{{ selected_range_label }}</strong>
-            <span>{{ selected_horizon }} future daily point{{ selected_horizon|pluralize }} from database records.</span>
+            <span>{{ selected_horizon|intcomma }} future daily point{{ selected_horizon|pluralize }} from database records.</span>
         </div>
         <div>
-            <strong>{{ history_days }} Days History</strong>
+            <strong>{{ history_days|intcomma }} Days History</strong>
             <span>Recent actual records are shown before the forecast starts.</span>
         </div>
         <div>
@@ -59,7 +60,7 @@
 
 {% if forecast_daily_points and forecast_daily_points < selected_horizon %}
 <div class="alert alert-warning">
-    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points }} future day{{ forecast_daily_points|pluralize }}.
+    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points|intcomma }} future day{{ forecast_daily_points|pluralize }}.
     Click Generate Forecast with this horizon to create the full range.
 </div>
 {% endif %}
@@ -75,18 +76,18 @@
     <div class="forecast-cards">
         <div class="metric-card">
             <div class="metric-label">Forecast Eggs</div>
-            <div class="metric-value">{{ forecast_total|floatformat:0 }}</div>
+            <div class="metric-value">{{ forecast_total|floatformat:0|intcomma }}</div>
             <div class="metric-meta">Total expected eggs in selected horizon</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Daily Points</div>
-            <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
+            <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
             <div class="metric-meta">{{ selected_range_label }}</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Forecast Target</div>
             <div class="metric-value">Overall</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} eggs{% else %}Egg pieces only{% endif %}</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty|intcomma }} eggs{% else %}Egg pieces only{% endif %}</div>
         </div>
     </div>
 </section>
@@ -133,7 +134,7 @@
         <div class="metric-card">
             <div class="metric-label">MAPE</div>
             <div class="metric-value">{% if latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
-            <div class="metric-meta">{{ latest_model.training_rows|default:0 }} training rows</div>
+            <div class="metric-meta">{{ latest_model.training_rows|default:0|intcomma }} training rows</div>
         </div>
     </div>
 </section>
@@ -165,7 +166,7 @@
             <h2>Forecast Rows</h2>
             <p>Saved database forecast records used for review and traceability.</p>
         </div>
-        <span>{{ forecast_rows }} row{{ forecast_rows|pluralize }}</span>
+        <span>{{ forecast_rows|intcomma }} row{{ forecast_rows|pluralize }}</span>
     </div>
     <div class="table-responsive table-card">
         <table class="table table-striped table-hover js-data-table" data-export-enabled="true" data-export-title="Database Egg Forecasts">
@@ -187,9 +188,9 @@
                     <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                     <td>House {{ forecast.flock.house_no }}</td>
                     <td>{{ forecast.get_grade_display }}</td>
-                    <td><strong>{{ forecast.predicted_qty }}</strong></td>
-                    <td>{{ forecast.lower_qty|default:"N/A" }}</td>
-                    <td>{{ forecast.upper_qty|default:"N/A" }}</td>
+                    <td><strong>{{ forecast.predicted_qty|intcomma }}</strong></td>
+                    <td>{{ forecast.lower_qty|default:"N/A"|intcomma }}</td>
+                    <td>{{ forecast.upper_qty|default:"N/A"|intcomma }}</td>
                     <td>{{ forecast.model_version.arima_order|default:"ARIMA" }}</td>
                     <td>{% if forecast.model_version.mape %}{{ forecast.model_version.mape }}%{% else %}N/A{% endif %}</td>
                 </tr>

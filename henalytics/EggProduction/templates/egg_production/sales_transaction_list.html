@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Manage Sales - Henalytics{% endblock %}
 {% block page_title %}Manage Sales{% endblock %}
@@ -30,8 +31,8 @@
             <tr>
                 <td>{{ transaction.sale_date|date:"M d, Y" }}</td>
                 <td>{{ transaction.or_number|default:"N/A" }}</td>
-                <td>{{ transaction.total_pieces }}</td>
-                <td><strong>₱{{ transaction.total_amount|floatformat:2 }}</strong></td>
+                <td>{{ transaction.total_pieces|intcomma }}</td>
+                <td><strong>₱ {{ transaction.total_amount|floatformat:2|intcomma }}</strong></td>
                 <td>
                     {% for item in transaction.items.all %}
                     {{ item.get_grade_display }}{% if not forloop.last %}, {% endif %}

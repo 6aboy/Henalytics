@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block content %}
 <div class="action-panel detail-panel">
@@ -18,10 +18,10 @@
     <section class="detail-section">
         <h3 class="detail-section-title">Production</h3>
         <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ production.eggs_collected }}</span></div>
-            <div class="detail-item"><span class="detail-label">Good Eggs</span><span class="detail-value">{{ production.good_eggs }}</span></div>
-            <div class="detail-item"><span class="detail-label">Broken Eggs</span><span class="detail-value">{{ production.broken_eggs }}</span></div>
-            <div class="detail-item"><span class="detail-label">Defective Eggs</span><span class="detail-value">{{ production.defective_eggs }}</span></div>
+            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ production.eggs_collected|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Good Eggs</span><span class="detail-value">{{ production.good_eggs|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Broken Eggs</span><span class="detail-value">{{ production.broken_eggs|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Defective Eggs</span><span class="detail-value">{{ production.defective_eggs|intcomma }}</span></div>
             <div class="detail-item"><span class="detail-label">Hen Day</span><span class="detail-value">{{ production.hen_day_production }}</span></div>
             <div class="detail-item"><span class="detail-label">Hen Housed</span><span class="detail-value">{{ production.hen_housed_production }}</span></div>
             <div class="detail-item"><span class="detail-label">Eggs Per Hen</span><span class="detail-value">{{ production.eggs_per_hen }}</span></div>

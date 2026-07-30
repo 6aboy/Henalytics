@@ -42,7 +42,7 @@
 
                 <div class="sales-grand-total">
                     <span>Total Amount</span>
-                    <strong id="sales-item-total">₱0.00</strong>
+                    <strong id="sales-item-total">₱ 0.00</strong>
                 </div>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -73,7 +73,7 @@
         var totalTarget = document.getElementById('sales-item-total');
 
         function money(value) {
-            return '₱' + Number(value || 0).toLocaleString(undefined, {
+            return '₱ ' + Number(value || 0).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Sales Transaction - Henalytics{% endblock %}
 {% block page_title %}Sales Details{% endblock %}
@@ -29,8 +29,8 @@
             <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ sales_transaction.flock.house_no }}</span></div>
             <div class="detail-item"><span class="detail-label">Sale Date</span><span class="detail-value">{{ sales_transaction.sale_date|date:"M d, Y" }}</span></div>
             <div class="detail-item"><span class="detail-label">OR Number</span><span class="detail-value">{{ sales_transaction.or_number|default:"N/A" }}</span></div>
-            <div class="detail-item"><span class="detail-label">Total Amount</span><span class="detail-value">₱{{ total_amount|floatformat:2 }}</span></div>
-            <div class="detail-item"><span class="detail-label">Total Pieces</span><span class="detail-value">{{ sales_transaction.total_pieces }}</span></div>
+            <div class="detail-item"><span class="detail-label">Total Amount</span><span class="detail-value">₱ {{ total_amount|floatformat:2|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Total Pieces</span><span class="detail-value">{{ sales_transaction.total_pieces|intcomma }}</span></div>
             <div class="detail-item"><span class="detail-label">Recorded By</span><span class="detail-value">{{ recorded_by_name }}</span></div>
         </div>
     </section>
@@ -56,9 +56,9 @@
                     {% for item in items %}
                     <tr>
                         <td>{{ item.get_grade_display }}</td>
-                        <td>{{ item.quantity_pieces }}</td>
-                        <td><strong>₱{{ item.amount|floatformat:2 }}</strong></td>
-                        <td>₱{{ item.unit_price|floatformat:2 }}</td>
+                        <td>{{ item.quantity_pieces|intcomma }}</td>
+                        <td><strong>₱ {{ item.amount|floatformat:2|intcomma }}</strong></td>
+                        <td>₱ {{ item.unit_price|floatformat:2|intcomma }}</td>
                         <td>
                             <a href="{% url 'eggproduction:sales-item-edit' item.pk %}" class="btn btn-sm btn-warning">Edit</a>
                             <form method="post" action="{% url 'eggproduction:sales-item-delete' item.pk %}" class="d-inline" data-swal-delete

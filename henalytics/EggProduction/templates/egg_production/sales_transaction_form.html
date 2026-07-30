@@ -89,7 +89,7 @@
                         </div>
                         <div class="sales-item-total">
                             <span>Total Amount</span>
-                            <strong data-row-total>₱0.00</strong>
+                            <strong data-row-total>₱ 0.00</strong>
                         </div>
                         {% if item_form.DELETE %}
                         <label class="sales-item-delete">
@@ -119,7 +119,7 @@
                         </div>
                         <div class="sales-item-total">
                             <span>Total Amount</span>
-                            <strong data-row-total>₱0.00</strong>
+                            <strong data-row-total>₱ 0.00</strong>
                         </div>
                         {% if item_form.DELETE %}
                         <label class="sales-item-delete">
@@ -133,7 +133,7 @@
 
                 <div class="sales-grand-total">
                     <span>Transaction Total</span>
-                    <strong id="sales-grand-total">₱0.00</strong>
+                    <strong id="sales-grand-total">₱ 0.00</strong>
                 </div>
 
                 <div class="form-group sales-notes note-field">
@@ -162,7 +162,7 @@
         var grandTotal = document.getElementById('sales-grand-total');
 
         function money(value) {
-            return '₱' + Number(value || 0).toLocaleString(undefined, {
+            return '₱ ' + Number(value || 0).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });

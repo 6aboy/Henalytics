@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Grading Logs - Henalytics{% endblock %}
 
@@ -37,15 +37,15 @@
                     <td>{{ log.grading_date|date:"M d, Y" }}</td>
                     <td><a href="{% url 'eggproduction:flock-detail' log.flock.pk %}">House {{ log.flock.house_no }}</a>
                     </td>
-                    <td>{{ log.age_weeks }}</td>
-                    <td>{{ log.grade_jumbo }}</td>
-                    <td>{{ log.grade_extra_large }}</td>
-                    <td>{{ log.grade_large }}</td>
-                    <td>{{ log.grade_medium }}</td>
-                    <td>{{ log.grade_small }}</td>
-                    <td>{{ log.grade_pullets }}</td>
-                    <td>{{ log.grade_peewee }}</td>
-                    <td>{{ log.cracked_eggs }}</td>
+                    <td>{{ log.age_weeks|intcomma }}</td>
+                    <td>{{ log.grade_jumbo|intcomma }}</td>
+                    <td>{{ log.grade_extra_large|intcomma }}</td>
+                    <td>{{ log.grade_large|intcomma }}</td>
+                    <td>{{ log.grade_medium|intcomma }}</td>
+                    <td>{{ log.grade_small|intcomma }}</td>
+                    <td>{{ log.grade_pullets|intcomma }}</td>
+                    <td>{{ log.grade_peewee|intcomma }}</td>
+                    <td>{{ log.cracked_eggs|intcomma }}</td>
                     <td>
                         <a href="{% url 'eggproduction:grading-log-detail' log.pk %}"
                             class="btn btn-sm btn-info">View</a>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Model Version - Henalytics{% endblock %}
 
@@ -28,7 +29,7 @@
                     <p><strong>RMSE:</strong> {{ model.rmse|default:"N/A" }}</p>
                     <p><strong>AIC Score:</strong> {{ model.aic_score|default:"N/A" }}</p>
                     <p><strong>ARIMA Order:</strong> {{ model.arima_order|default:"N/A" }}</p>
-                    <p><strong>Training Rows:</strong> {{ model.training_rows|default:"N/A" }}</p>
+                    <p><strong>Training Rows:</strong> {{ model.training_rows|default:"N/A"|intcomma }}</p>
                 </div>
             </div>
 
@@ -40,7 +41,7 @@
                         {% for forecast in harvest_forecasts %}
                         <li class="list-group-item">
                             <strong>{{ forecast.forecast_date|date:"M d, Y" }}</strong> -
-                            {{ forecast.get_grade_display }}: {{ forecast.predicted_qty }} eggs
+                            {{ forecast.get_grade_display }}: {{ forecast.predicted_qty|intcomma }} eggs
                         </li>
                         {% endfor %}
                     </ul>
@@ -56,7 +57,7 @@
                         {% for forecast in sales_forecasts %}
                         <li class="list-group-item">
                             <strong>{{ forecast.forecast_date|date:"M d, Y" }}</strong> -
-                            {{ forecast.get_grade_display }}: ₱{{ forecast.predicted_amount|floatformat:2 }}
+                            {{ forecast.get_grade_display }}: ₱ {{ forecast.predicted_amount|floatformat:2|intcomma }}
                         </li>
                         {% endfor %}
                     </ul>

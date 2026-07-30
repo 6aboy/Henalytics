@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Production Log - Henalytics{% endblock %}
 {% block page_title %}Egg Production Details{% endblock %}
@@ -21,7 +21,7 @@
     <section class="detail-section">
         <h3 class="detail-section-title">Production</h3>
         <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ production_log.eggs_total }}</span></div>
+            <div class="detail-item"><span class="detail-label">Total Eggs</span><span class="detail-value">{{ production_log.eggs_total|intcomma }}</span></div>
             <div class="detail-item"><span class="detail-label">Hen Day</span><span class="detail-value">{{ production_log.pct_hen_day }}%</span></div>
             <div class="detail-item"><span class="detail-label">Hen Housed</span><span class="detail-value">{{ production_log.pct_hen_housed }}%</span></div>
             <div class="detail-item"><span class="detail-label">FCR</span><span class="detail-value">{{ production_log.fcr|default:"N/A" }}</span></div>
@@ -33,10 +33,10 @@
         <div class="detail-grid">
             <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ production_log.flock.house_no }}</span></div>
             <div class="detail-item"><span class="detail-label">Age</span><span class="detail-value">{{ production_log.age_weeks }} weeks / {{ production_log.age_days }} days</span></div>
-            <div class="detail-item"><span class="detail-label">Live Hens</span><span class="detail-value">{{ production_log.hen_count }}</span></div>
-            <div class="detail-item"><span class="detail-label">Feed Bags</span><span class="detail-value">{{ production_log.feed_bags }}</span></div>
-            <div class="detail-item"><span class="detail-label">Dead</span><span class="detail-value">{{ production_log.dead_count }}</span></div>
-            <div class="detail-item"><span class="detail-label">Culled</span><span class="detail-value">{{ production_log.culled_count }}</span></div>
+            <div class="detail-item"><span class="detail-label">Live Hens</span><span class="detail-value">{{ production_log.hen_count|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Feed Bags</span><span class="detail-value">{{ production_log.feed_bags|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Dead</span><span class="detail-value">{{ production_log.dead_count|intcomma }}</span></div>
+            <div class="detail-item"><span class="detail-label">Culled</span><span class="detail-value">{{ production_log.culled_count|intcomma }}</span></div>
             <div class="detail-item"><span class="detail-label">Entered By</span><span class="detail-value">{{ entered_by_name }}</span></div>
             <div class="detail-item"><span class="detail-label">Updated</span><span class="detail-value">{{ production_log.updated_at|date:"M d, Y g:i A" }}</span></div>
         </div>

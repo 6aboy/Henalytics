@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Egg Production - Henalytics{% endblock %}
 {% block page_title %}Egg Production{% endblock %}
@@ -58,7 +59,7 @@
             {% for log in production_logs %}
             <tr>
                 <td>{{ log.log_date|date:"M d, Y" }}</td>
-                <td><strong>{{ log.eggs_total }}</strong></td>
+                <td><strong>{{ log.eggs_total|intcomma }}</strong></td>
                 <td>House {{ log.flock.house_no }} | Week {{ log.age_weeks }}</td>
                 <td>{{ log.pct_hen_day }}%</td>
                 <td>{{ log.pct_hen_housed }}%</td>

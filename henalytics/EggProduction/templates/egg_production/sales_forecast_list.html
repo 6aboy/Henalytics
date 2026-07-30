@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Sales Forecasts - Henalytics{% endblock %}
 {% block page_title %}Forecasts{% endblock %}
@@ -48,10 +49,10 @@
     <div class="forecast-method-strip">
         <div>
             <strong>{{ selected_range_label }}</strong>
-            <span>{{ selected_periods }} future daily revenue point{{ selected_periods|pluralize }} shown in charts and tables.</span>
+            <span>{{ selected_periods|intcomma }} future daily revenue point{{ selected_periods|pluralize }} shown in charts and tables.</span>
         </div>
         <div>
-            <strong>{{ history_days }} Days History</strong>
+            <strong>{{ history_days|intcomma }} Days History</strong>
             <span>Recent actual sales provide visual context before the forecast begins.</span>
         </div>
         <div>
@@ -63,7 +64,7 @@
 
 {% if forecast_daily_points and forecast_daily_points < selected_periods %}
 <div class="alert alert-warning">
-    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points }} future day{{ forecast_daily_points|pluralize }}.
+    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points|intcomma }} future day{{ forecast_daily_points|pluralize }}.
     Click Generate Forecast with this horizon to create the full range.
 </div>
 {% endif %}
@@ -158,12 +159,12 @@
     <div class="forecast-cards">
         <div class="metric-card">
             <div class="metric-label">Predicted Revenue</div>
-            <div class="metric-value">₱{{ forecast_total|floatformat:2 }}</div>
+            <div class="metric-value">₱ {{ forecast_total|floatformat:2|intcomma }}</div>
             <div class="metric-meta">{{ selected_range_label }}</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Daily Forecast Points</div>
-            <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
+            <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
             <div class="metric-meta">
                 {% if forecast_start and forecast_end %}
                 {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
@@ -174,8 +175,8 @@
         </div>
         <div class="metric-card">
             <div class="metric-label">Forecast Categories</div>
-            <div class="metric-value">{{ forecast_categories|default:0 }}</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: ₱{{ forecast_peak.predicted_amount|floatformat:2 }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
+            <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: ₱ {{ forecast_peak.predicted_amount|floatformat:2|intcomma }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
         </div>
     </div>
 </section>
@@ -194,7 +195,7 @@
             <h2 class="detail-title">Actual Revenue vs Forecast</h2>
             <div class="detail-subtitle">
                 {% if forecast_start and forecast_end %}
-                Shows recent actual sales plus {{ selected_periods }} future daily forecast point{{ selected_periods|pluralize }}.
+                Shows recent actual sales plus {{ selected_periods|intcomma }} future daily forecast point{{ selected_periods|pluralize }}.
                 {% else %}
                 Revenue forecast from saved sales records
                 {% endif %}
@@ -240,7 +241,7 @@
 
 {% if table_forecasts %}
 {% if forecast_rows > forecast_table_limit %}
-<div class="alert alert-info">Showing the first {{ forecast_table_limit }} rows within {{ selected_range_label }} to keep this page responsive.</div>
+<div class="alert alert-info">Showing the first {{ forecast_table_limit|intcomma }} rows within {{ selected_range_label }} to keep this page responsive.</div>
 {% endif %}
 <section class="analytics-section">
     <div class="section-heading">
@@ -248,7 +249,7 @@
             <h2>Forecast Rows</h2>
             <p>Detailed saved sales forecast records used for export, review, and traceability.</p>
         </div>
-        <span>{{ forecast_rows }} row{{ forecast_rows|pluralize }}</span>
+        <span>{{ forecast_rows|intcomma }} row{{ forecast_rows|pluralize }}</span>
     </div>
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table js-data-table"
@@ -269,7 +270,7 @@
             <tr>
                 <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
-                <td><strong>₱{{ forecast.predicted_amount|floatformat:2 }}</strong></td>
+                <td><strong>₱ {{ forecast.predicted_amount|floatformat:2|intcomma }}</strong></td>
                 <td>{{ forecast.model_version.get_model_type_display }}</td>
                 <td>{{ forecast.created_at|date:"M d, Y" }}</td>
                 <td class="no-export">
@@ -383,7 +384,7 @@
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
-                            label: (context) => `${context.dataset.label}: ₱${Number(context.parsed.y || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            label: (context) => `${context.dataset.label}: ₱ ${Number(context.parsed.y || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         }
                     }
                 },
@@ -421,7 +422,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: (context) => `${context.dataset.label}: ₱${Number(context.parsed.y).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                label: (context) => `${context.dataset.label}: ₱ ${Number(context.parsed.y).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                             }
                         }
                     },

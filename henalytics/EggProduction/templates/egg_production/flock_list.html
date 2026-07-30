@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Flock Management - Henalytics{% endblock %}
 {% block page_title %}Flock Management{% endblock %}
@@ -29,14 +30,14 @@
             {% for flock in flocks %}
             <tr>
                 <td><strong>House {{ flock.house_no }}</strong></td>
-                <td>{{ flock.table_age_weeks }}w {{ flock.table_age_days }}d</td>
+                <td>{{ flock.table_age_weeks|intcomma }}w {{ flock.table_age_days|intcomma }}d</td>
                 <td>{{ flock.date_started|date:"M d, Y" }}</td>
                 <td>
-                    <strong>{{ flock.table_current_population }}</strong>
-                    <small class="table-subtext">from {{ flock.initial_hen_count }}</small>
+                    <strong>{{ flock.table_current_population|intcomma }}</strong>
+                    <small class="table-subtext">from {{ flock.initial_hen_count|intcomma }}</small>
                 </td>
-                <td>{{ flock.table_culled_count }} | {{ flock.table_dead_count }}</td>
-                <td>{{ flock.table_feed_bags }}</td>
+                <td>{{ flock.table_culled_count|intcomma }} | {{ flock.table_dead_count|intcomma }}</td>
+                <td>{{ flock.table_feed_bags|intcomma }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:flock-detail' flock.pk %}" class="btn btn-sm btn-info">View</a>
                     {% if user.is_staff or user.is_superuser %}

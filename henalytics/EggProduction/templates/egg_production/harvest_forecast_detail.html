@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Egg Forecast - Henalytics{% endblock %}
 
@@ -14,7 +15,7 @@
                     <p><strong>Flock:</strong> <a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></p>
                     <p><strong>Forecast Date:</strong> {{ forecast.forecast_date }}</p>
                     <p><strong>Size:</strong> <span class="badge bg-info">{{ forecast.get_grade_display }}</span></p>
-                    <p><strong>Predicted Quantity:</strong> {{ forecast.predicted_qty }}</p>
+                    <p><strong>Predicted Quantity:</strong> {{ forecast.predicted_qty|intcomma }}</p>
                     <p><strong>Model Used:</strong> {{ forecast.model_version.get_model_type_display }}</p>
                     <p><strong>Model R2 Score:</strong> {{ forecast.model_version.r2_score|default:"N/A" }}</p>
                 </div>

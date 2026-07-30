@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Egg Forecasts - Henalytics{% endblock %}
 {% block page_title %}Forecasts{% endblock %}
@@ -59,10 +60,10 @@
     <div class="forecast-method-strip">
         <div>
             <strong>{{ selected_range_label }}</strong>
-            <span>{{ selected_periods }} future daily point{{ selected_periods|pluralize }} shown in charts and tables.</span>
+            <span>{{ selected_periods|intcomma }} future daily point{{ selected_periods|pluralize }} shown in charts and tables.</span>
         </div>
         <div>
-            <strong>{{ history_days }} Days History</strong>
+            <strong>{{ history_days|intcomma }} Days History</strong>
             <span>Recent actual records provide visual context before the forecast begins.</span>
         </div>
         <div>
@@ -74,7 +75,7 @@
 
 {% if forecast_daily_points and forecast_daily_points < selected_periods %}
 <div class="alert alert-warning">
-    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points }} future day{{ forecast_daily_points|pluralize }}.
+    This page is set to {{ selected_range_label }}, but the saved run only has {{ forecast_daily_points|intcomma }} future day{{ forecast_daily_points|pluralize }}.
     Click Generate Forecast with this horizon to create the full range.
 </div>
 {% endif %}
@@ -217,12 +218,12 @@
     <div class="forecast-cards">
         <div class="metric-card">
             <div class="metric-label">Predicted Overall Eggs</div>
-            <div class="metric-value">{{ forecast_total|default:0 }}</div>
+            <div class="metric-value">{{ forecast_total|default:0|intcomma }}</div>
             <div class="metric-meta">{{ selected_range_label }}</div>
         </div>
         <div class="metric-card">
             <div class="metric-label">Daily Forecast Points</div>
-            <div class="metric-value">{{ forecast_daily_points|default:0 }}</div>
+            <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
             <div class="metric-meta">
                 {% if forecast_start and forecast_end %}
                 {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
@@ -233,8 +234,8 @@
         </div>
         <div class="metric-card">
             <div class="metric-label">Forecast Categories</div>
-            <div class="metric-value">{{ forecast_categories|default:0 }}</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
+            <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
+            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty|intcomma }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
         </div>
     </div>
 </section>
@@ -252,7 +253,7 @@
         <div>
             <h2 class="detail-title">Actual Production vs Forecast</h2>
             <div class="detail-subtitle">
-                Shows recent actual records plus {{ selected_periods }} future daily forecast point{{ selected_periods|pluralize }}.
+                Shows recent actual records plus {{ selected_periods|intcomma }} future daily forecast point{{ selected_periods|pluralize }}.
             </div>
         </div>
     </div>
@@ -317,7 +318,7 @@
 
 {% if table_forecasts %}
 {% if forecast_rows > forecast_table_limit %}
-<div class="alert alert-info">Showing the first {{ forecast_table_limit }} rows within {{ selected_range_label }} to keep this page responsive.</div>
+<div class="alert alert-info">Showing the first {{ forecast_table_limit|intcomma }} rows within {{ selected_range_label }} to keep this page responsive.</div>
 {% endif %}
 <section class="analytics-section">
     <div class="section-heading">
@@ -325,7 +326,7 @@
             <h2>Forecast Rows</h2>
             <p>Detailed saved forecast records used for export, review, and traceability.</p>
         </div>
-        <span>{{ forecast_rows }} row{{ forecast_rows|pluralize }}</span>
+        <span>{{ forecast_rows|intcomma }} row{{ forecast_rows|pluralize }}</span>
     </div>
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table js-data-table"
@@ -353,9 +354,9 @@
                 <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                 <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
-                <td><strong>{{ forecast.predicted_qty }}</strong></td>
-                <td>{{ forecast.lower_qty|default:"N/A" }}</td>
-                <td>{{ forecast.upper_qty|default:"N/A" }}</td>
+                <td><strong>{{ forecast.predicted_qty|intcomma }}</strong></td>
+                <td>{{ forecast.lower_qty|default:"N/A"|intcomma }}</td>
+                <td>{{ forecast.upper_qty|default:"N/A"|intcomma }}</td>
                 <td>{{ forecast.model_version.arima_order|default:"ARIMA" }}</td>
                 <td>{{ forecast.model_version.rmse|default:"N/A" }}</td>
                 <td>{% if forecast.model_version.mape %}{{ forecast.model_version.mape }}%{% else %}N/A{% endif %}</td>
