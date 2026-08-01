@@ -1,0 +1,13 @@
+{% if form.errors %}
+<div class="form-error-summary" role="alert">
+    <strong>Please check the form.</strong>
+    <span>Some fields need correction before saving.</span>
+    {% if form.non_field_errors %}
+    <div class="form-error-summary-list">
+        {% for error in form.non_field_errors %}
+        <small>{{ error }}</small>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}

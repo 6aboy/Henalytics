@@ -60,6 +60,34 @@
         </div>
         {% endif %}
     </div>
+
+    <div class="action-panel sales-forecast-link-card">
+        <div class="detail-header">
+            <div>
+                <h2 class="detail-title">Overall Sales Forecasting</h2>
+                <div class="detail-subtitle">
+                    Open the sales forecasting workspace to generate and review overall sales revenue forecasts.
+                </div>
+            </div>
+            <a href="{% url 'eggproduction:sales-forecast-list' %}?range={{ selected_range }}&scope=overall" class="btn btn-primary">
+                Open Sales Forecasting
+            </a>
+        </div>
+        <div class="sales-forecast-link-body">
+            <div>
+                <span class="metric-label">Forecast Target</span>
+                <strong>Sales Revenue</strong>
+            </div>
+            <div>
+                <span class="metric-label">Default Scope</span>
+                <strong>Overall</strong>
+            </div>
+            <div>
+                <span class="metric-label">Selected Horizon</span>
+                <strong>{{ selected_range_label }}</strong>
+            </div>
+        </div>
+    </div>
 </section>
 
 {% if forecast_daily_points and forecast_daily_points < selected_horizon %}
