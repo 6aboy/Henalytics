@@ -618,7 +618,7 @@ class TemplateRenderTest(TestCase):
         self.assertNotContains(response, 'account-dropdown')
         self.assertNotContains(response, 'data-bs-toggle="dropdown"')
 
-    def test_admin_can_access_analytics_pages(self):
+    def test_admin_can_access_forecast_pages_without_analytics_nav(self):
         admin = User.objects.create_superuser(
             username='analyticsadmin',
             email='analytics@example.com',
@@ -629,7 +629,29 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:harvest-forecast-list'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Analytics')
+        self.assertContains(response, 'Forecasting')
+        self.assertNotContains(response, '<span>Analytics</span>', html=True)
+        self.assertContains(response, 'dashboard-tabs')
+        self.assertContains(response, 'Egg Forecasts')
+        self.assertContains(response, 'Sales Forecasts')
+
+    def test_sales_forecast_page_opens_with_forecast_tabs(self):
+        admin = User.objects.create_superuser(
+            username='salesforecastadmin',
+            email='salesforecast@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('eggproduction:sales-forecast-list'), {'range': 'month', 'scope': 'overall'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Forecast Setup')
+        self.assertContains(response, 'Forecasting')
+        self.assertNotContains(response, '<span>Analytics</span>', html=True)
+        self.assertContains(response, 'dashboard-tabs')
+        self.assertContains(response, 'Egg Forecasts')
+        self.assertContains(response, 'Sales Forecasts')
 
     def test_admin_can_access_database_forecasting_page(self):
         admin = User.objects.create_superuser(
