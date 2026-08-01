@@ -497,6 +497,39 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'notebook-bookmark')
         self.assertIn('dashboard_charts_payload_json', response.context)
 
+    def test_dashboard_defaults_to_recent_data_and_separate_loss_totals(self):
+        today = timezone.localdate()
+        rows = [
+            (today - timedelta(days=5), 1, 0),
+            (today - timedelta(days=20), 1, 1),
+            (today - timedelta(days=45), 2, 1),
+        ]
+        for log_date, dead, culled in rows:
+            ProductionLog.objects.create(
+                flock=self.flock,
+                log_date=log_date,
+                age_weeks=30,
+                age_days=210,
+                hen_count=1780,
+                dead_count=dead,
+                culled_count=culled,
+                feed_bags=12,
+                eggs_total=1000,
+                pct_hen_day=Decimal('56.18'),
+                pct_hen_housed=Decimal('55.56'),
+                entered_by=self.user,
+            )
+
+        response = self.client.get(reverse('eggproduction:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['dashboard_period'], 'last_30')
+        self.assertEqual(response.context['dashboard_period_label'], 'Last 30 Days')
+        self.assertEqual(response.context['period_egg_total'], 2000)
+        self.assertEqual(response.context['recent_losses_7d'], 1)
+        self.assertEqual(response.context['recent_losses_30d'], 3)
+        self.assertEqual(response.context['recent_losses_60d'], 6)
+
     def test_primary_detail_pages_render_real_values(self):
         log = ProductionLog.objects.create(
             flock=self.flock,

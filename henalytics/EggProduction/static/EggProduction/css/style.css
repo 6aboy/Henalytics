@@ -1927,7 +1927,9 @@ input[readonly].readonly-metric {
     font-size: 2rem;
     font-weight: 800;
     line-height: 1.05;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: keep-all;
 }
 
 .trend-up {

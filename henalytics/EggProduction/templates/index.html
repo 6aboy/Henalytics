@@ -16,6 +16,7 @@
     <label for="period">Summary:</label>
     <select name="period" id="period" class="form-select">
         <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
+        <option value="last_30" {% if dashboard_period == 'last_30' %}selected{% endif %}>Last 30 Days</option>
         <option value="month" {% if dashboard_period == 'month' %}selected{% endif %}>This Month</option>
         <option value="six_months" {% if dashboard_period == 'six_months' %}selected{% endif %}>Last 6 Months</option>
         <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
@@ -208,17 +209,17 @@
     <div class="mortality-cards">
         <article class="mortality-card">
             <div class="label">Last 7 Days</div>
-            <div class="value">{{ recent_losses_7d }}</div>
+            <div class="value">{{ recent_losses_7d|intcomma }}</div>
             <div class="meta">hen/s lost</div>
         </article>
         <article class="mortality-card">
             <div class="label">Last 30 Days</div>
-            <div class="value">{{ recent_losses_7d }}</div>
+            <div class="value">{{ recent_losses_30d|intcomma }}</div>
             <div class="meta">hen/s lost</div>
         </article>
         <article class="mortality-card">
             <div class="label">Last 60 Days</div>
-            <div class="value">{{ recent_losses_7d }}</div>
+            <div class="value">{{ recent_losses_60d|intcomma }}</div>
             <div class="meta">hen/s lost</div>
         </article>
     </div>

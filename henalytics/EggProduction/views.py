@@ -93,6 +93,11 @@ def build_actual_vs_forecast_payload(actual_rows, forecast_rows):
     last_actual_date = max(actual_by_date) if actual_by_date else None
     return {
         'labels': [item.strftime('%b %d, %Y') for item in dates],
+        'iso_labels': [item.isoformat() for item in dates],
+        'x_min': dates[0].strftime('%b %d, %Y') if dates else None,
+        'x_max': dates[-1].strftime('%b %d, %Y') if dates else None,
+        'x_min_iso': dates[0].isoformat() if dates else None,
+        'x_max_iso': dates[-1].isoformat() if dates else None,
         'actual': [actual_by_date.get(item) for item in dates],
         'forecast': [
             actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)
@@ -584,12 +589,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_period_bounds(self):
         today = timezone.localdate()
-        period = self.request.GET.get('period', 'month')
+        period = self.request.GET.get('period', 'last_30')
         start = None
         end = today
 
         if period == 'today':
             start = today
+        elif period == 'last_30':
+            start = today - timedelta(days=30)
         elif period == 'six_months':
             start = today - timedelta(days=183)
         elif period == 'year':
@@ -606,18 +613,19 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 start = today.replace(day=1)
                 end = today
         else:
-            period = 'month'
-            start = today.replace(day=1)
+            period = 'last_30'
+            start = today - timedelta(days=30)
 
         labels = {
             'today': 'Today',
+            'last_30': 'Last 30 Days',
             'month': 'This Month',
             'six_months': 'Last 6 Months',
             'year': 'This Year',
             'all': 'All Records',
             'custom': 'Custom Range',
         }
-        return period, start, end, labels.get(period, 'This Month')
+        return period, start, end, labels.get(period, 'Last 30 Days')
 
     @staticmethod
     def filter_by_date(queryset, field_name, start, end):
@@ -633,6 +641,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             today = timezone.localdate()
             last_7_days = today - timedelta(days=7)
             last_30_days = today - timedelta(days=30)
+            last_60_days = today - timedelta(days=60)
             period, date_from, date_to, period_label = self.get_period_bounds()
             period_logs = self.filter_by_date(ProductionLog.objects.all(), 'log_date', date_from, date_to)
             period_sales_items = self.filter_by_date(SalesItem.objects.all(), 'transaction__sale_date', date_from, date_to)
@@ -671,6 +680,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             graded_total = grading_logs.aggregate(total=models.Sum('eggs_total'))['total'] or 0
             cracked_egg_loss = float(broken_eggs) / graded_total * 100 if graded_total else 0
             recent_losses_7d = ProductionLog.objects.filter(log_date__gte=last_7_days).aggregate(
+                lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
+            )['lost'] or 0
+            recent_losses_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+                lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
+            )['lost'] or 0
+            recent_losses_60d = ProductionLog.objects.filter(log_date__gte=last_60_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
             chart_rows = list(
@@ -751,6 +766,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'feed_consumed_30d': feed_consumed_30d,
                 'cracked_egg_loss': round(cracked_egg_loss, 1),
                 'recent_losses_7d': recent_losses_7d,
+                'recent_losses_30d': recent_losses_30d,
+                'recent_losses_60d': recent_losses_60d,
                 'dashboard_charts_payload_json': json.dumps(dashboard_chart_payload),
                 'hen_housed_payload_json': json.dumps(dashboard_chart_payload['charts']['hen_housed']),
             })
@@ -758,10 +775,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             logger.exception("Dashboard error: %s", e)
             context.update({
                 'today': timezone.localdate(),
-                'dashboard_period': 'month',
+                'dashboard_period': 'last_30',
                 'dashboard_date_from': None,
                 'dashboard_date_to': None,
-                'dashboard_period_label': 'This Month',
+                'dashboard_period_label': 'Last 30 Days',
                 'active_flocks': 0,
                 'today_production': 0,
                 'period_egg_total': 0,
@@ -777,6 +794,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'feed_consumed_30d': 0,
                 'cracked_egg_loss': 0,
                 'recent_losses_7d': 0,
+                'recent_losses_30d': 0,
+                'recent_losses_60d': 0,
                 'dashboard_charts_payload_json': json.dumps({'labels': [], 'iso_labels': [], 'charts': {}}),
                 'hen_housed_payload_json': json.dumps({'labels': [], 'actual': [], 'threshold': []}),
             })
