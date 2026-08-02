@@ -1475,6 +1475,28 @@ input[readonly].readonly-metric {
     margin-bottom: 18px;
 }
 
+.forecast-overview-cards {
+    margin-top: 18px;
+}
+
+.forecast-overview-cards .metric-value,
+.forecast-cards .metric-value,
+.forecast-insight-grid .metric-value {
+    font-size: clamp(1.35rem, 2vw, 1.9rem);
+}
+
+.forecast-insight-grid .analytics-insight-card {
+    padding: 18px 20px;
+}
+
+.forecast-insight-grid .metric-card-main {
+    min-height: 92px;
+}
+
+.forecast-insight-grid .metric-icon {
+    align-self: center;
+}
+
 .dashboard-section,
 .analytics-section {
     margin-bottom: 28px;

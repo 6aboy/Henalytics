@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load humanize %}
+{% load humanize static %}
 
 {% block title %}Sales Forecasts - Henalytics{% endblock %}
 {% block page_title %}Forecasts{% endblock %}
@@ -46,19 +46,43 @@
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
     </form>
 
-    <div class="forecast-method-strip">
-        <div>
-            <strong>{{ selected_range_label }}</strong>
-            <span>{{ selected_periods|intcomma }} future daily revenue point{{ selected_periods|pluralize }} shown in charts and tables.</span>
-        </div>
-        <div>
-            <strong>{{ history_days|intcomma }} Days History</strong>
-            <span>Recent actual sales provide visual context before the forecast begins.</span>
-        </div>
-        <div>
-            <strong>Revenue Target</strong>
-            <span>The model forecasts sales amount from database sales records.</span>
-        </div>
+    <div class="forecast-cards forecast-overview-cards">
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Forecast Horizon</div>
+                    <div class="metric-value">{{ selected_range_label }}</div>
+                    <div class="metric-meta">{{ selected_periods|intcomma }} future daily revenue point{{ selected_periods|pluralize }}</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">History Window</div>
+                    <div class="metric-value">{{ history_days|intcomma }} days</div>
+                    <div class="metric-meta">Recent sales records before the forecast starts</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Revenue Target</div>
+                    <div class="metric-value">Sales Amount</div>
+                    <div class="metric-meta">Forecasts expected revenue from saved sales records.</div>
+                </div>
+                <span class="metric-icon warning">
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
     </div>
 </section>
 
@@ -123,12 +147,25 @@
         </div>
         <span>Interpretation</span>
     </div>
-    <div class="analytics-insight-grid sales-insight-grid">
+    <div class="analytics-insight-grid sales-insight-grid forecast-insight-grid">
         {% for card in sales_insights.cards %}
         <div class="analytics-insight-card {{ card.tone }}">
-            <div class="metric-label">{{ card.label }}</div>
-            <div class="metric-value">{{ card.value }}</div>
-            <div class="metric-meta">{{ card.meta }}</div>
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">{{ card.label }}</div>
+                    <div class="metric-value">{{ card.value }}</div>
+                    <div class="metric-meta">{{ card.meta }}</div>
+                </div>
+                <span class="metric-icon {% if card.tone == 'good' %}success{% elif card.tone == 'warning' %}warning{% elif card.tone == 'danger' %}danger{% else %}blue{% endif %}">
+                    {% if card.tone == 'danger' %}
+                    <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
+                    {% elif card.tone == 'warning' %}
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                    {% else %}
+                    <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
+                    {% endif %}
+                </span>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -158,25 +195,46 @@
     </div>
     <div class="forecast-cards">
         <div class="metric-card">
-            <div class="metric-label">Predicted Revenue</div>
-            <div class="metric-value">₱ {{ forecast_total|floatformat:2|intcomma }}</div>
-            <div class="metric-meta">{{ selected_range_label }}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Daily Forecast Points</div>
-            <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
-            <div class="metric-meta">
-                {% if forecast_start and forecast_end %}
-                {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
-                {% else %}
-                Generated by ARIMA
-                {% endif %}
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Predicted Revenue</div>
+                    <div class="metric-value">₱ {{ forecast_total|floatformat:2|intcomma }}</div>
+                    <div class="metric-meta">Expected sales amount in {{ selected_range_label }}</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
         </div>
         <div class="metric-card">
-            <div class="metric-label">Forecast Categories</div>
-            <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: ₱ {{ forecast_peak.predicted_amount|floatformat:2|intcomma }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Daily Forecast Points</div>
+                    <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
+                    <div class="metric-meta">
+                        {% if forecast_start and forecast_end %}
+                        {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
+                        {% else %}
+                        Generate a forecast to fill this card
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Forecast Categories</div>
+                    <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
+                    <div class="metric-meta">{% if forecast_peak %}Peak: ₱ {{ forecast_peak.predicted_amount|floatformat:2|intcomma }} {{ forecast_peak.get_grade_display }}{% else %}No forecast yet{% endif %}</div>
+                </div>
+                <span class="metric-icon warning">
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
         </div>
     </div>
 </section>

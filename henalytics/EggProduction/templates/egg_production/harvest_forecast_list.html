@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load humanize %}
+{% load humanize static %}
 
 {% block title %}Egg Forecasts - Henalytics{% endblock %}
 {% block page_title %}Forecasts{% endblock %}
@@ -57,19 +57,43 @@
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
     </form>
 
-    <div class="forecast-method-strip">
-        <div>
-            <strong>{{ selected_range_label }}</strong>
-            <span>{{ selected_periods|intcomma }} future daily point{{ selected_periods|pluralize }} shown in charts and tables.</span>
-        </div>
-        <div>
-            <strong>{{ history_days|intcomma }} Days History</strong>
-            <span>Recent actual records provide visual context before the forecast begins.</span>
-        </div>
-        <div>
-            <strong>Solid + Dashed Lines</strong>
-            <span>Solid is actual data. Dashed is forecast output.</span>
-        </div>
+    <div class="forecast-cards forecast-overview-cards">
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Forecast Horizon</div>
+                    <div class="metric-value">{{ selected_range_label }}</div>
+                    <div class="metric-meta">{{ selected_periods|intcomma }} future daily point{{ selected_periods|pluralize }}</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">History Window</div>
+                    <div class="metric-value">{{ history_days|intcomma }} days</div>
+                    <div class="metric-meta">Recent actual records before the forecast starts</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Chart Reading</div>
+                    <div class="metric-value">Actual + Forecast</div>
+                    <div class="metric-meta">Solid line is actual. Dashed line is expected output.</div>
+                </div>
+                <span class="metric-icon warning">
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
     </div>
 </section>
 
@@ -145,12 +169,25 @@
         </div>
         <span>Interpretation</span>
     </div>
-    <div class="analytics-insight-grid">
+    <div class="analytics-insight-grid forecast-insight-grid">
         {% for card in egg_insights.cards %}
         <div class="analytics-insight-card {{ card.tone }}">
-            <div class="metric-label">{{ card.label }}</div>
-            <div class="metric-value">{{ card.value }}</div>
-            <div class="metric-meta">{{ card.meta }}</div>
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">{{ card.label }}</div>
+                    <div class="metric-value">{{ card.value }}</div>
+                    <div class="metric-meta">{{ card.meta }}</div>
+                </div>
+                <span class="metric-icon {% if card.tone == 'good' %}success{% elif card.tone == 'warning' %}warning{% elif card.tone == 'danger' %}danger{% else %}blue{% endif %}">
+                    {% if card.tone == 'danger' %}
+                    <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
+                    {% elif card.tone == 'warning' %}
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                    {% else %}
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                    {% endif %}
+                </span>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -180,28 +217,49 @@
     </div>
     <div class="forecast-cards">
         <div class="metric-card">
-            <div class="metric-label">Model Used</div>
-            <div class="metric-value">{% if latest_model %}SARIMA{% else %}N/A{% endif %}</div>
-            <div class="metric-meta">{% if latest_model %}{{ latest_model.arima_order|default:"Seasonal ARIMA" }}{% else %}Generate a forecast first{% endif %}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Backtest Error</div>
-            <div class="metric-value">{% if latest_model and latest_model.rmse %}{{ latest_model.rmse }}{% else %}N/A{% endif %}</div>
-            <div class="metric-meta">
-                RMSE{% if latest_model and latest_model.mae %} | MAE {{ latest_model.mae }}{% endif %}{% if latest_model and latest_model.mape %} | MAPE {{ latest_model.mape }}%{% endif %}
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Model Used</div>
+                    <div class="metric-value">{% if latest_model %}SARIMA{% else %}N/A{% endif %}</div>
+                    <div class="metric-meta">{% if latest_model %}{{ latest_model.arima_order|default:"Seasonal ARIMA" }}{% else %}Generate a forecast first{% endif %}</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
         </div>
         <div class="metric-card">
-            <div class="metric-label">Baseline Check</div>
-            <div class="metric-value">
-                {% if latest_model and latest_model.baseline_rmse and latest_model.rmse %}
-                    {% if latest_model.rmse < latest_model.baseline_rmse %}Better{% else %}Watch{% endif %}
-                {% else %}
-                    N/A
-                {% endif %}
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Backtest Error</div>
+                    <div class="metric-value">{% if latest_model and latest_model.rmse %}{{ latest_model.rmse }}{% else %}N/A{% endif %}</div>
+                    <div class="metric-meta">
+                        RMSE{% if latest_model and latest_model.mae %} | MAE {{ latest_model.mae }}{% endif %}{% if latest_model and latest_model.mape %} | MAPE {{ latest_model.mape }}%{% endif %}
+                    </div>
+                </div>
+                <span class="metric-icon warning">
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
-            <div class="metric-meta">
-                {% if latest_model and latest_model.baseline_rmse %}Baseline RMSE {{ latest_model.baseline_rmse }}{% else %}Needs enough history{% endif %}
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Baseline Check</div>
+                    <div class="metric-value">
+                        {% if latest_model and latest_model.baseline_rmse and latest_model.rmse %}
+                            {% if latest_model.rmse < latest_model.baseline_rmse %}Better{% else %}Watch{% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                    <div class="metric-meta">
+                        {% if latest_model and latest_model.baseline_rmse %}Baseline RMSE {{ latest_model.baseline_rmse }}{% else %}Needs enough history{% endif %}
+                    </div>
+                </div>
+                <span class="metric-icon {% if latest_model and latest_model.baseline_rmse and latest_model.rmse and latest_model.rmse < latest_model.baseline_rmse %}success{% else %}danger{% endif %}">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
         </div>
     </div>
@@ -217,25 +275,46 @@
     </div>
     <div class="forecast-cards">
         <div class="metric-card">
-            <div class="metric-label">Predicted Overall Eggs</div>
-            <div class="metric-value">{{ forecast_total|default:0|intcomma }}</div>
-            <div class="metric-meta">{{ selected_range_label }}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Daily Forecast Points</div>
-            <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
-            <div class="metric-meta">
-                {% if forecast_start and forecast_end %}
-                {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
-                {% else %}
-                Generated by ARIMA / seasonal ARIMA
-                {% endif %}
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Predicted Overall Eggs</div>
+                    <div class="metric-value">{{ forecast_total|default:0|intcomma }}</div>
+                    <div class="metric-meta">Expected total in {{ selected_range_label }}</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
             </div>
         </div>
         <div class="metric-card">
-            <div class="metric-label">Forecast Categories</div>
-            <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
-            <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty|intcomma }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Daily Forecast Points</div>
+                    <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
+                    <div class="metric-meta">
+                        {% if forecast_start and forecast_end %}
+                        {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
+                        {% else %}
+                        Generate a forecast to fill this card
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Forecast Categories</div>
+                    <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
+                    <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty|intcomma }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
+                </div>
+                <span class="metric-icon warning">
+                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
         </div>
     </div>
 </section>
