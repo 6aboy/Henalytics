@@ -115,8 +115,8 @@ a {
 .brand-lockup img,
 .logo-img {
     display: block;
-    width: min(184px, 86%);
-    max-height: 94px;
+    width: min(196px, 88%);
+    max-height: 82px;
     object-fit: contain;
 }
 
@@ -2211,9 +2211,10 @@ select {
 }
 
 .login-card .logo-img {
-    width: min(480px, 90%);
-    max-height: 220px;
-    margin: 0 auto 48px;
+    width: min(360px, 88%);
+    max-height: 150px;
+    object-fit: contain;
+    margin: 0 auto 34px;
 }
 
 .login-card .mb-3 {

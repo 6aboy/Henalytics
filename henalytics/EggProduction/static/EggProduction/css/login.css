@@ -30,8 +30,8 @@
 }
 
 .login-card .logo-img {
-    width: min(255px, 82%);
-    max-height: 132px;
+    width: min(360px, 88%);
+    max-height: 150px;
     object-fit: contain;
     margin: 0 auto 24px;
 }
