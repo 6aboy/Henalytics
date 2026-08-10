@@ -151,8 +151,8 @@ class ModelVersionAdmin(admin.ModelAdmin):
 
 @admin.register(HarvestForecast)
 class HarvestForecastAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'forecast_date', 'grade', 'predicted_qty', 'lower_qty', 'upper_qty', 'model_version')
-    list_filter = ('flock', 'forecast_date', 'grade', 'model_version')
+    list_display = ('flock', 'forecast_date', 'predicted_qty', 'lower_qty', 'upper_qty', 'model_version')
+    list_filter = ('flock', 'forecast_date', 'model_version')
     search_fields = ('flock__house_no',)
     date_hierarchy = 'forecast_date'
     readonly_fields = ('created_at',)

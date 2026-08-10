@@ -93,7 +93,7 @@ class HarvestForecastSerializer(serializers.ModelSerializer):
     class Meta:
         model = HarvestForecast
         fields = ['id', 'flock', 'flock_detail', 'model_version', 'model_version_detail',
-                 'forecast_date', 'grade', 'predicted_qty', 'lower_qty', 'upper_qty', 'created_at']
+                 'forecast_date', 'predicted_qty', 'lower_qty', 'upper_qty', 'created_at']
         read_only_fields = ['created_at']
 
 

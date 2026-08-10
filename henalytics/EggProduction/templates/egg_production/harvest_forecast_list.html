@@ -14,7 +14,7 @@
     <div class="section-heading">
         <div>
             <h2>Forecast Setup</h2>
-            <p>Choose the flock, forecast horizon, and whether the model should produce overall or size-level outputs.</p>
+            <p>Choose the flock and forecast horizon. Egg production forecasting uses total pieces only.</p>
         </div>
         <span>Egg production</span>
     </div>
@@ -37,13 +37,6 @@
                 {% for value,label in range_options %}
                 <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label for="scope">Scope</label>
-            <select name="scope" id="scope" class="form-select">
-                <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
-                <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
             </select>
         </div>
         <div>
@@ -91,7 +84,7 @@
     <div class="section-heading">
         <div>
             <h2>Interpretation Cards</h2>
-            <p>Quick reading of what the model output implies for production direction, flock condition, and egg quality.</p>
+            <p>Quick reading of what the model output implies for total egg production and flock condition.</p>
         </div>
         <span>Analysis</span>
     </div>
@@ -132,9 +125,9 @@
 
     <div class="action-panel analytics-conclusion">
         <div>
-            <h2 class="detail-title">Machine Learning Interpretation</h2>
-            <div class="detail-subtitle">
-                Uses historical production records, grading records, hen performance indicators, and saved forecast rows.
+                <h2 class="detail-title">Machine Learning Interpretation</h2>
+                <div class="detail-subtitle">
+                Uses historical production records, hen performance indicators, and saved overall forecast rows.
             </div>
         </div>
         <ul class="analytics-notes">
@@ -207,11 +200,10 @@
     <div class="section-heading">
         <div>
             <h2>Supporting Charts</h2>
-            <p>Use these secondary views to inspect hen performance thresholds and egg size movement.</p>
+            <p>Use this secondary view to inspect hen performance thresholds beside the overall forecast.</p>
         </div>
         <span>Details</span>
     </div>
-<div class="analytics-chart-grid">
     <div class="action-panel forecast-chart-card">
         <div class="detail-header">
             <div>
@@ -221,50 +213,6 @@
         </div>
         <canvas id="henPerformanceChart" height="130"></canvas>
     </div>
-
-    <div class="action-panel forecast-chart-card">
-        <div class="detail-header">
-            <div>
-                <h2 class="detail-title">Egg Size Mix</h2>
-                <div class="detail-subtitle">Recent historical grading compared with saved size forecasts.</div>
-            </div>
-        </div>
-        <canvas id="sizeMixChart" height="130"></canvas>
-    </div>
-</div>
-
-<div class="action-panel forecast-chart-card">
-    <div class="detail-header">
-        <div>
-            <h2 class="detail-title">Forecast by Egg Size</h2>
-            <div class="detail-subtitle">
-                {% if forecast_start and forecast_end %}
-                {{ selected_range_label }}: {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
-                {% else %}
-                Generate a forecast to show future rows by date
-                {% endif %}
-            </div>
-        </div>
-        <div class="chart-controls">
-            <div>
-                <label for="eggChartSeries">Series</label>
-                <select id="eggChartSeries" class="form-select form-select-sm"></select>
-            </div>
-            <div>
-                <label for="eggChartType">View</label>
-                <select id="eggChartType" class="form-select form-select-sm">
-                    <option value="line">Line</option>
-                    <option value="bar">Bar</option>
-                </select>
-            </div>
-            <label class="chart-check">
-                <input type="checkbox" id="eggChartSmooth">
-                7-day trend
-            </label>
-        </div>
-    </div>
-    <canvas id="eggForecastChart" height="110"></canvas>
-</div>
 </section>
 
 {% if user.is_superuser or user.userprofile.role == 'admin' or user.userprofile.role == 'manager' %}
@@ -344,7 +292,6 @@
             <tr>
                 <th>Forecast Date</th>
                 <th>Flock</th>
-                <th>Size</th>
                 <th>Predicted Qty</th>
                 <th>Lower Range</th>
                 <th>Upper Range</th>
@@ -361,7 +308,6 @@
             <tr>
                 <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                 <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
-                <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
                 <td><strong>{{ forecast.predicted_qty|intcomma }}</strong></td>
                 <td>{{ forecast.lower_qty|default:"N/A"|intcomma }}</td>
                 <td>{{ forecast.upper_qty|default:"N/A"|intcomma }}</td>
@@ -386,23 +332,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     (function () {
-        const payload = {{ chart_payload_json|safe }};
         const actualForecastPayload = {{ actual_forecast_payload_json|safe }};
         const henPayload = {{ hen_payload_json|safe }};
-        const sizeMixPayload = {{ size_mix_payload_json|safe }};
-        const seriesSelect = document.getElementById('eggChartSeries');
-        const typeSelect = document.getElementById('eggChartType');
-        const smoothToggle = document.getElementById('eggChartSmooth');
-        const seriesKeys = Object.keys(payload.series || {});
-        const preferred = seriesKeys.includes('overall') ? 'overall' : seriesKeys[0];
-
-        function movingAverage(values, windowSize) {
-            return values.map((_, index) => {
-                const start = Math.max(0, index - windowSize + 1);
-                const sample = values.slice(start, index + 1);
-                return sample.reduce((sum, value) => sum + value, 0) / sample.length;
-            });
-        }
 
         function chartYBounds(datasets, floor = 0) {
             const values = datasets
@@ -419,16 +350,6 @@
                 suggestedMin: Math.max(floor, Math.floor(min - padding)),
                 suggestedMax: Math.ceil(max + padding)
             };
-        }
-
-        function fillSeriesOptions() {
-            seriesKeys.forEach((key) => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = payload.series[key].label;
-                option.selected = key === preferred;
-                seriesSelect.appendChild(option);
-            });
         }
 
         const intervalDatasets = actualForecastPayload.upper && actualForecastPayload.upper.some((value) => value !== null)
@@ -567,90 +488,6 @@
             }
         });
 
-        new Chart(document.getElementById('sizeMixChart'), {
-            type: 'bar',
-            data: {
-                labels: sizeMixPayload.labels,
-                datasets: [
-                    {
-                        label: 'Historical',
-                        data: sizeMixPayload.historical,
-                        backgroundColor: 'rgba(52, 64, 84, 0.35)'
-                    },
-                    {
-                        label: 'Forecast',
-                        data: sizeMixPayload.forecast,
-                        backgroundColor: 'rgba(51, 96, 207, 0.38)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => `${context.dataset.label}: ${Math.round(context.parsed.y || 0).toLocaleString()} eggs`
-                        }
-                    }
-                },
-                scales: { y: { beginAtZero: true } }
-            }
-        });
-
-        function datasetFor(key) {
-            const item = payload.series[key] || { label: 'Forecast', values: [] };
-            const values = smoothToggle.checked ? movingAverage(item.values, 7) : item.values;
-            return {
-                label: item.label,
-                data: values,
-                borderColor: '#3360cf',
-                backgroundColor: typeSelect.value === 'bar' ? 'rgba(51, 96, 207, 0.32)' : 'rgba(51, 96, 207, 0.14)',
-                fill: typeSelect.value === 'line',
-                tension: 0.25,
-                pointRadius: payload.labels.length > 120 ? 0 : 2,
-            };
-        }
-
-        fillSeriesOptions();
-        let chart = null;
-        if (seriesKeys.length) {
-            chart = new Chart(document.getElementById('eggForecastChart'), {
-                type: typeSelect.value,
-                data: {
-                    labels: payload.labels,
-                    datasets: [datasetFor(seriesSelect.value || preferred)]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => `${context.dataset.label}: ${Math.round(context.parsed.y).toLocaleString()} eggs`
-                            }
-                        }
-                    },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-
-        function refreshChart() {
-            if (!chart) {
-                return;
-            }
-            chart.config.type = typeSelect.value;
-            chart.data.datasets = [datasetFor(seriesSelect.value)];
-            chart.update();
-        }
-
-        seriesSelect.addEventListener('change', refreshChart);
-        typeSelect.addEventListener('change', refreshChart);
-        smoothToggle.addEventListener('change', refreshChart);
     })();
 </script>
 {% endblock %}

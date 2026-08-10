@@ -15,7 +15,7 @@ class Command(BaseCommand):
             help='Operational data to evaluate.',
         )
         parser.add_argument('--flock-id', type=int, help='Database ID of the flock to evaluate for egg forecasts.')
-        parser.add_argument('--overall-only', action='store_true', help='Skip per-size/category series.')
+        parser.add_argument('--overall-only', action='store_true', help='Deprecated: egg forecasts are always overall-only.')
 
     def handle(self, *args, **options):
         include_sizes = not options['overall_only']
@@ -29,7 +29,7 @@ class Command(BaseCommand):
         if flock is None:
             return
 
-        results = ForecastingService.evaluate_egg_forecasts(flock, include_sizes=include_sizes)
+        results = ForecastingService.evaluate_egg_forecasts(flock)
         self._write_results(f'Egg Forecast Evaluation - House {flock.house_no}', results)
 
     def _get_flock(self, flock_id):

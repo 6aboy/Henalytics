@@ -158,34 +158,6 @@ def build_hen_performance_payload(logs):
     }
 
 
-def build_size_mix_payload(grading_logs, forecasts):
-    grade_fields = [
-        ('xl', 'XL', 'eggs_aa'),
-        ('large', 'Large', 'eggs_a'),
-        ('medium', 'Medium', 'eggs_b'),
-        ('small', 'Small', 'eggs_small'),
-        ('pewee', 'Pewee', 'eggs_decode'),
-    ]
-    historical_totals = grading_logs.aggregate(
-        **{key: models.Sum(field_name) for key, _label, field_name in grade_fields}
-    )
-    forecast_totals = (
-        forecasts.exclude(grade='overall')
-        .values('grade')
-        .annotate(total=models.Sum('predicted_qty'))
-    )
-    forecast_by_grade = {
-        row['grade']: float(row['total'] or 0)
-        for row in forecast_totals
-    }
-
-    return {
-        'labels': [label for _key, label, _field_name in grade_fields],
-        'historical': [float(historical_totals.get(key) or 0) for key, _label, _field_name in grade_fields],
-        'forecast': [forecast_by_grade.get(key, 0) for key, _label, _field_name in grade_fields],
-    }
-
-
 def average(values):
     values = [float(value) for value in values if value is not None]
     return sum(values) / len(values) if values else None
@@ -197,7 +169,7 @@ def percent_change(previous, current):
     return ((current - previous) / previous) * 100
 
 
-def build_egg_insights(logs, grading_logs, forecasts):
+def build_egg_insights(logs, forecasts):
     latest_log = logs.order_by('-log_date').first()
     latest_hen_housed = float(latest_log.pct_hen_housed) if latest_log else None
     latest_hen_day = float(latest_log.pct_hen_day) if latest_log else None
@@ -212,23 +184,6 @@ def build_egg_insights(logs, grading_logs, forecasts):
     first_forecast_avg = average([forecast.predicted_qty for forecast in overall_forecasts[:7]])
     last_forecast_avg = average([forecast.predicted_qty for forecast in overall_forecasts[-7:]])
     forecast_change = percent_change(first_forecast_avg, last_forecast_avg)
-
-    grading_rows = list(grading_logs.order_by('-log_date')[:28])
-    recent_grades = grading_rows[:14]
-    previous_grades = grading_rows[14:28]
-
-    def small_share(rows):
-        total = sum(row.eggs_total or 0 for row in rows)
-        small = sum((row.eggs_small or 0) + (row.eggs_decode or 0) for row in rows)
-        return (small / total * 100) if total else None
-
-    recent_small_share = small_share(recent_grades)
-    previous_small_share = small_share(previous_grades)
-    small_share_change = (
-        recent_small_share - previous_small_share
-        if recent_small_share is not None and previous_small_share is not None
-        else None
-    )
 
     if latest_hen_housed is None:
         status = {
@@ -288,28 +243,6 @@ def build_egg_insights(logs, grading_logs, forecasts):
             'meta': f'Forecast average changes by {forecast_change:.1f}% across the selected horizon.',
         }
 
-    if small_share_change is None:
-        size_card = {
-            'label': 'Egg Size Signal',
-            'tone': 'neutral',
-            'value': 'Insufficient',
-            'meta': 'Add grading records to monitor whether egg sizes are shifting smaller.',
-        }
-    elif small_share_change > 5:
-        size_card = {
-            'label': 'Egg Size Signal',
-            'tone': 'warning',
-            'value': 'Smaller Shift',
-            'meta': f'Small and pewee share increased by {small_share_change:.1f} percentage points recently.',
-        }
-    else:
-        size_card = {
-            'label': 'Egg Size Signal',
-            'tone': 'good',
-            'value': 'No Major Shift',
-            'meta': f'Small and pewee share changed by {small_share_change:.1f} percentage points recently.',
-        }
-
     notes = []
     if latest_hen_housed is not None and latest_hen_housed < 60:
         notes.append('Hen housed production is below 60%, so the flock should be reviewed for culling or replacement planning.')
@@ -319,13 +252,11 @@ def build_egg_insights(logs, grading_logs, forecasts):
         notes.append(f'Recent actual egg production is {abs(production_change):.1f}% lower than the previous comparable period.')
     if forecast_change is not None and forecast_change < -5:
         notes.append('The forecast continues downward, so the decline is expected to persist if conditions stay similar.')
-    if small_share_change is not None and small_share_change > 5:
-        notes.append('The grading data suggests a shift toward smaller eggs, which may affect revenue and flock assessment.')
     if not notes:
-        notes.append('No critical signal was detected from the current production, grading, and forecast records.')
+        notes.append('No critical signal was detected from the current production and forecast records.')
 
     return {
-        'cards': [status, forecast_card, size_card],
+        'cards': [status, forecast_card],
         'notes': notes,
         'latest_hen_housed': latest_hen_housed,
         'latest_hen_day': latest_hen_day,
@@ -1249,7 +1180,6 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         flock_id = request.POST.get('flock_id')
         range_key = request.POST.get('range', 'month')
         periods = self._get_periods(request, range_key)
-        include_sizes = request.POST.get('scope', 'both') == 'both'
 
         flocks = Flock.objects.filter(status='active')
         if flock_id:
@@ -1262,7 +1192,6 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
                 flock=flock,
                 periods=periods,
                 user=request.user,
-                include_sizes=include_sizes,
             )
             total_created += result['created_count']
             errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
@@ -1276,7 +1205,6 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         if flock_id:
             query['flock_id'] = flock_id
         query['range'] = range_key
-        query['scope'] = request.POST.get('scope', 'both')
         if range_key == 'custom':
             if request.POST.get('date_from'):
                 query['date_from'] = request.POST.get('date_from')
@@ -1301,20 +1229,15 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
         overall_forecasts = forecasts.filter(grade='overall')
-        chart_payload = build_forecast_chart_payload(forecasts, 'predicted_qty')
         flock_id = self.request.GET.get('flock_id', '')
         selected_range = self.request.GET.get('range', 'month')
-        selected_scope = self.request.GET.get('scope', 'both')
         selected_periods = self._get_display_periods(self.request)
         selected_range_label = self._range_label(selected_range, selected_periods)
         production_logs = ProductionLog.objects.select_related('flock')
-        grading_logs = GradingLog.objects.select_related('flock')
         if flock_id:
             production_logs = production_logs.filter(flock_id=flock_id)
-            grading_logs = grading_logs.filter(flock_id=flock_id)
         else:
             production_logs = production_logs.filter(flock__status='active')
-            grading_logs = grading_logs.filter(flock__status='active')
 
         forecast_start_row = forecasts.order_by('forecast_date').first()
         if forecast_start_row:
@@ -1322,7 +1245,6 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         else:
             actual_chart_start = timezone.localdate() - timedelta(days=self._history_days_for_horizon(selected_periods))
         chart_logs = production_logs.filter(log_date__gte=actual_chart_start)
-        chart_grading_logs = grading_logs.filter(log_date__gte=actual_chart_start)
         actual_rows = (
             chart_logs.values('log_date')
             .annotate(total=models.Sum('eggs_total'))
@@ -1339,8 +1261,7 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         )
         actual_forecast_payload = build_actual_vs_forecast_payload(actual_rows, forecast_rows)
         hen_payload = build_hen_performance_payload(chart_logs)
-        size_mix_payload = build_size_mix_payload(chart_grading_logs, forecasts)
-        egg_insights = build_egg_insights(production_logs, grading_logs, forecasts)
+        egg_insights = build_egg_insights(production_logs, forecasts)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
         latest_model = (
             ModelVersion.objects
@@ -1354,14 +1275,12 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
             'selected_flock_id': flock_id,
             'selected_range': selected_range,
             'selected_range_label': selected_range_label,
-            'selected_scope': selected_scope,
             'selected_periods': selected_periods,
             'history_days': self._history_days_for_horizon(selected_periods),
             'range_options': self._range_options(),
             'forecast_total': overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
             'forecast_rows': run_summary['rows'],
             'forecast_daily_points': run_summary['daily_points'],
-            'forecast_categories': run_summary['categories'],
             'forecast_table_limit': FORECAST_TABLE_LIMIT,
             'table_forecasts': forecasts[:FORECAST_TABLE_LIMIT],
             'forecast_start': run_summary['first_row'],
@@ -1369,10 +1288,8 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
             'run_summary': run_summary,
             'latest_model': latest_model,
-            'chart_payload_json': json.dumps(chart_payload),
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'hen_payload_json': json.dumps(hen_payload),
-            'size_mix_payload_json': json.dumps(size_mix_payload),
             'egg_insights': egg_insights,
         })
         return context

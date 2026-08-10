@@ -20,7 +20,6 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from .models import (
     Flock,
-    GradingLog,
     HarvestForecast,
     ModelVersion,
     ProductionLog,
@@ -44,14 +43,6 @@ class ForecastingService:
         'month': 30,
         'three_months': 90,
     }
-    EGG_GRADE_FIELDS = {
-        'xl': 'eggs_aa',
-        'large': 'eggs_a',
-        'medium': 'eggs_b',
-        'small': 'eggs_small',
-        'broken': 'eggs_broken',
-        'pewee': 'eggs_decode',
-    }
     EGG_FEATURE_FIELDS = (
         # Notebook-aligned SARIMAX predictors: Bird No., Dead, Cull, and FEED (bags).
         # Calculated percentages are excluded because they are derived from the target.
@@ -69,8 +60,8 @@ class ForecastingService:
         return cls.HORIZONS.get(range_key, 30)
 
     @classmethod
-    def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=True):
-        series_map = cls._egg_series_map(flock, include_sizes=include_sizes)
+    def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=False):
+        series_map = cls._egg_series_map(flock)
         forecast_start_date = cls._latest_production_date(flock)
         if forecast_start_date:
             forecast_start_date += timedelta(days=1)
@@ -115,8 +106,8 @@ class ForecastingService:
         return results
 
     @classmethod
-    def evaluate_egg_forecasts(cls, flock, include_sizes=True):
-        series_map = cls._egg_series_map(flock, include_sizes=include_sizes)
+    def evaluate_egg_forecasts(cls, flock, include_sizes=False):
+        series_map = cls._egg_series_map(flock)
         return cls._evaluate_series_map(series_map, allow_seasonal=True, use_exog=True)
 
     @classmethod
@@ -715,11 +706,8 @@ class ForecastingService:
         return pd.concat([last_row] * periods, ignore_index=True)
 
     @classmethod
-    def _egg_series_map(cls, flock, include_sizes=True):
-        series_map = {'overall': cls._production_total_series(flock)}
-        if include_sizes:
-            series_map.update(cls._grading_size_series(flock))
-        return series_map
+    def _egg_series_map(cls, flock):
+        return {'overall': cls._production_total_series(flock)}
 
     @staticmethod
     def _production_total_series(flock):
@@ -744,39 +732,6 @@ class ForecastingService:
             .values_list('log_date', flat=True)
             .first()
         )
-
-    @classmethod
-    def _grading_size_series(cls, flock):
-        series = {}
-        production_features = {
-            row['log_date']: row
-            for row in ProductionLog.objects.filter(flock=flock).values(
-                'log_date',
-                'hen_count',
-                'dead_count',
-                'culled_count',
-                'feed_bags',
-            )
-        }
-        for grade, field_name in cls.EGG_GRADE_FIELDS.items():
-            rows = (
-                GradingLog.objects.filter(flock=flock)
-                .values(date=models.F('log_date'))
-                .annotate(value=models.Sum(field_name))
-                .order_by('date')
-            )
-            if rows:
-                enriched_rows = []
-                for row in rows:
-                    enriched = dict(row)
-                    features = production_features.get(row['date'])
-                    if features:
-                        for feature_name in cls.EGG_FEATURE_FIELDS:
-                            if feature_name in features:
-                                enriched[feature_name] = features[feature_name]
-                    enriched_rows.append(enriched)
-                series[grade] = enriched_rows
-        return series
 
     @staticmethod
     def _sales_amount_series():

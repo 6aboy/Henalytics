@@ -18,7 +18,7 @@ class Command(BaseCommand):
             choices=['egg', 'sales'],
             help='Operational data to forecast.',
         )
-        parser.add_argument('--overall-only', action='store_true', help='Skip per-size forecast series.')
+        parser.add_argument('--overall-only', action='store_true', help='Deprecated: egg forecasts are always overall-only.')
 
     def handle(self, *args, **options):
         admin_user = User.objects.filter(is_staff=True).first()
@@ -53,7 +53,6 @@ class Command(BaseCommand):
                 flock=flock,
                 periods=options['periods'],
                 user=admin_user,
-                include_sizes=not options['overall_only'],
             )
 
             if result['success']:

@@ -258,7 +258,7 @@ class ForecastModelTest(TestCase):
         self.assertTrue(egg_result['success'])
         self.assertTrue(sales_result['success'])
         self.assertTrue(HarvestForecast.objects.filter(grade='overall').exists())
-        self.assertTrue(HarvestForecast.objects.filter(grade='large').exists())
+        self.assertFalse(HarvestForecast.objects.exclude(grade='overall').exists())
         self.assertTrue(SalesForecast.objects.filter(grade='overall', predicted_amount__gt=0).exists())
         self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
 
