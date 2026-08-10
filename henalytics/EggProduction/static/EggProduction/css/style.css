@@ -1489,6 +1489,10 @@ input[readonly].readonly-metric {
     padding: 18px 20px;
 }
 
+.forecast-insight-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .forecast-insight-grid .metric-card-main {
     min-height: 92px;
 }
@@ -1619,6 +1623,10 @@ input[readonly].readonly-metric {
 
 .forecast-chart-card {
     margin-bottom: 18px;
+}
+
+.forecast-chart-card-primary {
+    padding: 22px;
 }
 
 #actualForecastChart,

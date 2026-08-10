@@ -57,44 +57,6 @@
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
     </form>
 
-    <div class="forecast-cards forecast-overview-cards">
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Forecast Horizon</div>
-                    <div class="metric-value">{{ selected_range_label }}</div>
-                    <div class="metric-meta">{{ selected_periods|intcomma }} future daily point{{ selected_periods|pluralize }}</div>
-                </div>
-                <span class="metric-icon blue">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">History Window</div>
-                    <div class="metric-value">{{ history_days|intcomma }} days</div>
-                    <div class="metric-meta">Recent actual records before the forecast starts</div>
-                </div>
-                <span class="metric-icon success">
-                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Chart Reading</div>
-                    <div class="metric-value">Actual + Forecast</div>
-                    <div class="metric-meta">Solid line is actual. Dashed line is expected output.</div>
-                </div>
-                <span class="metric-icon warning">
-                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-    </div>
 </section>
 
 {% if forecast_daily_points and forecast_daily_points < selected_periods %}
@@ -104,72 +66,48 @@
 </div>
 {% endif %}
 
-{% if user.is_superuser or user.userprofile.role == 'admin' or user.userprofile.role == 'manager' %}
-<details class="action-panel forecast-maintenance-panel">
-    <summary>Forecast Maintenance</summary>
-    <form method="post" action="{% url 'eggproduction:forecast-maintenance-clear' %}" class="forecast-maintenance-form"
-        data-swal-forecast-clear
-        data-swal-title="Update generated egg forecasts?"
-        data-swal-text="This only removes saved forecast output rows. Historical production and sales records will not be deleted."
-        data-swal-confirm-text="Continue">
-        {% csrf_token %}
-        <input type="hidden" name="forecast_type" value="egg">
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+<section class="analytics-section">
+    <div class="section-heading">
         <div>
-            <label for="clear_flock_id">Flock</label>
-            <select name="flock_id" id="clear_flock_id" class="form-select">
-                <option value="">All flocks</option>
-                {% for flock in flocks %}
-                <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
-                    House {{ flock.house_no }} - {{ flock.breed_strain }}
-                </option>
-                {% endfor %}
-            </select>
+            <h2>Forecast Chart</h2>
+            <p>Actual production appears as the solid line; generated forecast output appears as the dashed line with its expected range.</p>
         </div>
-        <div class="maintenance-button-row">
-            <button type="submit" name="mode" value="keep_latest" class="btn btn-warning">Keep Latest Only</button>
-            <button type="submit" name="mode" value="clear_all" class="btn btn-danger">Clear All Forecasts</button>
-        </div>
-    </form>
-
-    <div class="testing-cleanup">
-        <div>
-            <strong>Testing Data Cleanup</strong>
-            <p>Use only when resetting ML test data. Flocks and user accounts are not deleted.</p>
-        </div>
-        <div class="maintenance-button-row">
-            <form method="post" action="{% url 'eggproduction:testing-data-clear' %}" data-swal-source-clear
-                data-swal-title="Delete all egg production test data?"
-                data-swal-text="This deletes all production logs, grading logs, and egg forecast rows. Flocks remain."
-                data-swal-confirm-text="Delete egg data">
-                {% csrf_token %}
-                <input type="hidden" name="data_type" value="egg">
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button type="submit" class="btn btn-danger">Delete Egg Production Data</button>
-            </form>
-            <form method="post" action="{% url 'eggproduction:testing-data-clear' %}" data-swal-source-clear
-                data-swal-title="Delete all sales test data?"
-                data-swal-text="This deletes all sales transactions, sales items, and sales forecast rows."
-                data-swal-confirm-text="Delete sales data">
-                {% csrf_token %}
-                <input type="hidden" name="data_type" value="sales">
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button type="submit" class="btn btn-danger">Delete Sales Data</button>
-            </form>
-        </div>
+        <span>{{ selected_range_label }}</span>
     </div>
-</details>
-{% endif %}
+    <div class="action-panel forecast-chart-card forecast-chart-card-primary">
+        <div class="detail-header">
+            <div>
+                <h2 class="detail-title">Actual Production vs Forecast</h2>
+                <div class="detail-subtitle">
+                    Shows recent actual records plus {{ selected_periods|intcomma }} future daily forecast point{{ selected_periods|pluralize }}.
+                </div>
+            </div>
+        </div>
+        <canvas id="actualForecastChart" height="105"></canvas>
+    </div>
+</section>
 
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Model Signals</h2>
-            <p>High-level indicators that help explain whether future egg output and flock performance look healthy.</p>
+            <h2>Interpretation Cards</h2>
+            <p>Quick reading of what the model output implies for production direction, flock condition, and egg quality.</p>
         </div>
-        <span>Interpretation</span>
+        <span>Analysis</span>
     </div>
     <div class="analytics-insight-grid forecast-insight-grid">
+        <div class="analytics-insight-card neutral">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Forecasted Eggs</div>
+                    <div class="metric-value">{{ forecast_total|default:0|intcomma }}</div>
+                    <div class="metric-meta">Expected total in {{ selected_range_label }}</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </div>
         {% for card in egg_insights.cards %}
         <div class="analytics-insight-card {{ card.tone }}">
             <div class="metric-card-main">
@@ -268,77 +206,11 @@
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Forecast Summary</h2>
-            <p>Condensed output from the latest generated forecast run for the selected future range.</p>
+            <h2>Supporting Charts</h2>
+            <p>Use these secondary views to inspect hen performance thresholds and egg size movement.</p>
         </div>
-        <span>{{ selected_range_label }}</span>
+        <span>Details</span>
     </div>
-    <div class="forecast-cards">
-        <div class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Predicted Overall Eggs</div>
-                    <div class="metric-value">{{ forecast_total|default:0|intcomma }}</div>
-                    <div class="metric-meta">Expected total in {{ selected_range_label }}</div>
-                </div>
-                <span class="metric-icon success">
-                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Daily Forecast Points</div>
-                    <div class="metric-value">{{ forecast_daily_points|default:0|intcomma }}</div>
-                    <div class="metric-meta">
-                        {% if forecast_start and forecast_end %}
-                        {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
-                        {% else %}
-                        Generate a forecast to fill this card
-                        {% endif %}
-                    </div>
-                </div>
-                <span class="metric-icon blue">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Forecast Categories</div>
-                    <div class="metric-value">{{ forecast_categories|default:0|intcomma }}</div>
-                    <div class="metric-meta">{% if forecast_peak %}Peak: {{ forecast_peak.predicted_qty|intcomma }} {{ forecast_peak.get_grade_display }} eggs{% else %}No forecast yet{% endif %}</div>
-                </div>
-                <span class="metric-icon warning">
-                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Visual Analysis</h2>
-            <p>Charts compare recent actual records against future forecast output and flock performance thresholds.</p>
-        </div>
-        <span>Charts</span>
-    </div>
-<div class="action-panel forecast-chart-card">
-    <div class="detail-header">
-        <div>
-            <h2 class="detail-title">Actual Production vs Forecast</h2>
-            <div class="detail-subtitle">
-                Shows recent actual records plus {{ selected_periods|intcomma }} future daily forecast point{{ selected_periods|pluralize }}.
-            </div>
-        </div>
-    </div>
-    <canvas id="actualForecastChart" height="105"></canvas>
-</div>
-
 <div class="analytics-chart-grid">
     <div class="action-panel forecast-chart-card">
         <div class="detail-header">
@@ -395,6 +267,63 @@
 </div>
 </section>
 
+{% if user.is_superuser or user.userprofile.role == 'admin' or user.userprofile.role == 'manager' %}
+<details class="action-panel forecast-maintenance-panel">
+    <summary>Forecast Maintenance</summary>
+    <form method="post" action="{% url 'eggproduction:forecast-maintenance-clear' %}" class="forecast-maintenance-form"
+        data-swal-forecast-clear
+        data-swal-title="Update generated egg forecasts?"
+        data-swal-text="This only removes saved forecast output rows. Historical production and sales records will not be deleted."
+        data-swal-confirm-text="Continue">
+        {% csrf_token %}
+        <input type="hidden" name="forecast_type" value="egg">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div>
+            <label for="clear_flock_id">Flock</label>
+            <select name="flock_id" id="clear_flock_id" class="form-select">
+                <option value="">All flocks</option>
+                {% for flock in flocks %}
+                <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
+                    House {{ flock.house_no }} - {{ flock.breed_strain }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="maintenance-button-row">
+            <button type="submit" name="mode" value="keep_latest" class="btn btn-warning">Keep Latest Only</button>
+            <button type="submit" name="mode" value="clear_all" class="btn btn-danger">Clear All Forecasts</button>
+        </div>
+    </form>
+
+    <div class="testing-cleanup">
+        <div>
+            <strong>Testing Data Cleanup</strong>
+            <p>Use only when resetting ML test data. Flocks and user accounts are not deleted.</p>
+        </div>
+        <div class="maintenance-button-row">
+            <form method="post" action="{% url 'eggproduction:testing-data-clear' %}" data-swal-source-clear
+                data-swal-title="Delete all egg production test data?"
+                data-swal-text="This deletes all production logs, grading logs, and egg forecast rows. Flocks remain."
+                data-swal-confirm-text="Delete egg data">
+                {% csrf_token %}
+                <input type="hidden" name="data_type" value="egg">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-danger">Delete Egg Production Data</button>
+            </form>
+            <form method="post" action="{% url 'eggproduction:testing-data-clear' %}" data-swal-source-clear
+                data-swal-title="Delete all sales test data?"
+                data-swal-text="This deletes all sales transactions, sales items, and sales forecast rows."
+                data-swal-confirm-text="Delete sales data">
+                {% csrf_token %}
+                <input type="hidden" name="data_type" value="sales">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-danger">Delete Sales Data</button>
+            </form>
+        </div>
+    </div>
+</details>
+{% endif %}
+
 {% if table_forecasts %}
 {% if forecast_rows > forecast_table_limit %}
 <div class="alert alert-info">Showing the first {{ forecast_table_limit|intcomma }} rows within {{ selected_range_label }} to keep this page responsive.</div>
@@ -402,7 +331,7 @@
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Forecast Rows</h2>
+            <h2>Forecast Table</h2>
             <p>Detailed saved forecast records used for export, review, and traceability.</p>
         </div>
         <span>{{ forecast_rows|intcomma }} row{{ forecast_rows|pluralize }}</span>

@@ -1761,6 +1761,13 @@ class SalesForecastListView(ManagerAccessMixin, ListView):
         actual_forecast_payload = build_sales_actual_vs_forecast_payload(actual_sales_rows, forecast_rows)
         sales_insights = build_sales_insights(actual_sales_rows, forecasts)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_amount')
+        latest_model = (
+            ModelVersion.objects
+            .filter(sales_forecasts__in=forecasts)
+            .order_by('-trained_at', '-pk')
+            .distinct()
+            .first()
+        )
         context.update({
             'range_options': HarvestForecastListView._range_options(),
             'selected_range': selected_range,
@@ -1781,6 +1788,7 @@ class SalesForecastListView(ManagerAccessMixin, ListView):
             'chart_payload_json': json.dumps(chart_payload),
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'sales_insights': sales_insights,
+            'latest_model': latest_model,
         })
         return context
 
