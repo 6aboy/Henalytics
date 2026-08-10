@@ -14,13 +14,13 @@
     data-swal-text="Dashboard totals will update using your selected period.">
     <label for="period">Summary:</label>
     <select name="period" id="period" class="form-select">
-        <option value="today" {% if dashboard_period=='today' %}selected{% endif %}>Today</option>
-        <option value="last_30" {% if dashboard_period=='last_30' %}selected{% endif %}>Last 30 Days</option>
-        <option value="month" {% if dashboard_period=='month' %}selected{% endif %}>This Month</option>
-        <option value="six_months" {% if dashboard_period=='six_months' %}selected{% endif %}>Last 6 Months</option>
-        <option value="year" {% if dashboard_period=='year' %}selected{% endif %}>This Year</option>
-        <option value="all" {% if dashboard_period=='all' %}selected{% endif %}>All Records</option>
-        <option value="custom" {% if dashboard_period=='custom' %}selected{% endif %}>Custom</option>
+        <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
+        <option value="last_30" {% if dashboard_period == 'last_30' %}selected{% endif %}>Last 30 Days</option>
+        <option value="month" {% if dashboard_period == 'month' %}selected{% endif %}>This Month</option>
+        <option value="six_months" {% if dashboard_period == 'six_months' %}selected{% endif %}>Last 6 Months</option>
+        <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
+        <option value="all" {% if dashboard_period == 'all' %}selected{% endif %}>All Records</option>
+        <option value="custom" {% if dashboard_period == 'custom' %}selected{% endif %}>Custom</option>
     </select>
     <input type="date" name="date_from" class="form-control" value="{{ dashboard_date_from|date:'Y-m-d' }}">
     <input type="date" name="date_to" class="form-control" value="{{ dashboard_date_to|date:'Y-m-d' }}">
@@ -228,47 +228,48 @@
 </section>
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script id="dashboard-charts-payload" type="application/json">{{ dashboard_charts_payload_json|safe }}</script>
 <script>
     (function () {
-        const payload = {{ dashboard_charts_payload_json| safe
-    }};
-    const chart = document.getElementById('dashboardNotebookChart');
-    const empty = document.querySelector('.dashboard-chart-empty');
-    const title = document.getElementById('dashboardNotebookTitle');
-    const description = document.getElementById('dashboardNotebookDescription');
-    const meta = document.getElementById('dashboardNotebookMeta');
-    const bookmarks = document.querySelectorAll('.notebook-bookmark');
-    const labels = payload.iso_labels || payload.labels || [];
+        const payloadElement = document.getElementById('dashboard-charts-payload');
+        const payload = JSON.parse(payloadElement?.textContent || '{"labels":[],"iso_labels":[],"charts":{}}');
+        const chart = document.getElementById('dashboardNotebookChart');
+        const empty = document.querySelector('.dashboard-chart-empty');
+        const title = document.getElementById('dashboardNotebookTitle');
+        const description = document.getElementById('dashboardNotebookDescription');
+        const meta = document.getElementById('dashboardNotebookMeta');
+        const bookmarks = document.querySelectorAll('.notebook-bookmark');
+        const labels = payload.iso_labels || payload.labels || [];
 
-    if (!chart || !labels.length || !payload.charts) {
-        if (chart) {
-            chart.style.display = 'none';
-        }
-        return;
-    }
-    if (empty) {
-        empty.style.display = 'none';
-    }
-
-    const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
-
-    const plotChart = (key) => {
-        const selected = payload.charts[key] || payload.charts.eggs;
-        const suffix = selected.unit === '%' ? '%' : ` ${selected.unit}`;
-        const traces = [
-            {
-                x: labels,
-                y: selected.values,
-                name: selected.title,
-                type: 'scatter',
-                mode: labels.length > 120 ? 'lines' : 'lines+markers',
-                line: { color: selected.color, width: 3, shape: 'spline' },
-                marker: { color: selected.color, size: 5 },
-                fill: key === 'eggs' ? 'tozeroy' : 'none',
-                fillcolor: 'rgba(51, 96, 207, 0.10)',
-                hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.title}: %{y:,.2f}${suffix}<extra></extra>`
+        if (!chart || !labels.length || !payload.charts) {
+            if (chart) {
+                chart.style.display = 'none';
             }
-        ];
+            return;
+        }
+        if (empty) {
+            empty.style.display = 'none';
+        }
+
+        const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
+
+        const plotChart = (key) => {
+            const selected = payload.charts[key] || payload.charts.eggs;
+            const suffix = selected.unit === '%' ? '%' : ` ${selected.unit}`;
+            const traces = [
+                {
+                    x: labels,
+                    y: selected.values,
+                    name: selected.title,
+                    type: 'scatter',
+                    mode: labels.length > 120 ? 'lines' : 'lines+markers',
+                    line: { color: selected.color, width: 3, shape: 'spline' },
+                    marker: { color: selected.color, size: 5 },
+                    fill: key === 'eggs' ? 'tozeroy' : 'none',
+                    fillcolor: 'rgba(51, 96, 207, 0.10)',
+                    hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.title}: %{y:,.2f}${suffix}<extra></extra>`
+                }
+            ];
 
         if (selected.threshold) {
             traces.push({
@@ -342,7 +343,7 @@
         });
     });
 
-    plotChart('eggs');
-    }) ();
+        plotChart('eggs');
+    })();
 </script>
 {% endblock %}
