@@ -10,18 +10,17 @@
     <a href="{% url 'eggproduction:harvest-forecast-list' %}">HEN Analytics</a>
 </div>
 
-<form method="get" class="filter-row dashboard-filter" data-swal-filter
-    data-swal-title="Filtering dashboard"
+<form method="get" class="filter-row dashboard-filter" data-swal-filter data-swal-title="Filtering dashboard"
     data-swal-text="Dashboard totals will update using your selected period.">
     <label for="period">Summary:</label>
     <select name="period" id="period" class="form-select">
-        <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
-        <option value="last_30" {% if dashboard_period == 'last_30' %}selected{% endif %}>Last 30 Days</option>
-        <option value="month" {% if dashboard_period == 'month' %}selected{% endif %}>This Month</option>
-        <option value="six_months" {% if dashboard_period == 'six_months' %}selected{% endif %}>Last 6 Months</option>
-        <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
-        <option value="all" {% if dashboard_period == 'all' %}selected{% endif %}>All Records</option>
-        <option value="custom" {% if dashboard_period == 'custom' %}selected{% endif %}>Custom</option>
+        <option value="today" {% if dashboard_period=='today' %}selected{% endif %}>Today</option>
+        <option value="last_30" {% if dashboard_period=='last_30' %}selected{% endif %}>Last 30 Days</option>
+        <option value="month" {% if dashboard_period=='month' %}selected{% endif %}>This Month</option>
+        <option value="six_months" {% if dashboard_period=='six_months' %}selected{% endif %}>Last 6 Months</option>
+        <option value="year" {% if dashboard_period=='year' %}selected{% endif %}>This Year</option>
+        <option value="all" {% if dashboard_period=='all' %}selected{% endif %}>All Records</option>
+        <option value="custom" {% if dashboard_period=='custom' %}selected{% endif %}>Custom</option>
     </select>
     <input type="date" name="date_from" class="form-control" value="{{ dashboard_date_from|date:'Y-m-d' }}">
     <input type="date" name="date_to" class="form-control" value="{{ dashboard_date_to|date:'Y-m-d' }}">
@@ -42,7 +41,8 @@
                 <div>
                     <div class="metric-label">Total Eggs</div>
                     <div class="metric-value">{{ period_egg_total|intcomma }}</div>
-                    <div class="metric-meta">{{ active_flocks|intcomma }} active flock{{ active_flocks|pluralize }}</div>
+                    <div class="metric-meta">{{ active_flocks|intcomma }} active flock{{ active_flocks|pluralize }}
+                    </div>
                 </div>
                 <span class="metric-icon">
                     <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
@@ -160,7 +160,8 @@
     <div class="section-heading">
         <div>
             <h2>Production Notebook</h2>
-            <p>Switch between database-only charts for egg production, laying performance, feed use, and flock losses.</p>
+            <p>Switch between database-only charts for egg production, laying performance, feed use, and flock losses.
+            </p>
         </div>
         <span>Database records</span>
     </div>
@@ -175,7 +176,8 @@
             </div>
             <div class="dashboard-notebook-plot-wrap">
                 <div class="dashboard-chart-empty">No production records yet.</div>
-                <div id="dashboardNotebookChart" class="dashboard-notebook-chart" aria-label="Dashboard database chart"></div>
+                <div id="dashboardNotebookChart" class="dashboard-notebook-chart" aria-label="Dashboard database chart">
+                </div>
             </div>
         </div>
         <div class="notebook-bookmarks" aria-label="Dashboard chart bookmarks">
@@ -228,118 +230,119 @@
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
     (function () {
-        const payload = {{ dashboard_charts_payload_json|safe }};
-        const chart = document.getElementById('dashboardNotebookChart');
-        const empty = document.querySelector('.dashboard-chart-empty');
-        const title = document.getElementById('dashboardNotebookTitle');
-        const description = document.getElementById('dashboardNotebookDescription');
-        const meta = document.getElementById('dashboardNotebookMeta');
-        const bookmarks = document.querySelectorAll('.notebook-bookmark');
-        const labels = payload.iso_labels || payload.labels || [];
+        const payload = {{ dashboard_charts_payload_json| safe
+    }};
+    const chart = document.getElementById('dashboardNotebookChart');
+    const empty = document.querySelector('.dashboard-chart-empty');
+    const title = document.getElementById('dashboardNotebookTitle');
+    const description = document.getElementById('dashboardNotebookDescription');
+    const meta = document.getElementById('dashboardNotebookMeta');
+    const bookmarks = document.querySelectorAll('.notebook-bookmark');
+    const labels = payload.iso_labels || payload.labels || [];
 
-        if (!chart || !labels.length || !payload.charts) {
-            if (chart) {
-                chart.style.display = 'none';
-            }
-            return;
+    if (!chart || !labels.length || !payload.charts) {
+        if (chart) {
+            chart.style.display = 'none';
         }
-        if (empty) {
-            empty.style.display = 'none';
+        return;
+    }
+    if (empty) {
+        empty.style.display = 'none';
+    }
+
+    const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
+
+    const plotChart = (key) => {
+        const selected = payload.charts[key] || payload.charts.eggs;
+        const suffix = selected.unit === '%' ? '%' : ` ${selected.unit}`;
+        const traces = [
+            {
+                x: labels,
+                y: selected.values,
+                name: selected.title,
+                type: 'scatter',
+                mode: labels.length > 120 ? 'lines' : 'lines+markers',
+                line: { color: selected.color, width: 3, shape: 'spline' },
+                marker: { color: selected.color, size: 5 },
+                fill: key === 'eggs' ? 'tozeroy' : 'none',
+                fillcolor: 'rgba(51, 96, 207, 0.10)',
+                hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.title}: %{y:,.2f}${suffix}<extra></extra>`
+            }
+        ];
+
+        if (selected.threshold) {
+            traces.push({
+                x: labels,
+                y: selected.threshold,
+                name: selected.threshold_label || 'Threshold',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#d92d20', width: 2, dash: 'dash' },
+                hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.threshold_label || 'Threshold'}: %{y:,.2f}${suffix}<extra></extra>`
+            });
         }
 
-        const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
+        if (title) title.textContent = selected.title;
+        if (description) description.textContent = selected.description;
+        if (meta) meta.textContent = unitLabel(selected.unit);
 
-        const plotChart = (key) => {
-            const selected = payload.charts[key] || payload.charts.eggs;
-            const suffix = selected.unit === '%' ? '%' : ` ${selected.unit}`;
-            const traces = [
-                {
-                    x: labels,
-                    y: selected.values,
-                    name: selected.title,
-                    type: 'scatter',
-                    mode: labels.length > 120 ? 'lines' : 'lines+markers',
-                    line: { color: selected.color, width: 3, shape: 'spline' },
-                    marker: { color: selected.color, size: 5 },
-                    fill: key === 'eggs' ? 'tozeroy' : 'none',
-                    fillcolor: 'rgba(51, 96, 207, 0.10)',
-                    hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.title}: %{y:,.2f}${suffix}<extra></extra>`
-                }
-            ];
-
-            if (selected.threshold) {
-                traces.push({
-                    x: labels,
-                    y: selected.threshold,
-                    name: selected.threshold_label || 'Threshold',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { color: '#d92d20', width: 2, dash: 'dash' },
-                    hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.threshold_label || 'Threshold'}: %{y:,.2f}${suffix}<extra></extra>`
-                });
+        Plotly.react(chart, traces, {
+            autosize: true,
+            height: 390,
+            margin: { l: 62, r: 18, t: 18, b: 92 },
+            paper_bgcolor: '#fff',
+            plot_bgcolor: '#fff',
+            dragmode: 'pan',
+            hovermode: 'closest',
+            legend: {
+                orientation: 'h',
+                x: 0.5,
+                xanchor: 'center',
+                y: -0.34,
+                yanchor: 'top'
+            },
+            xaxis: {
+                type: 'date',
+                tickformat: '%b %d',
+                nticks: 8,
+                tickangle: 0,
+                showgrid: true,
+                gridcolor: 'rgba(52, 64, 84, 0.12)',
+                rangeslider: { visible: true, thickness: 0.10, bgcolor: '#f1f4f9', bordercolor: '#d0d5dd', borderwidth: 1 },
+                showspikes: true,
+                spikemode: 'across+toaxis',
+                spikesnap: 'cursor',
+                spikecolor: '#667085'
+            },
+            yaxis: {
+                title: { text: unitLabel(selected.unit), standoff: 18 },
+                rangemode: 'tozero',
+                showgrid: true,
+                gridcolor: 'rgba(52, 64, 84, 0.12)',
+                zeroline: false,
+                ticksuffix: selected.unit === '%' ? '%' : '',
+                showspikes: true,
+                spikemode: 'across+toaxis',
+                spikesnap: 'cursor',
+                spikecolor: '#667085'
             }
-
-            if (title) title.textContent = selected.title;
-            if (description) description.textContent = selected.description;
-            if (meta) meta.textContent = unitLabel(selected.unit);
-
-            Plotly.react(chart, traces, {
-                autosize: true,
-                height: 390,
-                margin: { l: 62, r: 18, t: 18, b: 92 },
-                paper_bgcolor: '#fff',
-                plot_bgcolor: '#fff',
-                dragmode: 'pan',
-                hovermode: 'closest',
-                legend: {
-                    orientation: 'h',
-                    x: 0.5,
-                    xanchor: 'center',
-                    y: -0.34,
-                    yanchor: 'top'
-                },
-                xaxis: {
-                    type: 'date',
-                    tickformat: '%b %d',
-                    nticks: 8,
-                    tickangle: 0,
-                    showgrid: true,
-                    gridcolor: 'rgba(52, 64, 84, 0.12)',
-                    rangeslider: { visible: true, thickness: 0.10, bgcolor: '#f1f4f9', bordercolor: '#d0d5dd', borderwidth: 1 },
-                    showspikes: true,
-                    spikemode: 'across+toaxis',
-                    spikesnap: 'cursor',
-                    spikecolor: '#667085'
-                },
-                yaxis: {
-                    title: { text: unitLabel(selected.unit), standoff: 18 },
-                    rangemode: 'tozero',
-                    showgrid: true,
-                    gridcolor: 'rgba(52, 64, 84, 0.12)',
-                    zeroline: false,
-                    ticksuffix: selected.unit === '%' ? '%' : '',
-                    showspikes: true,
-                    spikemode: 'across+toaxis',
-                    spikesnap: 'cursor',
-                    spikecolor: '#667085'
-                }
-            }, {
-                responsive: true,
-                displaylogo: false,
-                scrollZoom: true,
-                modeBarButtonsToRemove: ['select2d', 'lasso2d']
-            });
-        };
-
-        bookmarks.forEach((button) => {
-            button.addEventListener('click', () => {
-                bookmarks.forEach((item) => item.classList.remove('active'));
-                button.classList.add('active');
-                plotChart(button.dataset.chartKey);
-            });
+        }, {
+            responsive: true,
+            displaylogo: false,
+            scrollZoom: true,
+            modeBarButtonsToRemove: ['select2d', 'lasso2d']
         });
+    };
 
-        plotChart('eggs');
-    })();
+    bookmarks.forEach((button) => {
+        button.addEventListener('click', () => {
+            bookmarks.forEach((item) => item.classList.remove('active'));
+            button.classList.add('active');
+            plotChart(button.dataset.chartKey);
+        });
+    });
+
+    plotChart('eggs');
+    }) ();
 </script>
 {% endblock %}
