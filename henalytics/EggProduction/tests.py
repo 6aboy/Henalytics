@@ -586,6 +586,37 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-export-enabled="true"')
         self.assertContains(response, 'class="no-export">Actions</th>')
 
+    def test_admin_can_view_but_not_input_operational_records(self):
+        admin = User.objects.create_user(username='opsadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        log = ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=timezone.now().date(),
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('84.27'),
+            pct_hen_housed=Decimal('83.33'),
+            entered_by=self.user,
+        )
+        self.client.force_login(admin)
+
+        list_response = self.client.get(reverse('eggproduction:production-log-list'))
+        detail_response = self.client.get(reverse('eggproduction:production-log-detail', kwargs={'pk': log.pk}))
+        create_response = self.client.get(reverse('eggproduction:production-log-create'))
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(create_response.status_code, 403)
+        self.assertContains(list_response, 'data-export-enabled="true"')
+        self.assertNotContains(list_response, reverse('eggproduction:production-log-create'))
+        self.assertNotContains(list_response, reverse('eggproduction:production-log-edit', kwargs={'pk': log.pk}))
+        self.assertNotContains(list_response, reverse('eggproduction:production-log-delete', kwargs={'pk': log.pk}))
+        self.assertNotContains(detail_response, reverse('eggproduction:production-log-edit', kwargs={'pk': log.pk}))
+        self.assertNotContains(detail_response, reverse('eggproduction:production-log-delete', kwargs={'pk': log.pk}))
+
     def test_staff_cannot_access_analytics_pages(self):
         urls = [
             reverse('eggproduction:experimental-forecasting'),

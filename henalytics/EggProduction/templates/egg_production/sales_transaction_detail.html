@@ -12,6 +12,7 @@
             <div class="detail-subtitle">House {{ sales_transaction.flock.house_no }} | {{ sales_transaction.sale_date|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
+            {% if user.userprofile.role == 'staff' %}
             <a href="{% url 'eggproduction:sales-transaction-edit' sales_transaction.pk %}" class="btn btn-warning">Edit</a>
             <form method="post" action="{% url 'eggproduction:sales-transaction-delete' sales_transaction.pk %}" class="d-inline" data-swal-delete
                 data-swal-title="Delete sales transaction?"
@@ -19,6 +20,7 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">Delete</button>
             </form>
+            {% endif %}
             <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary">Back</a>
         </div>
     </div>
@@ -38,7 +40,9 @@
     <section class="detail-section">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 class="detail-section-title mb-0">Sales Items</h3>
+            {% if user.userprofile.role == 'staff' %}
             <a href="{% url 'eggproduction:sales-item-add' sales_transaction.pk %}" class="btn btn-sm btn-primary">Add Item</a>
+            {% endif %}
         </div>
         {% if items %}
         <div class="table-responsive detail-mini-table">
@@ -49,7 +53,9 @@
                         <th>Pieces</th>
                         <th>Amount</th>
                         <th>Unit Price</th>
+                        {% if user.userprofile.role == 'staff' %}
                         <th class="no-export">Actions</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -59,7 +65,8 @@
                         <td>{{ item.quantity_pieces|intcomma }}</td>
                         <td><strong>₱ {{ item.amount|floatformat:2|intcomma }}</strong></td>
                         <td>₱ {{ item.unit_price|floatformat:2|intcomma }}</td>
-                        <td>
+                        {% if user.userprofile.role == 'staff' %}
+                        <td class="no-export">
                             <a href="{% url 'eggproduction:sales-item-edit' item.pk %}" class="btn btn-sm btn-warning">Edit</a>
                             <form method="post" action="{% url 'eggproduction:sales-item-delete' item.pk %}" class="d-inline" data-swal-delete
                                 data-swal-title="Delete sales item?"
@@ -68,6 +75,7 @@
                                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                             </form>
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

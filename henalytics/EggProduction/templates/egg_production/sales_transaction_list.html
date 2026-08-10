@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="page-actions">
-    {% if perms.eggproduction.add_salestransaction or user.is_staff %}
+    {% if user.userprofile.role == 'staff' %}
     <a href="{% url 'eggproduction:sales-transaction-create' %}" class="btn btn-primary">Create</a>
     {% endif %}
 </div>
@@ -43,6 +43,7 @@
                 <td>House {{ transaction.flock.house_no }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:sales-transaction-detail' transaction.pk %}" class="btn btn-sm btn-info">View</a>
+                    {% if user.userprofile.role == 'staff' %}
                     <a href="{% url 'eggproduction:sales-transaction-edit' transaction.pk %}" class="btn btn-sm btn-warning">Edit</a>
                     <form method="post" action="{% url 'eggproduction:sales-transaction-delete' transaction.pk %}" class="d-inline" data-swal-delete
                         data-swal-title="Delete sales transaction?"
@@ -50,6 +51,7 @@
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

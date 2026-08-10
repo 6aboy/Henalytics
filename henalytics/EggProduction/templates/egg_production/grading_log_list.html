@@ -7,7 +7,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Grading Logs</h1>
-        {% if perms.eggproduction.add_gradinglog or user.is_staff %}
+        {% if user.userprofile.role == 'staff' %}
         <a href="{% url 'eggproduction:grading-log-create' %}" class="btn btn-primary">New Grading Log</a>
         {% endif %}
     </div>
@@ -49,8 +49,10 @@
                     <td>
                         <a href="{% url 'eggproduction:grading-log-detail' log.pk %}"
                             class="btn btn-sm btn-info">View</a>
+                        {% if user.userprofile.role == 'staff' %}
                         <a href="{% url 'eggproduction:grading-log-edit' log.pk %}"
                             class="btn btn-sm btn-warning">Edit</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -72,8 +74,12 @@
     </nav>
     {% endif %}
     {% else %}
-    <div class="alert alert-info">No grading logs found. <a href="{% url 'eggproduction:grading-log-create' %}">Create
-            one</a></div>
+    <div class="alert alert-info">
+        No grading logs found.
+        {% if user.userprofile.role == 'staff' %}
+        <a href="{% url 'eggproduction:grading-log-create' %}">Create one</a>
+        {% endif %}
+    </div>
     {% endif %}
 </div>
 {% endblock %}

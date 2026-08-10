@@ -495,6 +495,17 @@ class StaffAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
             return user.is_staff or user.is_superuser
 
 
+class StaffInputAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Restrict record creation, updates, and deletion to staff users."""
+    def test_func(self):
+        user = self.request.user
+        try:
+            profile = UserProfile.objects.get(user=user)
+            return profile.role == 'staff'
+        except UserProfile.DoesNotExist:
+            return user.is_staff and not user.is_superuser
+
+
 class ManagerAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
     """Mixin to restrict view to manager/admin users"""
     def test_func(self):
@@ -774,7 +785,7 @@ class FlockListView(LoginRequiredMixin, ListView):
         return flocks
 
 
-class FlockCreateView(ManagerAccessMixin, CreateView):
+class FlockCreateView(StaffInputAccessMixin, CreateView):
     model = Flock
     template_name = 'egg_production/flock_form.html'
     fields = ['house_no', 'breed_strain', 'date_started', 'initial_hen_count', 'status', 'notes']
@@ -807,14 +818,14 @@ class FlockDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class FlockUpdateView(ManagerAccessMixin, UpdateView):
+class FlockUpdateView(StaffInputAccessMixin, UpdateView):
     model = Flock
     template_name = 'egg_production/flock_form.html'
     fields = ['house_no', 'breed_strain', 'date_started', 'initial_hen_count', 'status', 'notes']
     success_url = reverse_lazy('eggproduction:flock-list')
 
 
-class FlockDeleteView(DirectDeleteOnlyMixin, ManagerAccessMixin, DeleteView):
+class FlockDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
     model = Flock
     template_name = 'egg_production/flock_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:flock-list')
@@ -895,7 +906,7 @@ class ProductionLogFormMixin:
         return super().form_valid(form)
 
 
-class ProductionLogCreateView(StaffAccessMixin, ProductionLogFormMixin, CreateView):
+class ProductionLogCreateView(StaffInputAccessMixin, ProductionLogFormMixin, CreateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
     form_class = ProductionLogForm
@@ -932,14 +943,14 @@ class ProductionLogDetailView(StaffAccessMixin, DetailView):
         return context
 
 
-class ProductionLogUpdateView(StaffAccessMixin, ProductionLogFormMixin, UpdateView):
+class ProductionLogUpdateView(StaffInputAccessMixin, ProductionLogFormMixin, UpdateView):
     model = ProductionLog
     template_name = 'egg_production/production_log_form.html'
     form_class = ProductionLogForm
     success_url = reverse_lazy('eggproduction:production-log-list')
 
 
-class ProductionLogDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
+class ProductionLogDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
     model = ProductionLog
     template_name = 'egg_production/production_log_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:production-log-list')
@@ -962,7 +973,7 @@ class GradingLogListView(StaffAccessMixin, ListView):
         return qs
 
 
-class GradingLogCreateView(StaffAccessMixin, CreateView):
+class GradingLogCreateView(StaffInputAccessMixin, CreateView):
     model = GradingLog
     template_name = 'egg_production/grading_log_form.html'
     fields = ['flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a',
@@ -979,7 +990,7 @@ class GradingLogDetailView(StaffAccessMixin, DetailView):
         return super().get_queryset().select_related('flock')
 
 
-class GradingLogUpdateView(StaffAccessMixin, UpdateView):
+class GradingLogUpdateView(StaffInputAccessMixin, UpdateView):
     model = GradingLog
     template_name = 'egg_production/grading_log_form.html'
     fields = ['flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a',
@@ -987,7 +998,7 @@ class GradingLogUpdateView(StaffAccessMixin, UpdateView):
     success_url = reverse_lazy('eggproduction:grading-log-list')
 
 
-class GradingLogDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
+class GradingLogDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
     model = GradingLog
     template_name = 'egg_production/grading_log_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:grading-log-list')
@@ -1009,7 +1020,7 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
         return qs
 
 
-class SalesTransactionCreateView(StaffAccessMixin, CreateView):
+class SalesTransactionCreateView(StaffInputAccessMixin, CreateView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_form.html'
     form_class = SalesTransactionForm
@@ -1071,7 +1082,7 @@ class SalesTransactionDetailView(StaffAccessMixin, DetailView):
         return context
 
 
-class SalesTransactionUpdateView(StaffAccessMixin, UpdateView):
+class SalesTransactionUpdateView(StaffInputAccessMixin, UpdateView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_form.html'
     form_class = SalesTransactionForm
@@ -1111,7 +1122,7 @@ class SalesTransactionUpdateView(StaffAccessMixin, UpdateView):
         return reverse_lazy('eggproduction:sales-transaction-detail', kwargs={'pk': self.object.pk})
 
 
-class SalesTransactionDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
+class SalesTransactionDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
     model = SalesTransaction
     template_name = 'egg_production/sales_transaction_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:sales-transaction-list')
@@ -1119,7 +1130,7 @@ class SalesTransactionDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, Delete
 
 # ======================== Sales Item Views ========================
 
-class SalesItemAddView(StaffAccessMixin, CreateView):
+class SalesItemAddView(StaffInputAccessMixin, CreateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
     form_class = SalesItemForm
@@ -1140,7 +1151,7 @@ class SalesItemAddView(StaffAccessMixin, CreateView):
                           kwargs={'pk': self.object.transaction.pk})
 
 
-class SalesItemUpdateView(StaffAccessMixin, UpdateView):
+class SalesItemUpdateView(StaffInputAccessMixin, UpdateView):
     model = SalesItem
     template_name = 'egg_production/sales_item_form.html'
     form_class = SalesItemForm
@@ -1155,7 +1166,7 @@ class SalesItemUpdateView(StaffAccessMixin, UpdateView):
                           kwargs={'pk': self.object.transaction.pk})
 
 
-class SalesItemDeleteView(DirectDeleteOnlyMixin, StaffAccessMixin, DeleteView):
+class SalesItemDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
     model = SalesItem
     template_name = 'egg_production/sales_item_confirm_delete.html'
     
