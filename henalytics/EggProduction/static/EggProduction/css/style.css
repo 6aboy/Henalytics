@@ -106,18 +106,38 @@ a {
 
 .brand-lockup {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
-    min-height: 118px;
-    padding: 22px 24px 12px;
+    min-height: 112px;
+    padding: 22px 22px 10px;
 }
 
-.brand-lockup img,
+.brand-card {
+    display: block;
+    width: 100%;
+    padding: 14px 16px 12px;
+    border: 1px solid #dbe6ff;
+    border-radius: 10px;
+    background: #f9fbff;
+    text-align: center;
+}
+
+.brand-card img,
 .logo-img {
     display: block;
-    width: min(196px, 88%);
-    max-height: 82px;
+    width: min(178px, 88%);
+    max-height: 64px;
     object-fit: contain;
+    margin-inline: auto;
+}
+
+.brand-subtitle {
+    display: block;
+    margin-top: 6px;
+    color: #7a8699;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 .side-nav {
