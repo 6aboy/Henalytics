@@ -348,6 +348,7 @@ class APIAuthenticationTest(APITestCase):
 
     def test_authenticated_user_can_list_flocks(self):
         user = User.objects.create_user(username='apiuser', password='pass12345')
+        UserProfile.objects.create(user=user, role='staff')
         create_flock()
         self.client.force_authenticate(user=user)
 
@@ -358,6 +359,7 @@ class APIAuthenticationTest(APITestCase):
 
     def test_active_flocks_action(self):
         user = User.objects.create_user(username='apiuser', password='pass12345')
+        UserProfile.objects.create(user=user, role='staff')
         create_flock(status='active')
         create_flock(house_no=2, status='inactive')
         self.client.force_authenticate(user=user)
@@ -366,6 +368,47 @@ class APIAuthenticationTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
+
+    def test_admin_api_can_read_but_cannot_create_operational_records(self):
+        admin = User.objects.create_user(username='apiadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        create_flock()
+        self.client.force_authenticate(user=admin)
+
+        list_response = self.client.get(reverse('eggproduction:api-flock-list'))
+        create_response = self.client.post(
+            reverse('eggproduction:api-flock-list'),
+            {
+                'house_no': 2,
+                'breed_strain': 'Lohmann Brown',
+                'date_started': timezone.now().date().isoformat(),
+                'initial_hen_count': 1800,
+                'status': 'active',
+            },
+            format='json',
+        )
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_api_can_create_operational_records(self):
+        staff = User.objects.create_user(username='apistaff', password='pass12345')
+        UserProfile.objects.create(user=staff, role='staff')
+        self.client.force_authenticate(user=staff)
+
+        response = self.client.post(
+            reverse('eggproduction:api-flock-list'),
+            {
+                'house_no': 2,
+                'breed_strain': 'Lohmann Brown',
+                'date_started': timezone.now().date().isoformat(),
+                'initial_hen_count': 1800,
+                'status': 'active',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
 class TemplateRenderTest(TestCase):

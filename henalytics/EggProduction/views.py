@@ -15,7 +15,7 @@ import logging
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 
 from .models import (
     UserProfile, Flock, ProductionLog, GradingLog,
@@ -515,6 +515,28 @@ class ManagerAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
             return profile.role in ['admin', 'manager']
         except UserProfile.DoesNotExist:
             return user.is_superuser
+
+
+class StaffCrudAdminReadPermission(BasePermission):
+    """Allow staff to write operational records while admin/manager users read only."""
+    def _role(self, user):
+        try:
+            return UserProfile.objects.get(user=user).role
+        except UserProfile.DoesNotExist:
+            return None
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        role = self._role(user)
+        if request.method in SAFE_METHODS:
+            return role in ['staff', 'admin', 'manager'] or user.is_staff or user.is_superuser
+
+        if role is not None:
+            return role == 'staff'
+        return user.is_staff and not user.is_superuser
 
 
 class DirectDeleteOnlyMixin:
@@ -1753,7 +1775,7 @@ class ModelVersionDetailView(ManagerAccessMixin, DetailView):
 class FlockViewSet(viewsets.ModelViewSet):
     queryset = Flock.objects.all()
     serializer_class = FlockSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [StaffCrudAdminReadPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['house_no', 'breed_strain']
     ordering_fields = ['date_started', 'status']
@@ -1769,7 +1791,7 @@ class FlockViewSet(viewsets.ModelViewSet):
 class ProductionLogViewSet(viewsets.ModelViewSet):
     queryset = ProductionLog.objects.all()
     serializer_class = ProductionLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [StaffCrudAdminReadPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['flock__house_no']
     ordering_fields = ['log_date', 'eggs_total']
@@ -1789,7 +1811,7 @@ class ProductionLogViewSet(viewsets.ModelViewSet):
 class GradingLogViewSet(viewsets.ModelViewSet):
     queryset = GradingLog.objects.all()
     serializer_class = GradingLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [StaffCrudAdminReadPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['flock__house_no']
     ordering_fields = ['log_date']
@@ -1806,7 +1828,7 @@ class GradingLogViewSet(viewsets.ModelViewSet):
 class SalesTransactionViewSet(viewsets.ModelViewSet):
     queryset = SalesTransaction.objects.all()
     serializer_class = SalesTransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [StaffCrudAdminReadPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['flock__house_no']
     ordering_fields = ['sale_date']
@@ -1826,7 +1848,7 @@ class SalesTransactionViewSet(viewsets.ModelViewSet):
 class SalesItemViewSet(viewsets.ModelViewSet):
     queryset = SalesItem.objects.all()
     serializer_class = SalesItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [StaffCrudAdminReadPermission]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['transaction__sale_date']
 
