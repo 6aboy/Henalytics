@@ -12,7 +12,7 @@
             <div class="detail-subtitle">House {{ production_log.flock.house_no }} | {{ production_log.log_date|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
-            {% if user.userprofile.role == 'staff' %}
+            {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
             <a href="{% url 'eggproduction:production-log-edit' production_log.pk %}" class="btn btn-warning">Edit</a>
             <a href="{% url 'eggproduction:production-log-delete' production_log.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
             {% endif %}

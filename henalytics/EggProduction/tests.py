@@ -441,6 +441,9 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, '4w 30d')
         self.assertContains(response, '3 | 2')
         self.assertContains(response, '12')
+        self.assertContains(response, reverse('eggproduction:flock-create'))
+        self.assertContains(response, reverse('eggproduction:flock-edit', kwargs={'pk': self.flock.pk}))
+        self.assertContains(response, reverse('eggproduction:flock-delete', kwargs={'pk': self.flock.pk}))
         self.assertNotContains(response, 'Lohmann Brown')
 
     def test_production_log_list_renders_with_filter(self):

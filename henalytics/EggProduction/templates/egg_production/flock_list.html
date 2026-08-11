@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="page-actions">
-    {% if user.userprofile.role == 'staff' %}
+    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
     <a href="{% url 'eggproduction:flock-create' %}" class="btn btn-primary">Create</a>
     {% endif %}
 </div>
@@ -40,7 +40,7 @@
                 <td>{{ flock.table_feed_bags|intcomma }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:flock-detail' flock.pk %}" class="btn btn-sm btn-info">View</a>
-                    {% if user.userprofile.role == 'staff' %}
+                    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
                     <a href="{% url 'eggproduction:flock-edit' flock.pk %}" class="btn btn-sm btn-warning">Edit</a>
                     <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-sm btn-danger" data-swal-delete-link>Delete</a>
                     {% endif %}

@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="page-actions">
-    {% if user.userprofile.role == 'staff' %}
+    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
     <a href="{% url 'eggproduction:production-log-create' %}" class="btn btn-primary">Create</a>
     {% endif %}
 </div>
@@ -66,7 +66,7 @@
                 <td>{{ log.fcr|default:"N/A" }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:production-log-detail' log.pk %}" class="btn btn-sm btn-info">View</a>
-                    {% if user.userprofile.role == 'staff' %}
+                    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
                     <a href="{% url 'eggproduction:production-log-edit' log.pk %}" class="btn btn-sm btn-warning">Edit</a>
                     <a href="{% url 'eggproduction:production-log-delete' log.pk %}" class="btn btn-sm btn-danger" data-swal-delete-link>Delete</a>
                     {% endif %}

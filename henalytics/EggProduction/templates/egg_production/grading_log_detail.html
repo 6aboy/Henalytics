@@ -12,7 +12,7 @@
             <div class="detail-subtitle">House {{ grading_log.flock.house_no }} | {{ grading_log.log_date|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
-            {% if user.userprofile.role == 'staff' %}
+            {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
             <a href="{% url 'eggproduction:grading-log-edit' grading_log.pk %}" class="btn btn-warning">Edit</a>
             <a href="{% url 'eggproduction:grading-log-delete' grading_log.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
             {% endif %}

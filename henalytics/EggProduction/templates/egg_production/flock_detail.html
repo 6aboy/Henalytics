@@ -12,7 +12,7 @@
             <div class="detail-subtitle">{{ flock.breed_strain }} | Started {{ flock.date_started|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
-            {% if user.userprofile.role == 'staff' %}
+            {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
             <a href="{% url 'eggproduction:flock-edit' flock.pk %}" class="btn btn-warning">Edit</a>
             <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-danger" data-swal-delete-link>Delete</a>
             {% endif %}
