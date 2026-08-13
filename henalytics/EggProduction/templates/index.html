@@ -7,7 +7,9 @@
 {% block content %}
 <div class="dashboard-tabs">
     <a href="{% url 'eggproduction:dashboard' %}" class="active">Overview</a>
+    {% if user.userprofile.role == 'admin' or user.username == 'gabrielnicholas' %}
     <a href="{% url 'eggproduction:harvest-forecast-list' %}">HEN Analytics</a>
+    {% endif %}
 </div>
 
 <form method="get" class="filter-row dashboard-filter" data-swal-filter data-swal-title="Filtering dashboard"

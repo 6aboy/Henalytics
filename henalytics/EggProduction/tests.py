@@ -675,6 +675,14 @@ class TemplateRenderTest(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 403)
 
+        post_urls = [
+            reverse('eggproduction:forecast-maintenance-clear'),
+            reverse('eggproduction:testing-data-clear'),
+        ]
+        for url in post_urls:
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, 403)
+
     def test_staff_sidebar_hides_analytics_link(self):
         response = self.client.get(reverse('eggproduction:production-log-list'))
 
@@ -683,6 +691,25 @@ class TemplateRenderTest(TestCase):
         self.assertNotContains(response, 'Forecasting')
         self.assertNotContains(response, reverse('eggproduction:experimental-forecasting'))
         self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
+
+    def test_staff_dashboard_hides_hen_analytics_tab(self):
+        response = self.client.get(reverse('eggproduction:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Overview')
+        self.assertNotContains(response, 'HEN Analytics')
+        self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
+
+    def test_admin_dashboard_shows_hen_analytics_tab(self):
+        admin = User.objects.create_user(username='dashboardadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('eggproduction:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'HEN Analytics')
+        self.assertContains(response, reverse('eggproduction:harvest-forecast-list'))
 
     def test_sidebar_account_uses_direct_logout_button(self):
         response = self.client.get(reverse('eggproduction:production-log-list'))
