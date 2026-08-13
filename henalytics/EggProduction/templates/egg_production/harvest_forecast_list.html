@@ -78,7 +78,7 @@
                 </div>
             </div>
         </div>
-        <canvas id="actualForecastChart" height="105"></canvas>
+        <div id="actualForecastChart" class="plotly-forecast-chart" aria-label="Actual egg production versus forecast chart"></div>
     </div>
 </section>
 
@@ -263,7 +263,7 @@
                 <div class="detail-subtitle">Hen day and hen housed with a 60% threshold reference.</div>
             </div>
         </div>
-        <canvas id="henPerformanceChart" height="130"></canvas>
+        <div id="henPerformanceChart" class="plotly-forecast-chart plotly-supporting-chart" aria-label="Hen performance chart"></div>
     </div>
 </section>
 
@@ -381,164 +381,183 @@
 <div class="alert alert-info">No egg forecasts available.</div>
 {% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
     (function () {
         const actualForecastPayload = {{ actual_forecast_payload_json|safe }};
         const henPayload = {{ hen_payload_json|safe }};
 
-        function chartYBounds(datasets, floor = 0) {
-            const values = datasets
-                .flatMap((dataset) => dataset.data || [])
+        function chartYBounds(arrays, floor = 0) {
+            const values = arrays
+                .flatMap((values) => values || [])
                 .filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)))
                 .map(Number);
             if (!values.length) {
-                return { suggestedMin: floor, suggestedMax: 100 };
+                return [floor, 100];
             }
             const min = Math.min(...values);
             const max = Math.max(...values);
             const padding = Math.max((max - min) * 0.18, max * 0.04, 10);
+            return [Math.max(floor, Math.floor(min - padding)), Math.ceil(max + padding)];
+        }
+
+        function forecastLayout(yTitle, yRange) {
             return {
-                suggestedMin: Math.max(floor, Math.floor(min - padding)),
-                suggestedMax: Math.ceil(max + padding)
+                autosize: true,
+                height: 430,
+                margin: { l: 70, r: 24, t: 20, b: 96 },
+                paper_bgcolor: '#fff',
+                plot_bgcolor: '#fff',
+                dragmode: 'pan',
+                hovermode: 'x unified',
+                legend: {
+                    orientation: 'h',
+                    x: 0.5,
+                    xanchor: 'center',
+                    y: -0.32,
+                    yanchor: 'top'
+                },
+                xaxis: {
+                    type: 'date',
+                    tickformat: '%b %d',
+                    nticks: 8,
+                    showgrid: true,
+                    gridcolor: 'rgba(52, 64, 84, 0.12)',
+                    rangeslider: {
+                        visible: true,
+                        thickness: 0.10,
+                        bgcolor: '#f1f4f9',
+                        bordercolor: '#d0d5dd',
+                        borderwidth: 1
+                    },
+                    showspikes: true,
+                    spikemode: 'across+toaxis',
+                    spikesnap: 'cursor',
+                    spikecolor: '#667085',
+                    spikethickness: 1
+                },
+                yaxis: {
+                    title: { text: yTitle, standoff: 20 },
+                    range: yRange,
+                    showgrid: true,
+                    gridcolor: 'rgba(52, 64, 84, 0.12)',
+                    zeroline: false,
+                    showspikes: true,
+                    spikemode: 'across+toaxis',
+                    spikesnap: 'cursor',
+                    spikecolor: '#667085',
+                    spikethickness: 1
+                }
             };
         }
 
-        const intervalDatasets = actualForecastPayload.upper && actualForecastPayload.upper.some((value) => value !== null)
-            ? [
+        const plotConfig = {
+            responsive: true,
+            displaylogo: false,
+            scrollZoom: true,
+            modeBarButtonsToRemove: ['select2d', 'lasso2d']
+        };
+
+        const forecastTraces = [];
+        if (actualForecastPayload.upper && actualForecastPayload.upper.some((value) => value !== null)) {
+            forecastTraces.push(
                 {
-                    label: 'Forecast Lower Range',
-                    data: actualForecastPayload.lower,
-                    borderColor: 'rgba(51, 96, 207, 0)',
-                    backgroundColor: 'rgba(51, 96, 207, 0)',
-                    pointRadius: 0,
-                    spanGaps: false,
-                    tension: 0.2,
-                    fill: false
+                    x: actualForecastPayload.labels,
+                    y: actualForecastPayload.lower,
+                    name: 'Forecast Lower Range',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'rgba(51, 96, 207, 0)', shape: 'spline' },
+                    hoverinfo: 'skip',
+                    showlegend: false
                 },
                 {
-                    label: 'Forecast Expected Range',
-                    data: actualForecastPayload.upper,
-                    borderColor: 'rgba(51, 96, 207, 0)',
-                    backgroundColor: 'rgba(51, 96, 207, 0.13)',
-                    pointRadius: 0,
-                    spanGaps: false,
-                    tension: 0.2,
-                    fill: '-1'
+                    x: actualForecastPayload.labels,
+                    y: actualForecastPayload.upper,
+                    name: 'Forecast Expected Range',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: 'rgba(51, 96, 207, 0)', shape: 'spline' },
+                    fill: 'tonexty',
+                    fillcolor: 'rgba(51, 96, 207, 0.14)',
+                    hoverinfo: 'skip'
                 }
-            ]
-            : [];
-
-        const actualForecastDatasets = [
-            ...intervalDatasets,
+            );
+        }
+        forecastTraces.push(
             {
-                label: 'Actual Eggs',
-                data: actualForecastPayload.actual,
-                borderColor: '#344054',
-                backgroundColor: 'rgba(52, 64, 84, 0.10)',
-                pointRadius: actualForecastPayload.labels.length > 140 ? 0 : 2,
-                spanGaps: false,
-                tension: 0.2
+                x: actualForecastPayload.labels,
+                y: actualForecastPayload.actual,
+                name: 'Actual Eggs',
+                type: 'scatter',
+                mode: actualForecastPayload.labels.length > 140 ? 'lines' : 'lines+markers',
+                line: { color: '#344054', width: 3, shape: 'spline' },
+                marker: { color: '#344054', size: 5 },
+                connectgaps: false,
+                hovertemplate: '%{y:,.0f} eggs<extra></extra>'
             },
             {
-                label: 'Forecast Eggs',
-                data: actualForecastPayload.forecast,
-                borderColor: '#3360cf',
-                backgroundColor: 'rgba(51, 96, 207, 0.14)',
-                borderDash: [7, 5],
-                pointRadius: actualForecastPayload.labels.length > 140 ? 0 : 2,
-                spanGaps: false,
-                tension: 0.2
+                x: actualForecastPayload.labels,
+                y: actualForecastPayload.forecast,
+                name: 'Forecast Eggs',
+                type: 'scatter',
+                mode: actualForecastPayload.labels.length > 140 ? 'lines' : 'lines+markers',
+                line: { color: '#3360cf', width: 3, dash: 'dash', shape: 'spline' },
+                marker: { color: '#3360cf', size: 5 },
+                connectgaps: false,
+                hovertemplate: '%{y:,.0f} eggs<extra></extra>'
+            }
+        );
+        Plotly.newPlot(
+            document.getElementById('actualForecastChart'),
+            forecastTraces,
+            forecastLayout('Eggs', chartYBounds([
+                actualForecastPayload.actual,
+                actualForecastPayload.forecast,
+                actualForecastPayload.lower,
+                actualForecastPayload.upper
+            ])),
+            plotConfig
+        );
+
+        const henMode = henPayload.labels.length > 140 ? 'lines' : 'lines+markers';
+        const henTraces = [
+            {
+                x: henPayload.labels,
+                y: henPayload.hen_day,
+                name: 'Hen Day %',
+                type: 'scatter',
+                mode: henMode,
+                line: { color: '#05853e', width: 3, shape: 'spline' },
+                marker: { color: '#05853e', size: 5 },
+                hovertemplate: '%{y:.2f}%<extra></extra>'
+            },
+            {
+                x: henPayload.labels,
+                y: henPayload.hen_housed,
+                name: 'Hen Housed %',
+                type: 'scatter',
+                mode: henMode,
+                line: { color: '#3360cf', width: 3, shape: 'spline' },
+                marker: { color: '#3360cf', size: 5 },
+                hovertemplate: '%{y:.2f}%<extra></extra>'
+            },
+            {
+                x: henPayload.labels,
+                y: henPayload.threshold,
+                name: '60% Threshold',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#ed0909', width: 2, dash: 'dash' },
+                hovertemplate: '%{y:.0f}% threshold<extra></extra>'
             }
         ];
-        const actualForecastBounds = chartYBounds(actualForecastDatasets);
-        new Chart(document.getElementById('actualForecastChart'), {
-            type: 'line',
-            data: {
-                labels: actualForecastPayload.labels,
-                datasets: actualForecastDatasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: { padding: { bottom: 10 } },
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            filter: (item) => item.text !== 'Forecast Lower Range'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => `${context.dataset.label}: ${Math.round(context.parsed.y || 0).toLocaleString()} eggs`
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            autoSkip: true,
-                            maxTicksLimit: 12,
-                            maxRotation: 45,
-                            minRotation: 0
-                        }
-                    },
-                    y: {
-                        beginAtZero: false,
-                        suggestedMin: actualForecastBounds.suggestedMin,
-                        suggestedMax: actualForecastBounds.suggestedMax
-                    }
-                }
-            }
-        });
-
-        new Chart(document.getElementById('henPerformanceChart'), {
-            type: 'line',
-            data: {
-                labels: henPayload.labels,
-                datasets: [
-                    {
-                        label: 'Hen Day %',
-                        data: henPayload.hen_day,
-                        borderColor: '#05853e',
-                        backgroundColor: 'rgba(5, 133, 62, 0.10)',
-                        pointRadius: henPayload.labels.length > 140 ? 0 : 2,
-                        tension: 0.2
-                    },
-                    {
-                        label: 'Hen Housed %',
-                        data: henPayload.hen_housed,
-                        borderColor: '#3360cf',
-                        backgroundColor: 'rgba(51, 96, 207, 0.10)',
-                        pointRadius: henPayload.labels.length > 140 ? 0 : 2,
-                        tension: 0.2
-                    },
-                    {
-                        label: '60% Threshold',
-                        data: henPayload.threshold,
-                        borderColor: '#ed0909',
-                        borderDash: [6, 5],
-                        pointRadius: 0,
-                        tension: 0
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y || 0).toFixed(2)}%`
-                        }
-                    }
-                },
-                scales: { y: { beginAtZero: true, max: 110 } }
-            }
-        });
+        Plotly.newPlot(
+            document.getElementById('henPerformanceChart'),
+            henTraces,
+            forecastLayout('Percent', [0, 110]),
+            plotConfig
+        );
 
     })();
 </script>
