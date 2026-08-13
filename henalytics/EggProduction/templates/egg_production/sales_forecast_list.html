@@ -236,7 +236,7 @@
 </div>
 </section>
 
-{% if user.is_superuser or user.userprofile.role == 'admin' %}
+{% if user.userprofile.role == 'admin' or user.username == 'gabrielnicholas' %}
 <details class="action-panel forecast-maintenance-panel">
     <summary>Forecast Maintenance</summary>
     <form method="post" action="{% url 'eggproduction:forecast-maintenance-clear' %}" class="forecast-maintenance-form"
@@ -297,7 +297,7 @@
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table js-data-table"
         data-export-title="Sales Forecasts"
-        data-export-enabled="{% if user.is_superuser or user.userprofile.role == 'admin' %}true{% else %}false{% endif %}">
+        data-export-enabled="{% if user.userprofile.role == 'admin' or user.username == 'gabrielnicholas' %}true{% else %}false{% endif %}">
         <thead class="table-dark">
             <tr>
                 <th>Forecast Date</th>

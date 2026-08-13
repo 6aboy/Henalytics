@@ -701,6 +701,7 @@ class TemplateRenderTest(TestCase):
             email='analytics@example.com',
             password='pass12345',
         )
+        UserProfile.objects.create(user=admin, role='admin')
         self.client.force_login(admin)
 
         response = self.client.get(reverse('eggproduction:harvest-forecast-list'))
@@ -718,6 +719,7 @@ class TemplateRenderTest(TestCase):
             email='salesforecast@example.com',
             password='pass12345',
         )
+        UserProfile.objects.create(user=admin, role='admin')
         self.client.force_login(admin)
 
         response = self.client.get(reverse('eggproduction:sales-forecast-list'), {'range': 'month', 'scope': 'overall'})
@@ -736,6 +738,7 @@ class TemplateRenderTest(TestCase):
             email='forecast@example.com',
             password='pass12345',
         )
+        UserProfile.objects.create(user=admin, role='admin')
         self.client.force_login(admin)
 
         response = self.client.get(reverse('eggproduction:experimental-forecasting'))
