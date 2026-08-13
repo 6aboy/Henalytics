@@ -29,7 +29,10 @@
         <tbody>
             {% for flock in flocks %}
             <tr>
-                <td><strong>House {{ flock.house_no }}</strong></td>
+                <td>
+                    <strong>House {{ flock.house_no }}</strong>
+                    <small class="table-subtext">{{ flock.breed_strain }}</small>
+                </td>
                 <td>{{ flock.table_age_weeks|intcomma }}w {{ flock.table_age_days|intcomma }}d</td>
                 <td>{{ flock.date_started|date:"M d, Y" }}</td>
                 <td>

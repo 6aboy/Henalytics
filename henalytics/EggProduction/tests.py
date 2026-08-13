@@ -467,13 +467,13 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Flock Management')
         self.assertContains(response, '<th>Age</th>', html=True)
+        self.assertContains(response, self.flock.breed_strain)
         self.assertContains(response, '4w 30d')
         self.assertContains(response, '3 | 2')
         self.assertContains(response, '12')
         self.assertContains(response, reverse('eggproduction:flock-create'))
         self.assertContains(response, reverse('eggproduction:flock-edit', kwargs={'pk': self.flock.pk}))
         self.assertContains(response, reverse('eggproduction:flock-delete', kwargs={'pk': self.flock.pk}))
-        self.assertNotContains(response, 'Lohmann Brown')
 
     def test_production_log_list_renders_with_filter(self):
         other_flock = create_flock(house_no=2, date_started=timezone.now().date() - timedelta(days=1))
