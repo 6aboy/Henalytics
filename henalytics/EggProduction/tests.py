@@ -739,6 +739,9 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'dashboard-tabs')
         self.assertContains(response, 'Egg Forecasts')
         self.assertContains(response, 'Sales Forecasts')
+        self.assertContains(response, 'data-swal-forecast-run')
+        self.assertContains(response, 'Generating egg forecast')
+        self.assertContains(response, 'do not close the system')
 
     def test_sales_forecast_page_opens_with_forecast_tabs(self):
         admin = User.objects.create_superuser(
@@ -758,6 +761,9 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'dashboard-tabs')
         self.assertContains(response, 'Egg Forecasts')
         self.assertContains(response, 'Sales Forecasts')
+        self.assertContains(response, 'data-swal-forecast-run')
+        self.assertContains(response, 'Generating sales forecast')
+        self.assertContains(response, 'do not close the system')
 
     def test_admin_can_access_database_forecasting_page(self):
         admin = User.objects.create_superuser(
@@ -972,6 +978,14 @@ class TemplateRenderTest(TestCase):
         detail_response = self.client.get(reverse('eggproduction:sales-transaction-detail', args=[transaction.pk]))
         self.assertContains(detail_response, 'alert-success swal')
         self.assertContains(detail_response, 'Sales transaction created successfully.')
+
+    def test_sales_transaction_form_uses_loading_alert(self):
+        response = self.client.get(reverse('eggproduction:sales-transaction-create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-swal-loading')
+        self.assertContains(response, 'Saving sales transaction')
+        self.assertContains(response, 'Please wait while the sales transaction is being saved.')
 
     def test_sales_transaction_missing_size_shows_red_field_error(self):
         response = self.client.post(reverse('eggproduction:sales-transaction-create'), {

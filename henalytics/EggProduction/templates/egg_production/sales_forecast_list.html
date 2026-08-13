@@ -18,7 +18,9 @@
         </div>
         <span>Sales revenue</span>
     </div>
-    <form method="post" class="forecast-toolbar action-panel">
+    <form method="post" class="forecast-toolbar action-panel" data-swal-forecast-run
+        data-swal-title="Generating sales forecast"
+        data-swal-text="Please wait and do not close the system while the sales forecast is being generated.">
         {% csrf_token %}
         <div>
             <label for="range">Forecast Horizon</label>

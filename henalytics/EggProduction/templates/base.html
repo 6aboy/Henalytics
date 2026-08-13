@@ -221,6 +221,23 @@
                 return;
             }
 
+            var showLoadingSubmit = function (title, text) {
+                event.preventDefault();
+                Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: function () {
+                        Swal.showLoading();
+                        form.dataset.swalSubmitting = 'true';
+                        form.submit();
+                    }
+                });
+            };
+
             if (form.matches('[data-swal-filter]')) {
                 event.preventDefault();
                 Swal.fire({
@@ -295,20 +312,19 @@
             }
 
             if (form.matches('[data-swal-forecast-run]')) {
-                event.preventDefault();
-                Swal.fire({
-                    title: form.dataset.swalTitle || 'Generating forecast',
-                    text: form.dataset.swalText || 'Please wait and do not close the system while the forecast is being generated.',
-                    icon: 'info',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: function () {
-                        Swal.showLoading();
-                        form.dataset.swalSubmitting = 'true';
-                        form.submit();
-                    }
-                });
+                showLoadingSubmit(
+                    form.dataset.swalTitle || 'Generating forecast',
+                    form.dataset.swalText || 'Please wait and do not close the system while the forecast is being generated.'
+                );
+                return;
+            }
+
+            if (form.matches('[data-swal-loading]')) {
+                showLoadingSubmit(
+                    form.dataset.swalTitle || 'Processing request',
+                    form.dataset.swalText || 'Please wait while the system saves your changes.'
+                );
+                return;
             }
 
             if (form.matches('[data-swal-source-clear]')) {

@@ -10,7 +10,9 @@
         <div class="col-md-10 action-panel">
             <h1>{% if form.instance.pk %}Edit Sales Transaction{% else %}New Sales Transaction{% endif %}</h1>
 
-            <form method="post" class="form mt-4" id="sales-transaction-form">
+            <form method="post" class="form mt-4" id="sales-transaction-form" data-swal-loading
+                data-swal-title="{% if form.instance.pk %}Updating sales transaction{% else %}Saving sales transaction{% endif %}"
+                data-swal-text="Please wait while the sales transaction is being saved.">
                 {% csrf_token %}
 
                 {% include 'egg_production/includes/form_errors.html' %}
