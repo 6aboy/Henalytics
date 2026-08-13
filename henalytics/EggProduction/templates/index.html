@@ -19,11 +19,14 @@
         <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
         <option value="last_30" {% if dashboard_period == 'last_30' %}selected{% endif %}>Last 30 Days</option>
         <option value="month" {% if dashboard_period == 'month' %}selected{% endif %}>This Month</option>
+        <option value="last_month" {% if dashboard_period == 'last_month' %}selected{% endif %}>Last Month</option>
+        <option value="specific_month" {% if dashboard_period == 'specific_month' %}selected{% endif %}>Specific Month</option>
         <option value="six_months" {% if dashboard_period == 'six_months' %}selected{% endif %}>Last 6 Months</option>
         <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
         <option value="all" {% if dashboard_period == 'all' %}selected{% endif %}>All Records</option>
         <option value="custom" {% if dashboard_period == 'custom' %}selected{% endif %}>Custom</option>
     </select>
+    <input type="month" name="month_value" class="form-control month-control" value="{{ dashboard_month_value }}">
     <input type="date" name="date_from" class="form-control" value="{{ dashboard_date_from|date:'Y-m-d' }}">
     <input type="date" name="date_to" class="form-control" value="{{ dashboard_date_to|date:'Y-m-d' }}">
     <button type="submit" class="btn btn-info">Filter</button>
@@ -43,8 +46,7 @@
                 <div>
                     <div class="metric-label">Total Eggs</div>
                     <div class="metric-value">{{ period_egg_total|intcomma }}</div>
-                    <div class="metric-meta">{{ active_flocks|intcomma }} active flock{{ active_flocks|pluralize }}
-                    </div>
+                    <div class="metric-meta change-pill {{ period_egg_change_tone }}">{{ period_egg_change_label }}</div>
                 </div>
                 <span class="metric-icon">
                     <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
@@ -55,8 +57,8 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Revenue</div>
-                    <div class="metric-value">₱ {{ period_revenue|floatformat:0|intcomma }}</div>
-                    <div class="metric-meta">Sales value in selected range</div>
+                    <div class="metric-value">&#8369; {{ period_revenue|floatformat:0|intcomma }}</div>
+                    <div class="metric-meta change-pill {{ period_revenue_change_tone }}">{{ period_revenue_change_label }}</div>
                 </div>
                 <span class="metric-icon success">
                     <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
@@ -68,7 +70,7 @@
                 <div>
                     <div class="metric-label">Feed Consumed</div>
                     <div class="metric-value">{{ period_feed_total|intcomma }} bags</div>
-                    <div class="metric-meta">Feed used in selected range</div>
+                    <div class="metric-meta change-pill {{ period_feed_change_tone }}">{{ period_feed_change_label }}</div>
                 </div>
                 <span class="metric-icon warning">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -84,13 +86,107 @@
                 <div>
                     <div class="metric-label">Mortality + Cull</div>
                     <div class="metric-value">{{ period_losses|intcomma }}</div>
-                    <div class="metric-meta">Recorded flock reductions</div>
+                    <div class="metric-meta change-pill {{ period_loss_change_tone }}">{{ period_loss_change_label }}</div>
                 </div>
                 <span class="metric-icon danger">
                     <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
                 </span>
             </div>
         </article>
+    </div>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <h2>Monthly Analytics</h2>
+            <p>Month-by-month view for reviewing production direction, revenue movement, feed use, and flock health.</p>
+        </div>
+        <span>{{ monthly_dashboard_summary.month_label }}</span>
+    </div>
+    <div class="dashboard-grid monthly-overview-grid">
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Latest Month Eggs</div>
+                    <div class="metric-value">{{ monthly_dashboard_summary.latest_eggs|floatformat:0|intcomma }}</div>
+                    <div class="metric-meta change-pill {{ monthly_dashboard_summary.egg_change_tone }}">{{ monthly_dashboard_summary.egg_change_label }}</div>
+                </div>
+                <span class="metric-icon">
+                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Latest Month Revenue</div>
+                    <div class="metric-value">&#8369; {{ monthly_dashboard_summary.latest_revenue|floatformat:0|intcomma }}</div>
+                    <div class="metric-meta">Grouped from sales records</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Latest Hen Housed</div>
+                    <div class="metric-value">{{ monthly_dashboard_summary.latest_housed }}%</div>
+                    <div class="metric-meta">60% is the review threshold</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+    </div>
+    <article class="dashboard-notebook-card monthly-notebook-card">
+        <div class="notebook-paper">
+            <div class="notebook-chart-heading">
+                <div>
+                    <h3 id="monthlyNotebookTitle">Monthly Egg Production</h3>
+                    <p id="monthlyNotebookDescription">Total eggs grouped by month to show longer-term production direction.</p>
+                </div>
+                <span id="monthlyNotebookMeta">Eggs</span>
+            </div>
+            <div class="dashboard-notebook-plot-wrap">
+                <div class="dashboard-chart-empty monthly-chart-empty">No monthly records yet.</div>
+                <div id="monthlyNotebookChart" class="dashboard-notebook-chart" aria-label="Monthly analytics chart"></div>
+            </div>
+        </div>
+        <div class="notebook-bookmarks monthly-bookmarks" aria-label="Monthly chart bookmarks">
+            <button type="button" class="notebook-bookmark active" data-chart-key="monthly_eggs">
+                <span>Eggs</span>
+            </button>
+            <button type="button" class="notebook-bookmark green" data-chart-key="monthly_revenue">
+                <span>Revenue</span>
+            </button>
+            <button type="button" class="notebook-bookmark violet" data-chart-key="monthly_hen_day">
+                <span>Hen Day</span>
+            </button>
+            <button type="button" class="notebook-bookmark green" data-chart-key="monthly_hen_housed">
+                <span>Housed</span>
+            </button>
+            <button type="button" class="notebook-bookmark amber" data-chart-key="monthly_feed">
+                <span>Feed</span>
+            </button>
+            <button type="button" class="notebook-bookmark red" data-chart-key="monthly_losses">
+                <span>Losses</span>
+            </button>
+            <button type="button" class="notebook-bookmark red" data-chart-key="monthly_cracked">
+                <span>Cracked</span>
+            </button>
+        </div>
+    </article>
+    <div class="monthly-analysis-notes">
+        <strong>Monthly Reading</strong>
+        <ul>
+            {% for note in monthly_dashboard_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
     </div>
 </section>
 
@@ -182,7 +278,7 @@
                 </div>
             </div>
         </div>
-        <div class="notebook-bookmarks" aria-label="Dashboard chart bookmarks">
+        <div class="notebook-bookmarks daily-bookmarks" aria-label="Dashboard chart bookmarks">
             <button type="button" class="notebook-bookmark active" data-chart-key="eggs">
                 <span>Eggs</span>
             </button>
@@ -231,121 +327,157 @@
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script id="dashboard-charts-payload" type="application/json">{{ dashboard_charts_payload_json|safe }}</script>
+<script id="monthly-dashboard-payload" type="application/json">{{ monthly_dashboard_payload_json|safe }}</script>
 <script>
     (function () {
-        const payloadElement = document.getElementById('dashboard-charts-payload');
-        const payload = JSON.parse(payloadElement?.textContent || '{"labels":[],"iso_labels":[],"charts":{}}');
-        const chart = document.getElementById('dashboardNotebookChart');
-        const empty = document.querySelector('.dashboard-chart-empty');
-        const title = document.getElementById('dashboardNotebookTitle');
-        const description = document.getElementById('dashboardNotebookDescription');
-        const meta = document.getElementById('dashboardNotebookMeta');
-        const bookmarks = document.querySelectorAll('.notebook-bookmark');
-        const labels = payload.iso_labels || payload.labels || [];
-
-        if (!chart || !labels.length || !payload.charts) {
-            if (chart) {
-                chart.style.display = 'none';
-            }
-            return;
-        }
-        if (empty) {
-            empty.style.display = 'none';
-        }
-
         const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
+        const valueSuffix = (unit) => unit === '%' ? '%' : unit === 'peso' ? '' : ` ${unit}`;
+        const valuePrefix = (unit) => unit === 'peso' ? 'PHP ' : '';
 
-        const plotChart = (key) => {
-            const selected = payload.charts[key] || payload.charts.eggs;
-            const suffix = selected.unit === '%' ? '%' : ` ${selected.unit}`;
-            const traces = [
-                {
+        const createNotebookChart = (config) => {
+            const payloadElement = document.getElementById(config.payloadId);
+            const payload = JSON.parse(payloadElement?.textContent || '{"labels":[],"iso_labels":[],"charts":{}}');
+            const chart = document.getElementById(config.chartId);
+            const empty = document.querySelector(config.emptySelector);
+            const title = document.getElementById(config.titleId);
+            const description = document.getElementById(config.descriptionId);
+            const meta = document.getElementById(config.metaId);
+            const bookmarks = document.querySelectorAll(config.bookmarksSelector);
+            const labels = payload.iso_labels || payload.labels || [];
+
+            if (!chart || !labels.length || !payload.charts) {
+                if (chart) {
+                    chart.style.display = 'none';
+                }
+                return;
+            }
+            if (empty) {
+                empty.style.display = 'none';
+            }
+
+            const plotChart = (key) => {
+                const selected = payload.charts[key] || payload.charts[config.defaultKey];
+                const suffix = valueSuffix(selected.unit);
+                const prefix = valuePrefix(selected.unit);
+                const isBar = selected.type === 'bar';
+                const mainTrace = {
                     x: labels,
                     y: selected.values,
                     name: selected.title,
-                    type: 'scatter',
-                    mode: labels.length > 120 ? 'lines' : 'lines+markers',
-                    line: { color: selected.color, width: 3, shape: 'spline' },
+                    type: isBar ? 'bar' : 'scatter',
                     marker: { color: selected.color, size: 5 },
-                    fill: key === 'eggs' ? 'tozeroy' : 'none',
-                    fillcolor: 'rgba(51, 96, 207, 0.10)',
-                    hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.title}: %{y:,.2f}${suffix}<extra></extra>`
+                    hovertemplate: `<b>%{x|${config.dateFormat}}</b><br>${selected.title}: ${prefix}%{y:,.2f}${suffix}<extra></extra>`
+                };
+                if (!isBar) {
+                    mainTrace.mode = labels.length > 120 ? 'lines' : 'lines+markers';
+                    mainTrace.line = { color: selected.color, width: 3, shape: 'spline' };
+                    mainTrace.fill = key === 'eggs' ? 'tozeroy' : 'none';
+                    mainTrace.fillcolor = 'rgba(51, 96, 207, 0.10)';
                 }
-            ];
+                const traces = [mainTrace];
 
-        if (selected.threshold) {
-            traces.push({
-                x: labels,
-                y: selected.threshold,
-                name: selected.threshold_label || 'Threshold',
-                type: 'scatter',
-                mode: 'lines',
-                line: { color: '#d92d20', width: 2, dash: 'dash' },
-                hovertemplate: `<b>%{x|%b %d, %Y}</b><br>${selected.threshold_label || 'Threshold'}: %{y:,.2f}${suffix}<extra></extra>`
+                if (selected.threshold) {
+                    traces.push({
+                        x: labels,
+                        y: selected.threshold,
+                        name: selected.threshold_label || 'Threshold',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { color: '#d92d20', width: 2, dash: 'dash' },
+                        hovertemplate: `<b>%{x|${config.dateFormat}}</b><br>${selected.threshold_label || 'Threshold'}: %{y:,.2f}${suffix}<extra></extra>`
+                    });
+                }
+
+                if (title) title.textContent = selected.title;
+                if (description) description.textContent = selected.description;
+                if (meta) meta.textContent = selected.unit === 'peso' ? 'Revenue' : unitLabel(selected.unit);
+
+                Plotly.react(chart, traces, {
+                    autosize: true,
+                    height: config.height || 390,
+                    margin: { l: 62, r: 18, t: 18, b: 92 },
+                    paper_bgcolor: '#fff',
+                    plot_bgcolor: '#fff',
+                    dragmode: 'pan',
+                    hovermode: 'closest',
+                    legend: {
+                        orientation: 'h',
+                        x: 0.5,
+                        xanchor: 'center',
+                        y: -0.34,
+                        yanchor: 'top'
+                    },
+                    xaxis: {
+                        type: 'date',
+                        tickformat: config.tickFormat,
+                        nticks: 8,
+                        tickangle: 0,
+                        showgrid: true,
+                        gridcolor: 'rgba(52, 64, 84, 0.12)',
+                        rangeslider: { visible: true, thickness: 0.10, bgcolor: '#f1f4f9', bordercolor: '#d0d5dd', borderwidth: 1 },
+                        showspikes: true,
+                        spikemode: 'across+toaxis',
+                        spikesnap: 'cursor',
+                        spikecolor: '#667085'
+                    },
+                    yaxis: {
+                        title: { text: selected.unit === 'peso' ? 'Revenue' : unitLabel(selected.unit), standoff: 18 },
+                        rangemode: 'tozero',
+                        showgrid: true,
+                        gridcolor: 'rgba(52, 64, 84, 0.12)',
+                        zeroline: false,
+                        tickprefix: selected.unit === 'peso' ? 'PHP ' : '',
+                        ticksuffix: selected.unit === '%' ? '%' : '',
+                        showspikes: true,
+                        spikemode: 'across+toaxis',
+                        spikesnap: 'cursor',
+                        spikecolor: '#667085'
+                    }
+                }, {
+                    responsive: true,
+                    displaylogo: false,
+                    scrollZoom: true,
+                    modeBarButtonsToRemove: ['select2d', 'lasso2d']
+                });
+            };
+
+            bookmarks.forEach((button) => {
+                button.addEventListener('click', () => {
+                    bookmarks.forEach((item) => item.classList.remove('active'));
+                    button.classList.add('active');
+                    plotChart(button.dataset.chartKey);
+                });
             });
-        }
 
-        if (title) title.textContent = selected.title;
-        if (description) description.textContent = selected.description;
-        if (meta) meta.textContent = unitLabel(selected.unit);
+            plotChart(config.defaultKey);
+        };
 
-        Plotly.react(chart, traces, {
-            autosize: true,
-            height: 390,
-            margin: { l: 62, r: 18, t: 18, b: 92 },
-            paper_bgcolor: '#fff',
-            plot_bgcolor: '#fff',
-            dragmode: 'pan',
-            hovermode: 'closest',
-            legend: {
-                orientation: 'h',
-                x: 0.5,
-                xanchor: 'center',
-                y: -0.34,
-                yanchor: 'top'
-            },
-            xaxis: {
-                type: 'date',
-                tickformat: '%b %d',
-                nticks: 8,
-                tickangle: 0,
-                showgrid: true,
-                gridcolor: 'rgba(52, 64, 84, 0.12)',
-                rangeslider: { visible: true, thickness: 0.10, bgcolor: '#f1f4f9', bordercolor: '#d0d5dd', borderwidth: 1 },
-                showspikes: true,
-                spikemode: 'across+toaxis',
-                spikesnap: 'cursor',
-                spikecolor: '#667085'
-            },
-            yaxis: {
-                title: { text: unitLabel(selected.unit), standoff: 18 },
-                rangemode: 'tozero',
-                showgrid: true,
-                gridcolor: 'rgba(52, 64, 84, 0.12)',
-                zeroline: false,
-                ticksuffix: selected.unit === '%' ? '%' : '',
-                showspikes: true,
-                spikemode: 'across+toaxis',
-                spikesnap: 'cursor',
-                spikecolor: '#667085'
-            }
-        }, {
-            responsive: true,
-            displaylogo: false,
-            scrollZoom: true,
-            modeBarButtonsToRemove: ['select2d', 'lasso2d']
+        createNotebookChart({
+            payloadId: 'dashboard-charts-payload',
+            chartId: 'dashboardNotebookChart',
+            emptySelector: '.dashboard-chart-empty:not(.monthly-chart-empty)',
+            titleId: 'dashboardNotebookTitle',
+            descriptionId: 'dashboardNotebookDescription',
+            metaId: 'dashboardNotebookMeta',
+            bookmarksSelector: '.daily-bookmarks .notebook-bookmark',
+            defaultKey: 'eggs',
+            tickFormat: '%b %d',
+            dateFormat: '%b %d, %Y'
         });
-    };
 
-    bookmarks.forEach((button) => {
-        button.addEventListener('click', () => {
-            bookmarks.forEach((item) => item.classList.remove('active'));
-            button.classList.add('active');
-            plotChart(button.dataset.chartKey);
+        createNotebookChart({
+            payloadId: 'monthly-dashboard-payload',
+            chartId: 'monthlyNotebookChart',
+            emptySelector: '.monthly-chart-empty',
+            titleId: 'monthlyNotebookTitle',
+            descriptionId: 'monthlyNotebookDescription',
+            metaId: 'monthlyNotebookMeta',
+            bookmarksSelector: '.monthly-bookmarks .notebook-bookmark',
+            defaultKey: 'monthly_eggs',
+            tickFormat: '%b %Y',
+            dateFormat: '%b %Y',
+            height: 410
         });
-    });
-
-        plotChart('eggs');
     })();
 </script>
 {% endblock %}

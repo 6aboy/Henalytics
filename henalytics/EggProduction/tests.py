@@ -568,9 +568,50 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.context['period_egg_total'], 1234)
         self.assertContains(response, 'Total Eggs')
         self.assertContains(response, 'Production Notebook')
+        self.assertContains(response, 'Monthly Analytics')
         self.assertContains(response, 'dashboardNotebookChart')
+        self.assertContains(response, 'monthlyNotebookChart')
         self.assertContains(response, 'notebook-bookmark')
         self.assertIn('dashboard_charts_payload_json', response.context)
+        self.assertIn('monthly_dashboard_payload_json', response.context)
+
+    def test_dashboard_specific_month_filter_uses_calendar_month(self):
+        selected_month_date = timezone.localdate().replace(day=10)
+        previous_month_date = (selected_month_date.replace(day=1) - timedelta(days=1)).replace(day=10)
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=previous_month_date,
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=1111,
+            pct_hen_day=Decimal('62.42'),
+            pct_hen_housed=Decimal('61.72'),
+            entered_by=self.user,
+        )
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=selected_month_date,
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=2222,
+            pct_hen_day=Decimal('100.00'),
+            pct_hen_housed=Decimal('100.00'),
+            entered_by=self.user,
+        )
+
+        response = self.client.get(reverse('eggproduction:dashboard'), {
+            'period': 'specific_month',
+            'month_value': selected_month_date.strftime('%Y-%m'),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['dashboard_period'], 'specific_month')
+        self.assertEqual(response.context['dashboard_period_label'], selected_month_date.strftime('%B %Y'))
+        self.assertEqual(response.context['period_egg_total'], 2222)
 
     def test_dashboard_defaults_to_recent_data_and_separate_loss_totals(self):
         today = timezone.localdate()

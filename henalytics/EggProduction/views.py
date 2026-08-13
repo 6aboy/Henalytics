@@ -7,6 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.db import models, transaction
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.conf import settings
 from datetime import date, timedelta
@@ -556,11 +557,26 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         period = self.request.GET.get('period', 'last_30')
         start = None
         end = today
+        selected_month = self.request.GET.get('month_value') or today.strftime('%Y-%m')
 
         if period == 'today':
             start = today
         elif period == 'last_30':
             start = today - timedelta(days=30)
+        elif period == 'month':
+            start = today.replace(day=1)
+        elif period == 'last_month':
+            first_this_month = today.replace(day=1)
+            end = first_this_month - timedelta(days=1)
+            start = end.replace(day=1)
+        elif period == 'specific_month':
+            try:
+                year, month = [int(part) for part in selected_month.split('-', 1)]
+                start = date(year, month, 1)
+                end = date(year + (month // 12), (month % 12) + 1, 1) - timedelta(days=1)
+            except (TypeError, ValueError):
+                period = 'month'
+                start = today.replace(day=1)
         elif period == 'six_months':
             start = today - timedelta(days=183)
         elif period == 'year':
@@ -584,6 +600,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'today': 'Today',
             'last_30': 'Last 30 Days',
             'month': 'This Month',
+            'last_month': 'Last Month',
+            'specific_month': start.strftime('%B %Y') if start else 'Selected Month',
             'six_months': 'Last 6 Months',
             'year': 'This Year',
             'all': 'All Records',
@@ -598,6 +616,198 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         if end:
             queryset = queryset.filter(**{f'{field_name}__lte': end})
         return queryset
+
+    @staticmethod
+    def previous_period_bounds(start, end):
+        if not start or not end:
+            return None, None
+        span = (end - start).days + 1
+        previous_end = start - timedelta(days=1)
+        previous_start = previous_end - timedelta(days=span - 1)
+        return previous_start, previous_end
+
+    @staticmethod
+    def percent_change(current, previous):
+        current = float(current or 0)
+        previous = float(previous or 0)
+        if previous == 0:
+            return None
+        return round(((current - previous) / previous) * 100, 1)
+
+    @staticmethod
+    def format_change(change):
+        if change is None:
+            return 'No previous period'
+        sign = '+' if change > 0 else ''
+        return f'{sign}{change}% vs previous period'
+
+    @staticmethod
+    def change_tone(change, inverse=False):
+        if change is None or change == 0:
+            return 'neutral'
+        improved = change > 0
+        if inverse:
+            improved = not improved
+        return 'good' if improved else 'danger'
+
+    @classmethod
+    def build_monthly_payload(cls):
+        production_rows = list(
+            ProductionLog.objects
+            .filter(flock__status='active')
+            .annotate(month=TruncMonth('log_date'))
+            .values('month')
+            .annotate(
+                eggs=models.Sum('eggs_total'),
+                feed=models.Sum('feed_bags'),
+                losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
+                hen_day=models.Avg('pct_hen_day'),
+                hen_housed=models.Avg('pct_hen_housed'),
+                fcr=models.Avg('fcr'),
+            )
+            .order_by('month')
+        )
+        revenue_by_month = {
+            row['month']: float(row['revenue'] or 0)
+            for row in (
+                SalesItem.objects
+                .annotate(month=TruncMonth('transaction__sale_date'))
+                .values('month')
+                .annotate(revenue=models.Sum('amount'))
+                .order_by('month')
+            )
+        }
+        cracked_by_month = {
+            row['month']: {
+                'broken': float(row['broken'] or 0),
+                'total': float(row['total'] or 0),
+            }
+            for row in (
+                GradingLog.objects
+                .annotate(month=TruncMonth('log_date'))
+                .values('month')
+                .annotate(broken=models.Sum('eggs_broken'), total=models.Sum('eggs_total'))
+                .order_by('month')
+            )
+        }
+        labels = [row['month'].strftime('%b %Y') for row in production_rows]
+        iso_labels = [
+            (row['month'].date() if hasattr(row['month'], 'date') else row['month']).isoformat()
+            for row in production_rows
+        ]
+        cracked_loss = []
+        for row in production_rows:
+            cracked = cracked_by_month.get(row['month'], {'broken': 0, 'total': 0})
+            cracked_loss.append((cracked['broken'] / cracked['total'] * 100) if cracked['total'] else 0)
+
+        return {
+            'labels': labels,
+            'iso_labels': iso_labels,
+            'charts': {
+                'monthly_eggs': {
+                    'title': 'Monthly Egg Production',
+                    'description': 'Total eggs grouped by month to show longer-term production direction.',
+                    'unit': 'eggs',
+                    'color': '#3360cf',
+                    'type': 'bar',
+                    'values': [float(row['eggs'] or 0) for row in production_rows],
+                },
+                'monthly_revenue': {
+                    'title': 'Monthly Revenue',
+                    'description': 'Sales amount grouped by month for financial performance tracking.',
+                    'unit': 'peso',
+                    'color': '#12a150',
+                    'type': 'bar',
+                    'values': [revenue_by_month.get(row['month'], 0) for row in production_rows],
+                },
+                'monthly_hen_day': {
+                    'title': 'Monthly Hen Day',
+                    'description': 'Average hen-day percentage per month.',
+                    'unit': '%',
+                    'color': '#7c3aed',
+                    'type': 'line',
+                    'values': [float(row['hen_day'] or 0) for row in production_rows],
+                },
+                'monthly_hen_housed': {
+                    'title': 'Monthly Hen Housed',
+                    'description': 'Average hen-housed percentage per month with the 60% warning threshold.',
+                    'unit': '%',
+                    'color': '#0f9f6e',
+                    'type': 'line',
+                    'values': [float(row['hen_housed'] or 0) for row in production_rows],
+                    'threshold': [60 for _row in production_rows],
+                    'threshold_label': '60% threshold',
+                },
+                'monthly_feed': {
+                    'title': 'Monthly Feed Use',
+                    'description': 'Total feed bags consumed per month.',
+                    'unit': 'bags',
+                    'color': '#e88411',
+                    'type': 'bar',
+                    'values': [float(row['feed'] or 0) for row in production_rows],
+                },
+                'monthly_losses': {
+                    'title': 'Monthly Flock Losses',
+                    'description': 'Dead and culled hens grouped by month.',
+                    'unit': 'hens',
+                    'color': '#d92d20',
+                    'type': 'bar',
+                    'values': [float(row['losses'] or 0) for row in production_rows],
+                },
+                'monthly_cracked': {
+                    'title': 'Monthly Cracked Egg Loss',
+                    'description': 'Cracked eggs as a percentage of graded eggs each month.',
+                    'unit': '%',
+                    'color': '#db2777',
+                    'type': 'line',
+                    'values': cracked_loss,
+                },
+            },
+        }
+
+    @classmethod
+    def build_monthly_notes(cls, monthly_payload):
+        charts = monthly_payload.get('charts', {})
+        eggs = charts.get('monthly_eggs', {}).get('values', [])
+        hen_housed = charts.get('monthly_hen_housed', {}).get('values', [])
+        revenue = charts.get('monthly_revenue', {}).get('values', [])
+        notes = []
+        if len(eggs) >= 2:
+            change = cls.percent_change(eggs[-1], eggs[-2])
+            direction = 'increased' if change and change > 0 else 'declined' if change and change < 0 else 'remained stable'
+            notes.append(f'Egg production {direction} compared with the previous month ({cls.format_change(change)}).')
+        if hen_housed:
+            latest_hh = hen_housed[-1]
+            if latest_hh < 60:
+                notes.append('Latest monthly hen-housed performance is below 60%, so the flock should be reviewed.')
+            else:
+                notes.append('Latest monthly hen-housed performance is above the 60% warning threshold.')
+        if len(revenue) >= 2:
+            change = cls.percent_change(revenue[-1], revenue[-2])
+            notes.append(f'Revenue movement: {cls.format_change(change)}.')
+        if not notes:
+            notes.append('Monthly analytics will become more useful once more month-level records are available.')
+        return notes
+
+    @classmethod
+    def build_monthly_summary(cls, monthly_payload):
+        labels = monthly_payload.get('labels', [])
+        charts = monthly_payload.get('charts', {})
+        eggs = charts.get('monthly_eggs', {}).get('values', [])
+        revenue = charts.get('monthly_revenue', {}).get('values', [])
+        hen_housed = charts.get('monthly_hen_housed', {}).get('values', [])
+        latest_eggs = eggs[-1] if eggs else 0
+        latest_revenue = revenue[-1] if revenue else 0
+        latest_housed = hen_housed[-1] if hen_housed else 0
+        egg_change = cls.percent_change(latest_eggs, eggs[-2]) if len(eggs) >= 2 else None
+        return {
+            'month_label': labels[-1] if labels else 'No monthly records',
+            'latest_eggs': latest_eggs,
+            'latest_revenue': latest_revenue,
+            'latest_housed': round(latest_housed, 1) if latest_housed else 0,
+            'egg_change_label': cls.format_change(egg_change),
+            'egg_change_tone': cls.change_tone(egg_change),
+        }
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -624,6 +834,24 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
             period_revenue = period_sales_items.aggregate(total=models.Sum('amount'))['total'] or 0
+            previous_start, previous_end = self.previous_period_bounds(date_from, date_to)
+            previous_logs = self.filter_by_date(ProductionLog.objects.all(), 'log_date', previous_start, previous_end)
+            previous_sales_items = self.filter_by_date(
+                SalesItem.objects.all(),
+                'transaction__sale_date',
+                previous_start,
+                previous_end,
+            )
+            previous_egg_total = previous_logs.aggregate(total=models.Sum('eggs_total'))['total'] or 0
+            previous_feed_total = previous_logs.aggregate(total=models.Sum('feed_bags'))['total'] or 0
+            previous_losses = previous_logs.aggregate(
+                lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
+            )['lost'] or 0
+            previous_revenue = previous_sales_items.aggregate(total=models.Sum('amount'))['total'] or 0
+            period_egg_change = self.percent_change(period_egg_total, previous_egg_total)
+            period_revenue_change = self.percent_change(period_revenue, previous_revenue)
+            period_feed_change = self.percent_change(period_feed_total, previous_feed_total)
+            period_loss_change = self.percent_change(period_losses, previous_losses)
             total_hens = Flock.objects.filter(status='active').aggregate(
                 total=models.Sum('initial_hen_count')
             )['total'] or 0
@@ -708,12 +936,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     },
                 },
             }
+            monthly_payload = self.build_monthly_payload()
+            monthly_summary = self.build_monthly_summary(monthly_payload)
+            month_value = self.request.GET.get('month_value') or today.strftime('%Y-%m')
 
             context.update({
                 'today': today,
                 'dashboard_period': period,
                 'dashboard_date_from': date_from,
                 'dashboard_date_to': date_to,
+                'dashboard_month_value': month_value,
                 'dashboard_period_label': period_label,
                 'active_flocks': active_flocks,
                 'today_production': today_production,
@@ -721,6 +953,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'period_feed_total': period_feed_total,
                 'period_losses': period_losses,
                 'period_revenue': float(period_revenue),
+                'period_egg_change_label': self.format_change(period_egg_change),
+                'period_egg_change_tone': self.change_tone(period_egg_change),
+                'period_revenue_change_label': self.format_change(period_revenue_change),
+                'period_revenue_change_tone': self.change_tone(period_revenue_change),
+                'period_feed_change_label': self.format_change(period_feed_change),
+                'period_feed_change_tone': self.change_tone(period_feed_change, inverse=True),
+                'period_loss_change_label': self.format_change(period_loss_change),
+                'period_loss_change_tone': self.change_tone(period_loss_change, inverse=True),
                 'today_sales': SalesTransaction.objects.filter(sale_date=today).count(),
                 'total_revenue': float(weekly_revenue),
                 'total_hens': total_hens,
@@ -733,6 +973,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'recent_losses_30d': recent_losses_30d,
                 'recent_losses_60d': recent_losses_60d,
                 'dashboard_charts_payload_json': json.dumps(dashboard_chart_payload),
+                'monthly_dashboard_payload_json': json.dumps(monthly_payload),
+                'monthly_dashboard_notes': self.build_monthly_notes(monthly_payload),
+                'monthly_dashboard_summary': monthly_summary,
                 'hen_housed_payload_json': json.dumps(dashboard_chart_payload['charts']['hen_housed']),
             })
         except Exception as e:
@@ -761,6 +1004,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'recent_losses_30d': 0,
                 'recent_losses_60d': 0,
                 'dashboard_charts_payload_json': json.dumps({'labels': [], 'iso_labels': [], 'charts': {}}),
+                'monthly_dashboard_payload_json': json.dumps({'labels': [], 'iso_labels': [], 'charts': {}}),
+                'monthly_dashboard_notes': ['Monthly analytics could not be loaded.'],
+                'monthly_dashboard_summary': {
+                    'month_label': 'No monthly records',
+                    'latest_eggs': 0,
+                    'latest_revenue': 0,
+                    'latest_housed': 0,
+                    'egg_change_label': 'No previous period',
+                    'egg_change_tone': 'neutral',
+                },
                 'hen_housed_payload_json': json.dumps({'labels': [], 'actual': [], 'threshold': []}),
             })
         return context
