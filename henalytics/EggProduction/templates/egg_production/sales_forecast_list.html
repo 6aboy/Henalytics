@@ -236,7 +236,7 @@
 </div>
 </section>
 
-{% if user.is_superuser or user.userprofile.role == 'admin' or user.userprofile.role == 'manager' %}
+{% if user.is_superuser or user.userprofile.role == 'admin' %}
 <details class="action-panel forecast-maintenance-panel">
     <summary>Forecast Maintenance</summary>
     <form method="post" action="{% url 'eggproduction:forecast-maintenance-clear' %}" class="forecast-maintenance-form"

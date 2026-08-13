@@ -485,12 +485,12 @@ class CustomLoginView(LoginView):
 
 # Mixins for access control
 class StaffAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Mixin to restrict view to staff/admin users"""
+    """Allow staff and admin users to view operational records."""
     def test_func(self):
         user = self.request.user
         try:
             profile = UserProfile.objects.get(user=user)
-            return profile.role in ['staff', 'admin', 'manager']
+            return profile.role in ['staff', 'admin']
         except UserProfile.DoesNotExist:
             return user.is_staff or user.is_superuser
 
@@ -506,19 +506,19 @@ class StaffInputAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
             return user.is_staff and not user.is_superuser
 
 
-class ManagerAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Mixin to restrict view to manager/admin users"""
+class AdminAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Allow admin users to access reports, exports, and forecasting."""
     def test_func(self):
         user = self.request.user
         try:
             profile = UserProfile.objects.get(user=user)
-            return profile.role in ['admin', 'manager']
+            return profile.role == 'admin'
         except UserProfile.DoesNotExist:
             return user.is_superuser
 
 
 class StaffCrudAdminReadPermission(BasePermission):
-    """Allow staff to write operational records while admin/manager users read only."""
+    """Allow staff to write operational records while admin users read only."""
     def _role(self, user):
         try:
             return UserProfile.objects.get(user=user).role
@@ -532,7 +532,7 @@ class StaffCrudAdminReadPermission(BasePermission):
 
         role = self._role(user)
         if request.method in SAFE_METHODS:
-            return role in ['staff', 'admin', 'manager'] or user.is_staff or user.is_superuser
+            return role in ['staff', 'admin'] or user.is_staff or user.is_superuser
 
         if role is not None:
             return role == 'staff'
@@ -1199,15 +1199,15 @@ class SalesItemDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteVi
 
 # ======================== Forecast Views ========================
 
-class HarvestForecastListView(ManagerAccessMixin, ListView):
+class HarvestForecastListView(AdminAccessMixin, ListView):
     model = HarvestForecast
     template_name = 'egg_production/harvest_forecast_list.html'
     context_object_name = 'forecasts'
     ordering = ['-forecast_date']
 
     def post(self, request, *args, **kwargs):
-        if not ManagerAccessMixin.test_func(self):
-            messages.error(request, 'Only admin or manager accounts can run forecasts.')
+        if not AdminAccessMixin.test_func(self):
+            messages.error(request, 'Only admin accounts can run forecasts.')
             return redirect('eggproduction:harvest-forecast-list')
 
         flock_id = request.POST.get('flock_id')
@@ -1383,7 +1383,7 @@ class HarvestForecastListView(ManagerAccessMixin, ListView):
         return labels.get(range_key, f'Next {periods} Days')
 
 
-class HarvestForecastDetailView(ManagerAccessMixin, DetailView):
+class HarvestForecastDetailView(AdminAccessMixin, DetailView):
     model = HarvestForecast
     template_name = 'egg_production/harvest_forecast_detail.html'
     context_object_name = 'forecast'
@@ -1391,7 +1391,7 @@ class HarvestForecastDetailView(ManagerAccessMixin, DetailView):
 
 class ForecastMaintenanceClearView(LoginRequiredMixin, UserPassesTestMixin, View):
     def test_func(self):
-        return ManagerAccessMixin.test_func(self)
+        return AdminAccessMixin.test_func(self)
 
     def post(self, request, *args, **kwargs):
         forecast_type = request.POST.get('forecast_type', 'egg')
@@ -1494,7 +1494,7 @@ class ForecastMaintenanceClearView(LoginRequiredMixin, UserPassesTestMixin, View
 
 class TestingDataClearView(LoginRequiredMixin, UserPassesTestMixin, View):
     def test_func(self):
-        return ManagerAccessMixin.test_func(self)
+        return AdminAccessMixin.test_func(self)
 
     def post(self, request, *args, **kwargs):
         data_type = request.POST.get('data_type', 'egg')
@@ -1521,7 +1521,7 @@ class TestingDataClearView(LoginRequiredMixin, UserPassesTestMixin, View):
         return redirect(redirect_to)
 
 
-class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
+class ExperimentalForecastingView(AdminAccessMixin, TemplateView):
     template_name = 'egg_production/experimental_forecasting.html'
 
     def post(self, request, *args, **kwargs):
@@ -1639,15 +1639,15 @@ class ExperimentalForecastingView(ManagerAccessMixin, TemplateView):
         return 120
 
 
-class SalesForecastListView(ManagerAccessMixin, ListView):
+class SalesForecastListView(AdminAccessMixin, ListView):
     model = SalesForecast
     template_name = 'egg_production/sales_forecast_list.html'
     context_object_name = 'forecasts'
     ordering = ['-forecast_date']
 
     def post(self, request, *args, **kwargs):
-        if not ManagerAccessMixin.test_func(self):
-            messages.error(request, 'Only admin or manager accounts can run forecasts.')
+        if not AdminAccessMixin.test_func(self):
+            messages.error(request, 'Only admin accounts can run forecasts.')
             return redirect('eggproduction:sales-forecast-list')
 
         range_key = request.POST.get('range', 'month')
@@ -1743,13 +1743,13 @@ class SalesForecastListView(ManagerAccessMixin, ListView):
         return context
 
 
-class SalesForecastDetailView(ManagerAccessMixin, DetailView):
+class SalesForecastDetailView(AdminAccessMixin, DetailView):
     model = SalesForecast
     template_name = 'egg_production/sales_forecast_detail.html'
     context_object_name = 'forecast'
 
 
-class ModelVersionListView(ManagerAccessMixin, ListView):
+class ModelVersionListView(AdminAccessMixin, ListView):
     model = ModelVersion
     template_name = 'egg_production/model_version_list.html'
     context_object_name = 'models'
@@ -1757,7 +1757,7 @@ class ModelVersionListView(ManagerAccessMixin, ListView):
     ordering = ['-trained_at']
 
 
-class ModelVersionDetailView(ManagerAccessMixin, DetailView):
+class ModelVersionDetailView(AdminAccessMixin, DetailView):
     model = ModelVersion
     template_name = 'egg_production/model_version_detail.html'
     context_object_name = 'model'
