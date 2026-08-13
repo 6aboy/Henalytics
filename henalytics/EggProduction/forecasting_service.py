@@ -43,14 +43,31 @@ class ForecastingService:
         'month': 30,
         'three_months': 90,
     }
-    EGG_FEATURE_FIELDS = (
-        # Notebook-aligned SARIMAX predictors: Bird No., Dead, Cull, and FEED (bags).
-        # Calculated percentages are excluded because they are derived from the target.
+    EGG_SOURCE_FEATURE_FIELDS = (
+        # Poultry performance predictors used by the SARIMAX egg forecast.
+        'age_weeks',
+        'age_days',
         'hen_count',
         'dead_count',
         'culled_count',
         'feed_bags',
     )
+    EGG_DERIVED_FEATURE_FIELDS = (
+        # These are useful diagnostics, but are calculated from production and are tested separately.
+        'pct_hen_day',
+        'pct_hen_housed',
+        'fcr',
+    )
+    EGG_TIME_FEATURE_FIELDS = (
+        # Calendar/trend predictors let the model see direction and weekly rhythm.
+        'trend_day',
+        'weekday_sin',
+        'weekday_cos',
+    )
+    EGG_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_DERIVED_FEATURE_FIELDS + EGG_TIME_FEATURE_FIELDS
+    EGG_SAFE_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_TIME_FEATURE_FIELDS
+    EGG_DIAGNOSTIC_FEATURE_FIELDS = EGG_FEATURE_FIELDS
+    EGG_DATABASE_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_DERIVED_FEATURE_FIELDS
 
     @classmethod
     def periods_for_range(cls, range_key, custom_start=None, custom_end=None):
@@ -139,6 +156,7 @@ class ForecastingService:
                 prepared,
                 periods,
                 allow_seasonal=model_kind == 'egg',
+                compare_models=model_kind == 'egg',
                 forecast_start_date=forecast_start_date,
             )
             if not result['success']:
@@ -156,6 +174,9 @@ class ForecastingService:
                     baseline_rmse=cls._decimal_or_none(result.get('baseline_rmse'), 2),
                     aic_score=cls._decimal_or_none(result['aic_score'], 2),
                     arima_order=str(result['order']),
+                    feature_set=result.get('feature_set', ''),
+                    selection_metric=result.get('selection_metric', 'rolling_mae_mape'),
+                    comparison_summary=result.get('comparison_summary') or {},
                     training_rows=len(prepared['series']),
                     is_active=True,
                 )
@@ -203,51 +224,49 @@ class ForecastingService:
             HarvestForecast.objects.filter(flock=flock).delete()
 
     @classmethod
-    def _forecast_series(cls, prepared, periods, allow_seasonal=False, forecast_start_date=None):
+    def _forecast_series(cls, prepared, periods, allow_seasonal=False, compare_models=False, forecast_start_date=None):
         series = prepared['series']
-        exog = prepared['exog']
-        best = None
-        for spec in cls._candidate_model_specs(len(series), allow_seasonal):
-            try:
-                model = cls._fit_model(series.to_numpy(dtype=float), spec, exog=exog)
-                if best is None or model.aic < best['model'].aic:
-                    best = {'model': model, 'spec': spec}
-            except Exception:
-                logger.debug("Time-series model %s failed", spec, exc_info=True)
+        selection = cls._select_forecast_candidate(prepared, allow_seasonal=allow_seasonal, compare_models=compare_models)
+        best = selection['candidate'] if selection else None
 
         if best is None:
             return {'success': False, 'error': 'ARIMA could not fit this series'}
 
+        exog = cls._exog_for_candidate(prepared, best)
         future_exog = cls._future_exog(exog, periods)
         forecast_values, lower_values, upper_values = cls._forecast_values_with_intervals(
             best['model'],
             periods,
             future_exog=future_exog,
         )
-        metrics = cls._score_series(prepared, best['spec'])
-        fallback = cls._fallback_forecast_if_needed(
-            series,
-            forecast_values,
-            periods,
-            metrics['rmse'],
-            forecast_start_date=forecast_start_date,
-            exog=exog,
-        )
-        if fallback is not None:
-            return fallback
+        metrics = best.get('metrics') or cls._score_series(prepared, best['spec'], feature_set=best.get('feature_set', 'all'))
+        if not compare_models:
+            fallback = cls._fallback_forecast_if_needed(
+                series,
+                forecast_values,
+                periods,
+                metrics,
+                forecast_start_date=forecast_start_date,
+                exog=exog,
+            )
+            if fallback is not None:
+                return fallback
 
         return {
             'success': True,
             'forecasted_values': forecast_values,
             'lower_values': lower_values,
             'upper_values': upper_values,
-            'order': cls._format_model_spec(best['spec'], uses_exog=exog is not None),
+            'order': cls._format_candidate_label(best),
             'aic_score': float(best['model'].aic),
             'rmse': metrics['rmse'],
             'mae': metrics['mae'],
             'mape': metrics['mape'],
             'baseline_rmse': metrics['baseline_rmse'],
             'r_squared': metrics['r_squared'],
+            'feature_set': best.get('feature_set', ''),
+            'selection_metric': 'rolling_mae_mape' if compare_models else 'aic',
+            'comparison_summary': selection.get('comparison_summary') if selection else {},
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
 
@@ -266,17 +285,312 @@ class ForecastingService:
         return forecast_values, lower_values, upper_values
 
     @classmethod
-    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None, exog=None):
+    def _select_forecast_candidate(cls, prepared, allow_seasonal=False, compare_models=False):
+        series = prepared['series']
+        values = series.to_numpy(dtype=float)
+        if not compare_models:
+            return cls._select_lowest_aic_candidate(prepared, allow_seasonal)
+
+        candidates = cls._model_candidates(len(series), allow_seasonal)
+        comparison_candidates = []
+        forecast_candidates = []
+        for candidate in candidates:
+            metrics = cls._rolling_backtest(prepared, candidate)
+            if metrics.get('mae') is None:
+                continue
+            comparison_candidates.append({**candidate, 'metrics': metrics})
+            if candidate['kind'] == 'baseline' or candidate.get('feature_set') == 'diagnostic':
+                continue
+            try:
+                exog = cls._exog_for_candidate(prepared, candidate)
+                model = cls._fit_model(values, candidate['spec'], exog=exog)
+                candidate = {**candidate, 'model': model, 'metrics': metrics}
+                forecast_candidates.append(candidate)
+            except Exception:
+                logger.debug("Final model fit failed for %s", candidate, exc_info=True)
+
+        if not forecast_candidates:
+            return cls._select_lowest_aic_candidate(prepared, allow_seasonal)
+
+        best = min(
+            forecast_candidates,
+            key=lambda item: (
+                item['metrics']['mae'],
+                item['metrics']['mape'] if item['metrics'].get('mape') is not None else float('inf'),
+                item['metrics']['rmse'],
+            ),
+        )
+        return {
+            'candidate': best,
+            'comparison_summary': cls._comparison_summary(comparison_candidates, best),
+        }
+
+    @classmethod
+    def _select_lowest_aic_candidate(cls, prepared, allow_seasonal):
+        series = prepared['series']
+        values = series.to_numpy(dtype=float)
+        best = None
+        for candidate in cls._model_candidates(len(series), allow_seasonal):
+            if candidate['kind'] == 'baseline':
+                continue
+            try:
+                exog = cls._exog_for_candidate(prepared, candidate)
+                model = cls._fit_model(values, candidate['spec'], exog=exog)
+                if best is None or model.aic < best['model'].aic:
+                    best = {**candidate, 'model': model}
+            except Exception:
+                logger.debug("Time-series model %s failed", candidate, exc_info=True)
+        if best is None:
+            return None
+        best['metrics'] = cls._score_series(prepared, best['spec'], feature_set=best.get('feature_set', 'all'))
+        return {'candidate': best, 'comparison_summary': cls._comparison_summary([best], best)}
+
+    @classmethod
+    def _model_candidates(cls, series_length, allow_seasonal):
+        candidates = [
+            {'name': 'Seasonal Baseline', 'kind': 'baseline', 'spec': None, 'feature_set': 'none'},
+        ]
+        for spec in cls._candidate_model_specs(series_length, allow_seasonal):
+            candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none'})
+            if allow_seasonal:
+                candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe'})
+                candidates.append({'name': 'SARIMAX Diagnostic', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'diagnostic'})
+        return candidates
+
+    @classmethod
+    def _exog_for_candidate(cls, prepared, candidate):
+        feature_set = candidate.get('feature_set')
+        exog = prepared.get('exog')
+        if feature_set in (None, '', 'none') or exog is None:
+            return None
+        if feature_set == 'safe':
+            return cls._slice_exog(exog, cls.EGG_SAFE_FEATURE_FIELDS)
+        if feature_set == 'diagnostic':
+            return cls._slice_exog(exog, cls.EGG_DIAGNOSTIC_FEATURE_FIELDS)
+        return exog
+
+    @staticmethod
+    def _slice_exog(exog, columns):
+        selected_columns = [column for column in columns if column in exog.columns]
+        if not selected_columns:
+            return None
+        sliced = exog[selected_columns].copy()
+        sliced.attrs.update(exog.attrs)
+        if sliced.attrs.get('latest_source_values') is not None:
+            latest_values = sliced.attrs['latest_source_values']
+            sliced.attrs['latest_source_values'] = latest_values[[column for column in latest_values.index if column in selected_columns]]
+        return sliced
+
+    @classmethod
+    def _rolling_backtest(cls, prepared, candidate):
+        series = prepared['series']
+        values = series.to_numpy(dtype=float)
+        if candidate['kind'] == 'baseline':
+            return cls._seasonal_naive_metrics(series)
+        if len(values) < cls.MIN_POINTS + 7:
+            return cls._score_series(prepared, candidate['spec'], feature_set=candidate.get('feature_set', 'none'))
+
+        horizon = min(14, max(3, len(values) // 12))
+        min_train_size = max(cls.MIN_POINTS, min(90, len(values) // 2))
+        max_windows = 4
+        available_windows = max((len(values) - min_train_size) // horizon, 1)
+        window_count = min(max_windows, available_windows)
+        starts = [
+            len(values) - (window_count - index) * horizon
+            for index in range(window_count)
+        ]
+        actual_values = []
+        predicted_values = []
+        for test_start in starts:
+            train_values = values[:test_start]
+            test_values = values[test_start:test_start + horizon]
+            if len(test_values) < 2 or len(train_values) < cls.MIN_POINTS:
+                continue
+            try:
+                prediction = cls._candidate_backtest_prediction(prepared, candidate, train_values, test_start, len(test_values))
+            except Exception:
+                logger.debug("Rolling backtest failed for %s", candidate, exc_info=True)
+                continue
+            actual_values.extend(test_values.tolist())
+            predicted_values.extend(prediction.tolist())
+
+        if not actual_values:
+            return {
+                'rmse': None,
+                'mae': None,
+                'mape': None,
+                'baseline_rmse': None,
+                'r_squared': None,
+            }
+
+        metrics = cls._prediction_metrics(np.asarray(actual_values), np.asarray(predicted_values))
+        baseline_predictions = cls._rolling_baseline_predictions(values, starts, horizon)
+        baseline_metrics = cls._prediction_metrics(
+            np.asarray(actual_values),
+            np.asarray(baseline_predictions[:len(actual_values)]),
+        ) if baseline_predictions else {'rmse': None}
+        return {
+            'rmse': metrics['rmse'],
+            'mae': metrics['mae'],
+            'mape': metrics['mape'],
+            'baseline_rmse': baseline_metrics['rmse'],
+            'r_squared': metrics['r2'],
+            'windows': len(starts),
+        }
+
+    @classmethod
+    def _candidate_backtest_prediction(cls, prepared, candidate, train_values, test_start, test_size):
+        if candidate['kind'] == 'baseline':
+            return cls._seasonal_naive_from_train(train_values, test_size)
+
+        exog = cls._exog_for_candidate(prepared, candidate)
+        train_exog = exog.iloc[:test_start] if exog is not None else None
+        test_exog = exog.iloc[test_start:test_start + test_size] if exog is not None else None
+        model = cls._fit_model(train_values, candidate['spec'], exog=train_exog)
+        return np.asarray(model.forecast(steps=test_size, exog=test_exog), dtype=float)
+
+    @classmethod
+    def _rolling_baseline_predictions(cls, values, starts, horizon):
+        predictions = []
+        for test_start in starts:
+            train_values = values[:test_start]
+            test_size = min(horizon, len(values) - test_start)
+            if len(train_values) >= cls.MIN_POINTS and test_size > 0:
+                predictions.extend(cls._seasonal_naive_from_train(train_values, test_size).tolist())
+        return predictions
+
+    @classmethod
+    def _comparison_summary(cls, candidates, best):
+        summary = []
+        for candidate in sorted(
+            candidates,
+            key=lambda item: (
+                item.get('metrics', {}).get('mae') if item.get('metrics', {}).get('mae') is not None else float('inf'),
+                item.get('metrics', {}).get('mape') if item.get('metrics', {}).get('mape') is not None else float('inf'),
+            ),
+        )[:6]:
+            metrics = candidate.get('metrics') or {}
+            summary.append({
+                'name': candidate.get('name'),
+                'feature_set': candidate.get('feature_set', 'none'),
+                'order': cls._format_candidate_label(candidate),
+                'mae': cls._round_metric(metrics.get('mae')),
+                'mape': cls._round_metric(metrics.get('mape')),
+                'rmse': cls._round_metric(metrics.get('rmse')),
+                'winner': cls._same_candidate(candidate, best),
+            })
+        return {
+            'selected': cls._format_candidate_label(best),
+            'selected_name': best.get('name'),
+            'selected_feature_set': best.get('feature_set', 'none'),
+            'selection_metric': 'rolling MAE then MAPE',
+            'items': summary,
+            'cards': cls._comparison_cards(candidates, best),
+            'assumptions': cls._future_exog_assumptions(best),
+        }
+
+    @classmethod
+    def _comparison_cards(cls, candidates, best):
+        grouped = {}
+        for candidate in candidates:
+            key = cls._comparison_group(candidate)
+            metrics = candidate.get('metrics') or {}
+            if metrics.get('mae') is None:
+                continue
+            current = grouped.get(key)
+            if current is None or (
+                metrics.get('mae'),
+                metrics.get('mape') if metrics.get('mape') is not None else float('inf'),
+            ) < (
+                current.get('metrics', {}).get('mae'),
+                current.get('metrics', {}).get('mape') if current.get('metrics', {}).get('mape') is not None else float('inf'),
+            ):
+                grouped[key] = candidate
+
+        labels = [
+            ('baseline', 'Weekly Baseline', 'Simple repeat of recent weekly pattern'),
+            ('sarima', 'SARIMA', 'Uses production history and weekly seasonality'),
+            ('safe_sarimax', 'SARIMAX', 'Uses safe flock and calendar predictors'),
+            ('diagnostic_sarimax', 'Diagnostic SARIMAX', 'Tests lagged hen-day, hen-housed, and FCR separately'),
+        ]
+        cards = []
+        for key, label, description in labels:
+            candidate = grouped.get(key)
+            metrics = candidate.get('metrics') if candidate else {}
+            cards.append({
+                'key': key,
+                'label': label,
+                'description': description,
+                'order': cls._format_candidate_label(candidate) if candidate else 'Not enough data',
+                'mae': cls._round_metric(metrics.get('mae')) if metrics else None,
+                'mape': cls._round_metric(metrics.get('mape')) if metrics else None,
+                'rmse': cls._round_metric(metrics.get('rmse')) if metrics else None,
+                'winner': cls._same_candidate(candidate, best) if candidate else False,
+            })
+        return cards
+
+    @staticmethod
+    def _comparison_group(candidate):
+        if candidate.get('kind') == 'baseline':
+            return 'baseline'
+        if candidate.get('kind') == 'sarima':
+            return 'sarima'
+        if candidate.get('feature_set') == 'diagnostic':
+            return 'diagnostic_sarimax'
+        if candidate.get('feature_set') == 'safe':
+            return 'safe_sarimax'
+        return candidate.get('kind', 'other')
+
+    @classmethod
+    def _format_candidate_label(cls, candidate):
+        if candidate.get('kind') == 'baseline':
+            return 'Seasonal naive baseline'
+        return cls._format_model_spec(candidate['spec'], uses_exog=candidate.get('feature_set') not in ('none', None, ''))
+
+    @staticmethod
+    def _round_metric(value):
+        return round(float(value), 2) if value is not None else None
+
+    @staticmethod
+    def _same_candidate(left, right):
+        return (
+            left.get('name') == right.get('name')
+            and left.get('feature_set') == right.get('feature_set')
+            and left.get('spec') == right.get('spec')
+        )
+
+    @classmethod
+    def _future_exog_assumptions(cls, candidate):
+        if candidate.get('feature_set') == 'safe':
+            return [
+                'Age and calendar features continue naturally into future dates.',
+                'Live hen count, dead/cull count, and feed bags use the latest recorded conditions.',
+                'Derived production rates are not used for model selection to reduce target leakage.',
+            ]
+        if candidate.get('feature_set') == 'diagnostic':
+            return [
+                'Age and calendar features continue naturally into future dates.',
+                'Latest flock condition and lagged derived indicators are carried forward.',
+                'Hen-day, hen-housed, and FCR are diagnostic features and may be close to the target.',
+            ]
+        return [
+            'Forecast uses historical egg totals and weekly seasonality only.',
+            'No future flock-condition assumptions are required.',
+        ]
+
+    @classmethod
+    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None):
         if not len(forecast_values):
             return None
 
+        model_rmse = model_metrics.get('rmse') if model_metrics else None
         recent = series.tail(min(60, len(series))).to_numpy(dtype=float)
         recent_mean = float(np.mean(recent)) if len(recent) else 0
         unreasonable = cls._forecast_is_unreasonable(recent, forecast_values, exog)
         if unreasonable:
-            return cls._trend_seasonal_guard(series, periods, model_rmse, forecast_start_date)
+            return cls._trend_seasonal_guard(series, periods, model_metrics, forecast_start_date)
 
-        trend_fallback = cls._trend_forecast_if_model_is_flat(series, forecast_values, periods, model_rmse, forecast_start_date)
+        trend_fallback = cls._trend_forecast_if_model_is_flat(series, forecast_values, periods, model_metrics, forecast_start_date)
         if trend_fallback is not None:
             return trend_fallback
 
@@ -302,9 +616,9 @@ class ForecastingService:
             'order': 'seasonal naive baseline (7-day)',
             'aic_score': None,
             'rmse': baseline_rmse,
-            'mae': None,
-            'mape': None,
-            'baseline_rmse': baseline_rmse,
+            'mae': model_metrics.get('mae') if model_metrics else None,
+            'mape': model_metrics.get('mape') if model_metrics else None,
+            'baseline_rmse': model_metrics.get('baseline_rmse') if model_metrics else baseline_rmse,
             'r_squared': baseline_r2,
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
@@ -329,7 +643,8 @@ class ForecastingService:
         return False
 
     @classmethod
-    def _trend_seasonal_guard(cls, series, periods, model_rmse, forecast_start_date=None):
+    def _trend_seasonal_guard(cls, series, periods, model_metrics, forecast_start_date=None):
+        model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         window_size = min(45, len(values))
         recent = values[-window_size:]
@@ -356,20 +671,21 @@ class ForecastingService:
             'order': 'bounded trend + weekly seasonality guard',
             'aic_score': None,
             'rmse': interval_rmse,
-            'mae': None,
-            'mape': None,
-            'baseline_rmse': baseline_rmse,
+            'mae': model_metrics.get('mae') if model_metrics else None,
+            'mape': model_metrics.get('mape') if model_metrics else None,
+            'baseline_rmse': model_metrics.get('baseline_rmse') if model_metrics else baseline_rmse,
             'r_squared': baseline_r2,
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
 
     @classmethod
-    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_rmse, forecast_start_date=None):
+    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None):
+        model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         if len(values) < cls.MIN_POINTS:
             return None
 
-        window_size = min(30, len(values))
+        window_size = min(60 if periods >= 30 else 30, len(values))
         recent = values[-window_size:]
         recent_mean = float(np.mean(recent)) if len(recent) else 0
         if recent_mean <= 0:
@@ -390,8 +706,11 @@ class ForecastingService:
             else 0
         )
 
-        strong_recent_trend = abs(recent_change_pct) >= 12 and abs(slope) >= recent_mean * 0.005
-        model_is_flat = abs(forecast_change_pct) < max(3, abs(recent_change_pct) * 0.25)
+        strong_recent_trend = (
+            abs(recent_change_pct) >= 8
+            or (abs(recent_change_pct) >= 5 and abs(slope) >= recent_mean * 0.001)
+        )
+        model_is_flat = abs(forecast_change_pct) < max(2, abs(recent_change_pct) * 0.10)
         model_opposes_trend = slope and forecast_slope and np.sign(slope) != np.sign(forecast_slope)
         if not strong_recent_trend or not (model_is_flat or model_opposes_trend):
             return None
@@ -411,9 +730,9 @@ class ForecastingService:
             'order': 'trend-adjusted ARIMA fallback',
             'aic_score': None,
             'rmse': trend_rmse if trend_rmse is not None else model_rmse,
-            'mae': None,
-            'mape': None,
-            'baseline_rmse': None,
+            'mae': model_metrics.get('mae') if model_metrics else None,
+            'mape': model_metrics.get('mape') if model_metrics else None,
+            'baseline_rmse': model_metrics.get('baseline_rmse') if model_metrics else None,
             'r_squared': trend_r2,
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
@@ -478,9 +797,34 @@ class ForecastingService:
         return rmse, r_squared
 
     @classmethod
-    def _score_series(cls, prepared, spec):
+    def _seasonal_naive_metrics(cls, series):
+        values = series.to_numpy(dtype=float)
+        test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
+        if len(values) <= cls.SEASONAL_PERIOD or test_size <= 0:
+            return {
+                'rmse': None,
+                'mae': None,
+                'mape': None,
+                'baseline_rmse': None,
+                'r_squared': None,
+            }
+
+        train = values[:-test_size]
+        test = values[-test_size:]
+        predictions = cls._seasonal_naive_from_train(train, test_size)
+        metrics = cls._prediction_metrics(test, predictions)
+        return {
+            'rmse': metrics['rmse'],
+            'mae': metrics['mae'],
+            'mape': metrics['mape'],
+            'baseline_rmse': metrics['rmse'],
+            'r_squared': metrics['r2'],
+        }
+
+    @classmethod
+    def _score_series(cls, prepared, spec, feature_set='all'):
         series = prepared['series']
-        exog = prepared['exog']
+        exog = cls._exog_for_candidate(prepared, {'spec': spec, 'feature_set': feature_set})
         values = series.to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
         empty = {
@@ -531,22 +875,24 @@ class ForecastingService:
     @classmethod
     def _evaluate_series(cls, prepared, allow_seasonal=False):
         series = prepared['series']
-        exog = prepared['exog']
         values = series.to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
         train = values[:-test_size]
         test = values[-test_size:]
-        train_exog = exog.iloc[:-test_size] if exog is not None else None
-        test_exog = exog.iloc[-test_size:] if exog is not None else None
 
         best = None
-        for spec in cls._candidate_model_specs(len(train), allow_seasonal):
+        for candidate in cls._model_candidates(len(train), allow_seasonal):
             try:
-                model = cls._fit_model(train, spec, exog=train_exog)
-                if best is None or model.aic < best['model'].aic:
-                    best = {'model': model, 'spec': spec}
+                metrics = cls._rolling_backtest(prepared, candidate)
+                if metrics.get('mae') is None:
+                    continue
+                if best is None or (metrics['mae'], metrics.get('mape') or float('inf')) < (
+                    best['metrics']['mae'],
+                    best['metrics'].get('mape') or float('inf'),
+                ):
+                    best = {**candidate, 'metrics': metrics}
             except Exception:
-                logger.debug("Evaluation model %s failed", spec, exc_info=True)
+                logger.debug("Evaluation model %s failed", candidate, exc_info=True)
 
         if best is None:
             return {
@@ -554,10 +900,8 @@ class ForecastingService:
                 'error': 'ARIMA could not fit this series',
             }
 
-        arima_predictions = np.asarray(best['model'].forecast(steps=test_size, exog=test_exog), dtype=float)
-        baseline_predictions = np.repeat(train[-1], test_size)
-
-        arima_metrics = cls._prediction_metrics(test, arima_predictions)
+        arima_metrics = best['metrics']
+        baseline_predictions = cls._seasonal_naive_from_train(train, test_size)
         baseline_metrics = cls._prediction_metrics(test, baseline_predictions)
         arima_beats_baseline = arima_metrics['rmse'] < baseline_metrics['rmse']
 
@@ -565,8 +909,8 @@ class ForecastingService:
             'success': True,
             'rows': len(values),
             'test_rows': test_size,
-            'model_order': cls._format_model_spec(best['spec'], uses_exog=exog is not None),
-            'uses_features': exog is not None,
+            'model_order': cls._format_candidate_label(best),
+            'uses_features': best.get('feature_set') not in ('none', None, ''),
             'arima': arima_metrics,
             'baseline': baseline_metrics,
             'winner': 'ARIMA' if arima_beats_baseline else 'Baseline',
@@ -679,7 +1023,7 @@ class ForecastingService:
 
         aggregations = {'value': lambda values: values.sum(min_count=1)}
         if use_exog:
-            for field_name in cls.EGG_FEATURE_FIELDS:
+            for field_name in cls.EGG_DATABASE_FEATURE_FIELDS:
                 if field_name in df.columns:
                     df[field_name] = pd.to_numeric(df[field_name], errors='coerce')
                     aggregations[field_name] = 'mean'
@@ -687,6 +1031,8 @@ class ForecastingService:
         df = df.groupby('date', as_index=True).agg(aggregations).sort_index()
         df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
         df = df.interpolate(method='time').ffill().bfill()
+        if use_exog:
+            cls._add_egg_time_features(df)
 
         if len(df) < cls.MIN_POINTS or df['value'].isna().all():
             return None
@@ -694,16 +1040,52 @@ class ForecastingService:
         exog = None
         feature_columns = [field for field in cls.EGG_FEATURE_FIELDS if field in df.columns]
         if use_exog and feature_columns:
-            exog = df[feature_columns].shift(1).ffill().bfill()
+            source_columns = [field for field in cls.EGG_DATABASE_FEATURE_FIELDS if field in df.columns]
+            time_columns = [field for field in cls.EGG_TIME_FEATURE_FIELDS if field in df.columns]
+            lagged_sources = df[source_columns].shift(1).ffill().bfill()
+            exog = pd.concat([lagged_sources, df[time_columns]], axis=1)[feature_columns]
+            exog.attrs['last_date'] = df.index.max()
+            exog.attrs['latest_source_values'] = df[source_columns].iloc[-1].copy() if source_columns else None
 
         return {'series': df['value'], 'exog': exog}
 
     @staticmethod
-    def _future_exog(exog, periods):
+    def _add_egg_time_features(df):
+        trend = np.arange(len(df), dtype=float)
+        weekdays = df.index.dayofweek.to_numpy(dtype=float)
+        df['trend_day'] = trend
+        df['weekday_sin'] = np.sin(2 * np.pi * weekdays / 7)
+        df['weekday_cos'] = np.cos(2 * np.pi * weekdays / 7)
+
+    @classmethod
+    def _future_exog(cls, exog, periods):
         if exog is None:
             return None
-        last_row = exog.iloc[[-1]]
-        return pd.concat([last_row] * periods, ignore_index=True)
+        last_values = exog.iloc[-1].copy()
+        latest_source_values = exog.attrs.get('latest_source_values')
+        last_date = exog.attrs.get('last_date')
+        future_rows = []
+        for step in range(1, periods + 1):
+            row = last_values.copy()
+            if latest_source_values is not None:
+                for field_name, value in latest_source_values.items():
+                    if field_name in row:
+                        row[field_name] = value
+            if 'trend_day' in row:
+                row['trend_day'] = float(last_values['trend_day']) + step
+            if 'age_days' in row:
+                row['age_days'] = float(last_values['age_days']) + step
+            if 'age_weeks' in row and 'age_days' in row:
+                row['age_weeks'] = int(row['age_days'] // 7)
+            if last_date is not None:
+                forecast_date = last_date + pd.Timedelta(days=step)
+                weekday = float(forecast_date.dayofweek)
+                if 'weekday_sin' in row:
+                    row['weekday_sin'] = np.sin(2 * np.pi * weekday / cls.SEASONAL_PERIOD)
+                if 'weekday_cos' in row:
+                    row['weekday_cos'] = np.cos(2 * np.pi * weekday / cls.SEASONAL_PERIOD)
+            future_rows.append(row)
+        return pd.DataFrame(future_rows, columns=exog.columns)
 
     @classmethod
     def _egg_series_map(cls, flock):
@@ -714,10 +1096,15 @@ class ForecastingService:
         return (
             ProductionLog.objects.filter(flock=flock)
             .values(
+                'age_weeks',
+                'age_days',
                 'hen_count',
                 'dead_count',
                 'culled_count',
                 'feed_bags',
+                'pct_hen_day',
+                'pct_hen_housed',
+                'fcr',
                 date=models.F('log_date'),
             )
             .annotate(value=models.Sum('eggs_total'))

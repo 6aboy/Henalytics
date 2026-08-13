@@ -153,7 +153,13 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Model Used</div>
-                    <div class="metric-value">{% if latest_model %}SARIMA{% else %}N/A{% endif %}</div>
+                    <div class="metric-value">
+                        {% if latest_model %}
+                            {% if latest_model.feature_set and latest_model.feature_set != 'none' %}SARIMAX{% else %}SARIMA{% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
                     <div class="metric-meta">{% if latest_model %}{{ latest_model.arima_order|default:"Seasonal ARIMA" }}{% else %}Generate a forecast first{% endif %}</div>
                 </div>
                 <span class="metric-icon blue">
@@ -197,6 +203,50 @@
         </div>
     </div>
 </section>
+
+{% if model_comparison %}
+<section class="analytics-section">
+    <div class="section-heading">
+        <div>
+            <h2>Model Comparison</h2>
+            <p>Rolling backtesting compares candidate models and selects the production forecast by lowest MAE, then MAPE.</p>
+        </div>
+        <span>{{ model_comparison.selection_metric|default:"rolling MAE then MAPE" }}</span>
+    </div>
+    <div class="forecast-cards">
+        {% for card in model_comparison.cards %}
+        <div class="metric-card {% if card.winner %}analytics-insight-card good{% endif %}">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">{{ card.label }}{% if card.winner %} Selected{% endif %}</div>
+                    <div class="metric-value">{% if card.mae %}{{ card.mae }}{% else %}N/A{% endif %}</div>
+                    <div class="metric-meta">
+                        MAE{% if card.mape %} | MAPE {{ card.mape }}%{% endif %}
+                    </div>
+                </div>
+                <span class="metric-icon {% if card.winner %}success{% else %}blue{% endif %}">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+            <p class="metric-meta">{{ card.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="action-panel analytics-conclusion">
+        <div>
+            <h2 class="detail-title">Forecast Assumptions</h2>
+            <div class="detail-subtitle">
+                Future exogenous values must be known or assumed; these are the assumptions used by the selected model.
+            </div>
+        </div>
+        <ul class="analytics-notes">
+            {% for assumption in model_comparison.assumptions %}
+            <li>{{ assumption }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endif %}
 
 <section class="analytics-section">
     <div class="section-heading">

@@ -1256,6 +1256,9 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         flock_id = self.request.GET.get('flock_id')
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
+        latest_actual_date = self._latest_actual_date_for_request()
+        if latest_actual_date:
+            qs = qs.filter(forecast_date__gte=latest_actual_date + timedelta(days=1))
         periods = self._get_display_periods(self.request)
         first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
         if first_date:
@@ -1279,6 +1282,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         forecast_start_row = forecasts.order_by('forecast_date').first()
         if forecast_start_row:
             actual_chart_start = forecast_start_row.forecast_date - timedelta(days=self._history_days_for_horizon(selected_periods))
+        elif self._latest_actual_date_for_request():
+            actual_chart_start = self._latest_actual_date_for_request() - timedelta(days=self._history_days_for_horizon(selected_periods))
         else:
             actual_chart_start = timezone.localdate() - timedelta(days=self._history_days_for_horizon(selected_periods))
         chart_logs = production_logs.filter(log_date__gte=actual_chart_start)
@@ -1307,6 +1312,7 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             .distinct()
             .first()
         )
+        model_comparison = latest_model.comparison_summary if latest_model and latest_model.comparison_summary else {}
         context.update({
             'flocks': Flock.objects.filter(status='active').order_by('house_no'),
             'selected_flock_id': flock_id,
@@ -1325,11 +1331,21 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             'forecast_peak': forecasts.order_by('-predicted_qty').first(),
             'run_summary': run_summary,
             'latest_model': latest_model,
+            'model_comparison': model_comparison,
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'hen_payload_json': json.dumps(hen_payload),
             'egg_insights': egg_insights,
         })
         return context
+
+    def _latest_actual_date_for_request(self):
+        production_logs = ProductionLog.objects.all()
+        flock_id = self.request.GET.get('flock_id')
+        if flock_id:
+            production_logs = production_logs.filter(flock_id=flock_id)
+        else:
+            production_logs = production_logs.filter(flock__status='active')
+        return production_logs.order_by('-log_date').values_list('log_date', flat=True).first()
 
     @staticmethod
     def _range_options():

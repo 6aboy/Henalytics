@@ -313,7 +313,20 @@ class ForecastModelTest(TestCase):
     def test_egg_sarimax_features_match_notebook_predictors(self):
         self.assertEqual(
             ForecastingService.EGG_FEATURE_FIELDS,
-            ('hen_count', 'dead_count', 'culled_count', 'feed_bags'),
+            (
+                'age_weeks',
+                'age_days',
+                'hen_count',
+                'dead_count',
+                'culled_count',
+                'feed_bags',
+                'pct_hen_day',
+                'pct_hen_housed',
+                'fcr',
+                'trend_day',
+                'weekday_sin',
+                'weekday_cos',
+            ),
         )
         self.assertEqual(ForecastingService.SEASONAL_PERIOD, 7)
 
@@ -331,6 +344,7 @@ class ForecastModelTest(TestCase):
                 'age_days': 210 + day,
                 'pct_hen_day': Decimal('78.00'),
                 'pct_hen_housed': Decimal('77.00'),
+                'fcr': Decimal('7.500'),
             })
 
         prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True)
@@ -338,7 +352,20 @@ class ForecastModelTest(TestCase):
         self.assertIsNotNone(prepared)
         self.assertEqual(
             list(prepared['exog'].columns),
-            ['hen_count', 'dead_count', 'culled_count', 'feed_bags'],
+            [
+                'age_weeks',
+                'age_days',
+                'hen_count',
+                'dead_count',
+                'culled_count',
+                'feed_bags',
+                'pct_hen_day',
+                'pct_hen_housed',
+                'fcr',
+                'trend_day',
+                'weekday_sin',
+                'weekday_cos',
+            ],
         )
 
 
@@ -744,6 +771,63 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'Generating egg forecast')
         self.assertContains(response, 'do not close the system')
+
+    def test_forecast_chart_uses_latest_actual_date_for_all_active_flocks(self):
+        admin = User.objects.create_user(username='forecastfreshadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        self.client.force_login(admin)
+        older_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=500))
+        newer_flock = create_flock(house_no=3, date_started=timezone.localdate() - timedelta(days=120))
+        old_actual_date = timezone.localdate() - timedelta(days=320)
+        latest_actual_date = timezone.localdate() - timedelta(days=30)
+
+        ProductionLog.objects.create(
+            flock=older_flock,
+            log_date=old_actual_date,
+            age_weeks=0,
+            age_days=0,
+            hen_count=1800,
+            feed_bags=12,
+            eggs_total=1500,
+            pct_hen_day=Decimal('80.00'),
+            pct_hen_housed=Decimal('80.00'),
+            entered_by=admin,
+        )
+        ProductionLog.objects.create(
+            flock=newer_flock,
+            log_date=latest_actual_date,
+            age_weeks=0,
+            age_days=0,
+            hen_count=1800,
+            feed_bags=12,
+            eggs_total=1300,
+            pct_hen_day=Decimal('72.22'),
+            pct_hen_housed=Decimal('72.22'),
+            entered_by=admin,
+        )
+        older_model = ModelVersion.objects.create(model_type='arima', triggered_by=admin)
+        newer_model = ModelVersion.objects.create(model_type='arima', triggered_by=admin)
+        HarvestForecast.objects.create(
+            flock=older_flock,
+            model_version=older_model,
+            forecast_date=old_actual_date + timedelta(days=1),
+            grade='overall',
+            predicted_qty=1510,
+        )
+        HarvestForecast.objects.create(
+            flock=newer_flock,
+            model_version=newer_model,
+            forecast_date=latest_actual_date + timedelta(days=1),
+            grade='overall',
+            predicted_qty=1290,
+        )
+
+        response = self.client.get(reverse('eggproduction:harvest-forecast-list'), {'range': 'month'})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.context['actual_forecast_payload_json']
+        self.assertIn((latest_actual_date + timedelta(days=1)).isoformat(), payload)
+        self.assertNotIn((old_actual_date + timedelta(days=1)).isoformat(), payload)
 
     def test_forecast_success_message_renders_status_card(self):
         admin = User.objects.create_user(username='forecastcardadmin', password='pass12345')
