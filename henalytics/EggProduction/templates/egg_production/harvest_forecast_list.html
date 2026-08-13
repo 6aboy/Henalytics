@@ -164,10 +164,10 @@
         <div class="metric-card">
             <div class="metric-card-main">
                 <div>
-                    <div class="metric-label">Backtest Error</div>
-                    <div class="metric-value">{% if latest_model and latest_model.rmse %}{{ latest_model.rmse }}{% else %}N/A{% endif %}</div>
+                    <div class="metric-label">Forecast Error Rate</div>
+                    <div class="metric-value">{% if latest_model and latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
                     <div class="metric-meta">
-                        RMSE{% if latest_model and latest_model.mae %} | MAE {{ latest_model.mae }}{% endif %}{% if latest_model and latest_model.mape %} | MAPE {{ latest_model.mape }}%{% endif %}
+                        {% if latest_model and latest_model.mae %}Typical miss: about {{ latest_model.mae }} eggs/day{% else %}Backtest needs enough history{% endif %}
                     </div>
                 </div>
                 <span class="metric-icon warning">
@@ -187,7 +187,7 @@
                         {% endif %}
                     </div>
                     <div class="metric-meta">
-                        {% if latest_model and latest_model.baseline_rmse %}Baseline RMSE {{ latest_model.baseline_rmse }}{% else %}Needs enough history{% endif %}
+                        {% if latest_model and latest_model.baseline_rmse %}Compared with a simple weekly repeat forecast{% else %}Needs enough history{% endif %}
                     </div>
                 </div>
                 <span class="metric-icon {% if latest_model and latest_model.baseline_rmse and latest_model.rmse and latest_model.rmse < latest_model.baseline_rmse %}success{% else %}danger{% endif %}">
