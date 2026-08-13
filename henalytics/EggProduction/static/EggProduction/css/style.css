@@ -1296,6 +1296,29 @@ input[readonly].readonly-metric {
     margin-bottom: 16px;
 }
 
+.forecast-run-status {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 520px;
+    margin: 0 0 20px;
+    padding: 16px 18px;
+    border-left: 4px solid var(--hen-blue);
+}
+
+.forecast-run-status .metric-icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+}
+
+.forecast-run-status-text {
+    color: #1f3763;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
 .forecast-toolbar {
     display: grid;
     grid-template-columns: minmax(180px, 1.3fr) repeat(4, minmax(130px, 1fr)) auto;

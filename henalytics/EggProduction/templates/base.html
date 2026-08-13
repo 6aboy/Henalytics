@@ -108,7 +108,20 @@
                 {% if messages %}
                 <div class="message-stack">
                     {% for message in messages %}
+                    {% if 'forecast-run-card' in message.tags %}
+                    <section class="forecast-run-status action-panel">
+                        <span class="metric-icon blue">
+                            <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                        </span>
+                        <div>
+                            <div class="metric-label">Latest Forecast Run</div>
+                            <div class="forecast-run-status-text">{{ message }}</div>
+                            <div class="metric-meta">Generated {% now "M d, Y g:i A" %}</div>
+                        </div>
+                    </section>
+                    {% else %}
                     <div class="alert {% if 'success' in message.tags %}alert-success{% elif 'error' in message.tags %}alert-danger{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %} {{ message.tags|default:'info' }}">{{ message }}</div>
+                    {% endif %}
                     {% endfor %}
                 </div>
                 {% endif %}

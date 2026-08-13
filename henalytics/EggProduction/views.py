@@ -1230,7 +1230,11 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
 
         if total_created:
-            messages.success(request, f'Generated {total_created} egg forecast rows for the next {periods} day{"s" if periods != 1 else ""}.')
+            messages.success(
+                request,
+                f'Generated {total_created} egg forecast rows for the next {periods} day{"s" if periods != 1 else ""}.',
+                extra_tags='forecast-run-card',
+            )
         if errors:
             messages.warning(request, '; '.join(errors[:3]))
         redirect_url = reverse_lazy('eggproduction:harvest-forecast-list')
@@ -1547,7 +1551,11 @@ class ExperimentalForecastingView(AdminAccessMixin, TemplateView):
             errors.extend([f'House {flock.house_no}: {error}' for error in result['errors']])
 
         if created_count:
-            messages.success(request, f'Generated {created_count} database forecast rows.', extra_tags='swal')
+            messages.success(
+                request,
+                f'Generated {created_count} database forecast rows.',
+                extra_tags='forecast-run-card',
+            )
         if errors:
             messages.warning(request, '; '.join(errors[:3]), extra_tags='swal')
 
@@ -1660,7 +1668,11 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         )
 
         if result['success']:
-            messages.success(request, f'Generated {result["created_count"]} sales revenue forecast rows for the next {periods} day{"s" if periods != 1 else ""}.')
+            messages.success(
+                request,
+                f'Generated {result["created_count"]} sales revenue forecast rows for the next {periods} day{"s" if periods != 1 else ""}.',
+                extra_tags='forecast-run-card',
+            )
         if result['errors']:
             messages.warning(request, '; '.join(result['errors'][:3]))
         redirect_url = reverse_lazy('eggproduction:sales-forecast-list')

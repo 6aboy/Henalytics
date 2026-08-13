@@ -1,7 +1,9 @@
 from decimal import Decimal
 from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth.models import User
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -21,7 +23,7 @@ from .models import (
 )
 from .forecasting_service import ForecastingService
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
-from .views import build_actual_vs_forecast_payload
+from .views import DashboardView, build_actual_vs_forecast_payload
 
 
 def create_flock(**overrides):
@@ -742,6 +744,27 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'Generating egg forecast')
         self.assertContains(response, 'do not close the system')
+
+    def test_forecast_success_message_renders_status_card(self):
+        admin = User.objects.create_user(username='forecastcardadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        request = self.client.request().wsgi_request
+        request.user = admin
+        request.session = self.client.session
+        setattr(request, '_messages', FallbackStorage(request))
+        messages.success(
+            request,
+            'Generated 21 egg forecast rows for the next 21 days.',
+            extra_tags='forecast-run-card',
+        )
+
+        response = DashboardView.as_view()(request)
+        response.render()
+
+        self.assertContains(response, 'forecast-run-status')
+        self.assertContains(response, 'Latest Forecast Run')
+        self.assertContains(response, 'Generated 21 egg forecast rows for the next 21 days.')
+        self.assertNotContains(response, '<div class="alert alert-success')
 
     def test_sales_forecast_page_opens_with_forecast_tabs(self):
         admin = User.objects.create_superuser(
