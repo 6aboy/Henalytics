@@ -1026,7 +1026,11 @@ input[readonly].readonly-metric {
 
 .table thead th.no-export,
 .table tbody td.no-export {
-    min-width: 120px;
+    min-width: 132px;
+}
+
+.table tbody td.no-export {
+    white-space: nowrap;
 }
 
 .table tfoot th,
@@ -1050,11 +1054,27 @@ input[readonly].readonly-metric {
 }
 
 .table .btn-sm {
-    min-width: 68px;
-    padding: 4px 13px;
-    font-size: 17px;
+    min-width: 44px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
     line-height: 1.2;
     color: #fff;
+}
+
+.table tbody td.no-export .btn-sm,
+.table tbody td.no-export form {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.table tbody td.no-export .btn-sm {
+    justify-content: center;
+}
+
+.table tbody td.no-export .btn-sm + .btn-sm,
+.table tbody td.no-export form {
+    margin-left: 4px;
 }
 
 .dataTables_wrapper {
