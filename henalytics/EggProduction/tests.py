@@ -263,6 +263,10 @@ class ForecastModelTest(TestCase):
         self.assertFalse(HarvestForecast.objects.exclude(grade='overall').exists())
         self.assertTrue(SalesForecast.objects.filter(grade='overall', predicted_amount__gt=0).exists())
         self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
+        sales_model = ModelVersion.objects.filter(sales_forecasts__isnull=False).first()
+        self.assertIsNotNone(sales_model)
+        self.assertIn('cards', sales_model.comparison_summary)
+        self.assertEqual(sales_model.selection_metric, 'rolling_mae_mape')
 
     def test_forecast_evaluation_compares_against_baseline(self):
         flock = create_flock(date_started=timezone.now().date() - timedelta(days=40))
@@ -367,6 +371,40 @@ class ForecastModelTest(TestCase):
                 'weekday_cos',
             ],
         )
+
+    def test_sales_sarimax_features_use_lagged_sales_predictors(self):
+        self.assertEqual(
+            ForecastingService.SALES_FEATURE_FIELDS,
+            (
+                'quantity_pieces',
+                'avg_unit_price',
+                'transaction_count',
+                'trend_day',
+                'weekday_sin',
+                'weekday_cos',
+                'month_sin',
+                'month_cos',
+            ),
+        )
+
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(12):
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': 1500 + (day * 20),
+                'quantity_pieces': 100 + day,
+                'avg_unit_price': Decimal('15.00'),
+                'transaction_count': 1 + (day % 2),
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True, dataset_kind='sales')
+
+        self.assertIsNotNone(prepared)
+        self.assertEqual(prepared['dataset_kind'], 'sales')
+        self.assertEqual(list(prepared['exog'].columns), list(ForecastingService.SALES_FEATURE_FIELDS))
+        self.assertEqual(prepared['exog'].iloc[1]['quantity_pieces'], 100)
+        self.assertIn('month_sin', prepared['exog'].columns)
 
 
 class APIAuthenticationTest(APITestCase):

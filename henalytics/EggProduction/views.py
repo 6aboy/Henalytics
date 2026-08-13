@@ -1999,6 +1999,7 @@ class SalesForecastListView(AdminAccessMixin, ListView):
             .distinct()
             .first()
         )
+        model_comparison = latest_model.comparison_summary if latest_model and latest_model.comparison_summary else {}
         context.update({
             'range_options': HarvestForecastListView._range_options(),
             'selected_range': selected_range,
@@ -2020,6 +2021,7 @@ class SalesForecastListView(AdminAccessMixin, ListView):
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'sales_insights': sales_insights,
             'latest_model': latest_model,
+            'model_comparison': model_comparison,
         })
         return context
 

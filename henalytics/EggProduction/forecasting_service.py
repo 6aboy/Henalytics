@@ -68,6 +68,23 @@ class ForecastingService:
     EGG_SAFE_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_TIME_FEATURE_FIELDS
     EGG_DIAGNOSTIC_FEATURE_FIELDS = EGG_FEATURE_FIELDS
     EGG_DATABASE_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_DERIVED_FEATURE_FIELDS
+    SALES_SOURCE_FEATURE_FIELDS = (
+        # Lagged sales predictors: known historical behavior carried into the forecast.
+        'quantity_pieces',
+        'avg_unit_price',
+        'transaction_count',
+    )
+    SALES_TIME_FEATURE_FIELDS = (
+        # Calendar/trend predictors help revenue models see weekday and monthly rhythm.
+        'trend_day',
+        'weekday_sin',
+        'weekday_cos',
+        'month_sin',
+        'month_cos',
+    )
+    SALES_FEATURE_FIELDS = SALES_SOURCE_FEATURE_FIELDS + SALES_TIME_FEATURE_FIELDS
+    SALES_SAFE_FEATURE_FIELDS = SALES_FEATURE_FIELDS
+    SALES_DATABASE_FEATURE_FIELDS = SALES_SOURCE_FEATURE_FIELDS
 
     @classmethod
     def periods_for_range(cls, range_key, custom_start=None, custom_end=None):
@@ -97,12 +114,16 @@ class ForecastingService:
         series_map = {'overall': cls._sales_amount_series()}
         if include_sizes:
             series_map.update(cls._sales_amount_series_by_grade())
+        forecast_start_date = cls._latest_sales_date()
+        if forecast_start_date:
+            forecast_start_date += timedelta(days=1)
 
         return cls._generate_series_forecasts(
             series_map=series_map,
             periods=periods,
             user=user,
             model_kind='sales',
+            forecast_start_date=forecast_start_date,
         )
 
     @classmethod
@@ -132,7 +153,7 @@ class ForecastingService:
         series_map = {'overall': cls._sales_amount_series()}
         if include_sizes:
             series_map.update(cls._sales_amount_series_by_grade())
-        return cls._evaluate_series_map(series_map, allow_seasonal=False, use_exog=False)
+        return cls._evaluate_series_map(series_map, allow_seasonal=True, use_exog=True, dataset_kind='sales')
 
     @classmethod
     def _generate_series_forecasts(cls, series_map, periods, user, model_kind, flock=None, forecast_start_date=None):
@@ -144,7 +165,7 @@ class ForecastingService:
         cls._clear_previous_forecasts(model_kind, flock)
 
         for grade, series in series_map.items():
-            prepared = cls._prepare_daily_dataset(series, use_exog=model_kind == 'egg')
+            prepared = cls._prepare_daily_dataset(series, use_exog=model_kind in ('egg', 'sales'), dataset_kind=model_kind)
             if prepared is None:
                 errors.append(f'{grade}: at least {cls.MIN_POINTS} dated records are required')
                 continue
@@ -155,8 +176,8 @@ class ForecastingService:
             result = cls._forecast_series(
                 prepared,
                 periods,
-                allow_seasonal=model_kind == 'egg',
-                compare_models=model_kind == 'egg',
+                allow_seasonal=model_kind in ('egg', 'sales'),
+                compare_models=model_kind in ('egg', 'sales'),
                 forecast_start_date=forecast_start_date,
             )
             if not result['success']:
@@ -291,7 +312,7 @@ class ForecastingService:
         if not compare_models:
             return cls._select_lowest_aic_candidate(prepared, allow_seasonal)
 
-        candidates = cls._model_candidates(len(series), allow_seasonal)
+        candidates = cls._model_candidates(len(series), allow_seasonal, prepared.get('dataset_kind', 'egg'))
         comparison_candidates = []
         forecast_candidates = []
         for candidate in candidates:
@@ -330,7 +351,7 @@ class ForecastingService:
         series = prepared['series']
         values = series.to_numpy(dtype=float)
         best = None
-        for candidate in cls._model_candidates(len(series), allow_seasonal):
+        for candidate in cls._model_candidates(len(series), allow_seasonal, prepared.get('dataset_kind', 'egg')):
             if candidate['kind'] == 'baseline':
                 continue
             try:
@@ -346,15 +367,17 @@ class ForecastingService:
         return {'candidate': best, 'comparison_summary': cls._comparison_summary([best], best)}
 
     @classmethod
-    def _model_candidates(cls, series_length, allow_seasonal):
+    def _model_candidates(cls, series_length, allow_seasonal, dataset_kind='egg'):
         candidates = [
-            {'name': 'Seasonal Baseline', 'kind': 'baseline', 'spec': None, 'feature_set': 'none'},
+            {'name': 'Seasonal Baseline', 'kind': 'baseline', 'spec': None, 'feature_set': 'none', 'dataset_kind': dataset_kind},
         ]
+        feature_profiles = ['safe', 'diagnostic'] if dataset_kind == 'egg' else ['safe']
         for spec in cls._candidate_model_specs(series_length, allow_seasonal):
-            candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none'})
-            if allow_seasonal:
-                candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe'})
-                candidates.append({'name': 'SARIMAX Diagnostic', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'diagnostic'})
+            candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none', 'dataset_kind': dataset_kind})
+            if allow_seasonal and 'safe' in feature_profiles:
+                candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe', 'dataset_kind': dataset_kind})
+            if allow_seasonal and 'diagnostic' in feature_profiles:
+                candidates.append({'name': 'SARIMAX Diagnostic', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'diagnostic', 'dataset_kind': dataset_kind})
         return candidates
 
     @classmethod
@@ -364,6 +387,8 @@ class ForecastingService:
         if feature_set in (None, '', 'none') or exog is None:
             return None
         if feature_set == 'safe':
+            if prepared.get('dataset_kind') == 'sales':
+                return cls._slice_exog(exog, cls.SALES_SAFE_FEATURE_FIELDS)
             return cls._slice_exog(exog, cls.EGG_SAFE_FEATURE_FIELDS)
         if feature_set == 'diagnostic':
             return cls._slice_exog(exog, cls.EGG_DIAGNOSTIC_FEATURE_FIELDS)
@@ -509,9 +534,9 @@ class ForecastingService:
 
         labels = [
             ('baseline', 'Weekly Baseline', 'Simple repeat of recent weekly pattern'),
-            ('sarima', 'SARIMA', 'Uses production history and weekly seasonality'),
-            ('safe_sarimax', 'SARIMAX', 'Uses safe flock and calendar predictors'),
-            ('diagnostic_sarimax', 'Diagnostic SARIMAX', 'Tests lagged hen-day, hen-housed, and FCR separately'),
+            ('sarima', 'SARIMA', 'Uses historical values and weekly seasonality'),
+            ('safe_sarimax', 'SARIMAX', 'Uses lagged operational predictors plus calendar rhythm'),
+            ('diagnostic_sarimax', 'Diagnostic SARIMAX', 'Tests lagged derived performance indicators separately'),
         ]
         cards = []
         for key, label, description in labels:
@@ -561,6 +586,17 @@ class ForecastingService:
 
     @classmethod
     def _future_exog_assumptions(cls, candidate):
+        if candidate.get('dataset_kind') == 'sales' and candidate.get('feature_set') == 'safe':
+            return [
+                'Sales quantity, average unit price, and transaction count use the latest known historical behavior.',
+                'Weekday, month cycle, and trend features continue naturally into future dates.',
+                'Same-day sales quantity is not used directly, reducing target leakage.',
+            ]
+        if candidate.get('dataset_kind') == 'sales':
+            return [
+                'Forecast uses historical sales revenue and weekly seasonality only.',
+                'No future sales-volume assumptions are required.',
+            ]
         if candidate.get('feature_set') == 'safe':
             return [
                 'Age and calendar features continue naturally into future dates.',
@@ -855,10 +891,10 @@ class ForecastingService:
             return empty
 
     @classmethod
-    def _evaluate_series_map(cls, series_map, allow_seasonal=False, use_exog=False):
+    def _evaluate_series_map(cls, series_map, allow_seasonal=False, use_exog=False, dataset_kind='egg'):
         results = []
         for category, rows in series_map.items():
-            prepared = cls._prepare_daily_dataset(rows, use_exog=use_exog)
+            prepared = cls._prepare_daily_dataset(rows, use_exog=use_exog, dataset_kind=dataset_kind)
             if prepared is None:
                 results.append({
                     'category': category,
@@ -881,7 +917,7 @@ class ForecastingService:
         test = values[-test_size:]
 
         best = None
-        for candidate in cls._model_candidates(len(train), allow_seasonal):
+        for candidate in cls._model_candidates(len(train), allow_seasonal, prepared.get('dataset_kind', 'egg')):
             try:
                 metrics = cls._rolling_backtest(prepared, candidate)
                 if metrics.get('mae') is None:
@@ -1007,7 +1043,7 @@ class ForecastingService:
         return prepared['series'] if prepared else None
 
     @classmethod
-    def _prepare_daily_dataset(cls, rows, use_exog=False):
+    def _prepare_daily_dataset(cls, rows, use_exog=False, dataset_kind='egg'):
         if not rows:
             return None
 
@@ -1021,9 +1057,12 @@ class ForecastingService:
         if observed_count < cls.MIN_POINTS:
             return None
 
+        database_fields = cls.EGG_DATABASE_FEATURE_FIELDS if dataset_kind == 'egg' else cls.SALES_DATABASE_FEATURE_FIELDS
+        time_fields = cls.EGG_TIME_FEATURE_FIELDS if dataset_kind == 'egg' else cls.SALES_TIME_FEATURE_FIELDS
+        feature_fields = cls.EGG_FEATURE_FIELDS if dataset_kind == 'egg' else cls.SALES_FEATURE_FIELDS
         aggregations = {'value': lambda values: values.sum(min_count=1)}
         if use_exog:
-            for field_name in cls.EGG_DATABASE_FEATURE_FIELDS:
+            for field_name in database_fields:
                 if field_name in df.columns:
                     df[field_name] = pd.to_numeric(df[field_name], errors='coerce')
                     aggregations[field_name] = 'mean'
@@ -1032,30 +1071,34 @@ class ForecastingService:
         df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
         df = df.interpolate(method='time').ffill().bfill()
         if use_exog:
-            cls._add_egg_time_features(df)
+            cls._add_time_features(df)
 
         if len(df) < cls.MIN_POINTS or df['value'].isna().all():
             return None
 
         exog = None
-        feature_columns = [field for field in cls.EGG_FEATURE_FIELDS if field in df.columns]
+        feature_columns = [field for field in feature_fields if field in df.columns]
         if use_exog and feature_columns:
-            source_columns = [field for field in cls.EGG_DATABASE_FEATURE_FIELDS if field in df.columns]
-            time_columns = [field for field in cls.EGG_TIME_FEATURE_FIELDS if field in df.columns]
+            source_columns = [field for field in database_fields if field in df.columns]
+            time_columns = [field for field in time_fields if field in df.columns]
             lagged_sources = df[source_columns].shift(1).ffill().bfill()
             exog = pd.concat([lagged_sources, df[time_columns]], axis=1)[feature_columns]
             exog.attrs['last_date'] = df.index.max()
             exog.attrs['latest_source_values'] = df[source_columns].iloc[-1].copy() if source_columns else None
+            exog.attrs['dataset_kind'] = dataset_kind
 
-        return {'series': df['value'], 'exog': exog}
+        return {'series': df['value'], 'exog': exog, 'dataset_kind': dataset_kind}
 
     @staticmethod
-    def _add_egg_time_features(df):
+    def _add_time_features(df):
         trend = np.arange(len(df), dtype=float)
         weekdays = df.index.dayofweek.to_numpy(dtype=float)
+        months = df.index.month.to_numpy(dtype=float)
         df['trend_day'] = trend
         df['weekday_sin'] = np.sin(2 * np.pi * weekdays / 7)
         df['weekday_cos'] = np.cos(2 * np.pi * weekdays / 7)
+        df['month_sin'] = np.sin(2 * np.pi * months / 12)
+        df['month_cos'] = np.cos(2 * np.pi * months / 12)
 
     @classmethod
     def _future_exog(cls, exog, periods):
@@ -1080,10 +1123,15 @@ class ForecastingService:
             if last_date is not None:
                 forecast_date = last_date + pd.Timedelta(days=step)
                 weekday = float(forecast_date.dayofweek)
+                month = float(forecast_date.month)
                 if 'weekday_sin' in row:
                     row['weekday_sin'] = np.sin(2 * np.pi * weekday / cls.SEASONAL_PERIOD)
                 if 'weekday_cos' in row:
                     row['weekday_cos'] = np.cos(2 * np.pi * weekday / cls.SEASONAL_PERIOD)
+                if 'month_sin' in row:
+                    row['month_sin'] = np.sin(2 * np.pi * month / 12)
+                if 'month_cos' in row:
+                    row['month_cos'] = np.cos(2 * np.pi * month / 12)
             future_rows.append(row)
         return pd.DataFrame(future_rows, columns=exog.columns)
 
@@ -1124,8 +1172,22 @@ class ForecastingService:
     def _sales_amount_series():
         return (
             SalesItem.objects.values(date=models.F('transaction__sale_date'))
-            .annotate(value=models.Sum('amount'))
+            .annotate(
+                value=models.Sum('amount'),
+                quantity_pieces=models.Sum('quantity_pieces'),
+                avg_unit_price=models.Avg('unit_price'),
+                transaction_count=models.Count('transaction', distinct=True),
+            )
             .order_by('date')
+        )
+
+    @staticmethod
+    def _latest_sales_date():
+        return (
+            SalesItem.objects
+            .order_by('-transaction__sale_date')
+            .values_list('transaction__sale_date', flat=True)
+            .first()
         )
 
     @staticmethod
@@ -1140,7 +1202,12 @@ class ForecastingService:
             series[grade] = (
                 SalesItem.objects.filter(grade=grade)
                 .values(date=models.F('transaction__sale_date'))
-                .annotate(value=models.Sum('amount'))
+                .annotate(
+                    value=models.Sum('amount'),
+                    quantity_pieces=models.Sum('quantity_pieces'),
+                    avg_unit_price=models.Avg('unit_price'),
+                    transaction_count=models.Count('transaction', distinct=True),
+                )
                 .order_by('date')
             )
         return series
