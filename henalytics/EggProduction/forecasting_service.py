@@ -312,7 +312,7 @@ class ForecastingService:
         if not compare_models:
             return cls._select_lowest_aic_candidate(prepared, allow_seasonal)
 
-        candidates = cls._model_candidates(len(series), allow_seasonal, prepared.get('dataset_kind', 'egg'))
+        candidates = cls._web_forecast_candidates(len(series), allow_seasonal, prepared.get('dataset_kind', 'egg'))
         comparison_candidates = []
         forecast_candidates = []
         for candidate in candidates:
@@ -345,6 +345,25 @@ class ForecastingService:
             'candidate': best,
             'comparison_summary': cls._comparison_summary(comparison_candidates, best),
         }
+
+    @classmethod
+    def _web_forecast_candidates(cls, series_length, allow_seasonal, dataset_kind='egg'):
+        candidates = [
+            {'name': 'Seasonal Baseline', 'kind': 'baseline', 'spec': None, 'feature_set': 'none', 'dataset_kind': dataset_kind},
+        ]
+        if allow_seasonal and series_length >= cls.SEASONAL_PERIOD * 4:
+            specs = [
+                {'order': (0, 1, 1), 'seasonal_order': (1, 0, 1, cls.SEASONAL_PERIOD)},
+                {'order': (1, 0, 0), 'seasonal_order': (0, 1, 1, cls.SEASONAL_PERIOD)},
+                {'order': (1, 0, 0), 'seasonal_order': None},
+            ]
+        else:
+            specs = [{'order': (1, 0, 0), 'seasonal_order': None}]
+
+        for spec in specs:
+            candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none', 'dataset_kind': dataset_kind})
+            candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe', 'dataset_kind': dataset_kind})
+        return candidates
 
     @classmethod
     def _select_lowest_aic_candidate(cls, prepared, allow_seasonal):
@@ -417,7 +436,7 @@ class ForecastingService:
 
         horizon = min(14, max(3, len(values) // 12))
         min_train_size = max(cls.MIN_POINTS, min(90, len(values) // 2))
-        max_windows = 4
+        max_windows = 2
         available_windows = max((len(values) - min_train_size) // horizon, 1)
         window_count = min(max_windows, available_windows)
         starts = [

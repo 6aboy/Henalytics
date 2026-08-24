@@ -462,7 +462,8 @@
         if (actualForecastPayload.upper && actualForecastPayload.upper.some((value) => value !== null)) {
             forecastTraces.push(
                 {
-                    x: actualForecastPayload.labels,
+                    x: actualForecastPayload.iso_labels,
+                    customdata: actualForecastPayload.labels,
                     y: actualForecastPayload.lower,
                     name: 'Forecast Lower Range',
                     type: 'scatter',
@@ -472,7 +473,8 @@
                     showlegend: false
                 },
                 {
-                    x: actualForecastPayload.labels,
+                    x: actualForecastPayload.iso_labels,
+                    customdata: actualForecastPayload.labels,
                     y: actualForecastPayload.upper,
                     name: 'Forecast Expected Range',
                     type: 'scatter',
@@ -486,7 +488,8 @@
         }
         forecastTraces.push(
             {
-                x: actualForecastPayload.labels,
+                x: actualForecastPayload.iso_labels,
+                customdata: actualForecastPayload.labels,
                 y: actualForecastPayload.actual,
                 name: 'Actual Eggs',
                 type: 'scatter',
@@ -494,10 +497,11 @@
                 line: { color: '#344054', width: 3, shape: 'spline' },
                 marker: { color: '#344054', size: 5 },
                 connectgaps: false,
-                hovertemplate: '%{y:,.0f} eggs<extra></extra>'
+                hovertemplate: '%{customdata}<br>%{y:,.0f} eggs<extra></extra>'
             },
             {
-                x: actualForecastPayload.labels,
+                x: actualForecastPayload.iso_labels,
+                customdata: actualForecastPayload.labels,
                 y: actualForecastPayload.forecast,
                 name: 'Forecast Eggs',
                 type: 'scatter',
@@ -505,7 +509,7 @@
                 line: { color: '#3360cf', width: 3, dash: 'dash', shape: 'spline' },
                 marker: { color: '#3360cf', size: 5 },
                 connectgaps: false,
-                hovertemplate: '%{y:,.0f} eggs<extra></extra>'
+                hovertemplate: '%{customdata}<br>%{y:,.0f} eggs<extra></extra>'
             }
         );
         Plotly.newPlot(
