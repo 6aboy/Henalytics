@@ -544,7 +544,10 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Egg Production')
-        self.assertContains(response, 'class="table table-striped table-hover prototype-table js-data-table"')
+        self.assertContains(response, 'production-log-table')
+        self.assertContains(response, 'Flock<br>Status')
+        self.assertContains(response, 'Live: 1,800')
+        self.assertContains(response, 'Loss: 0')
         self.assertContains(response, 'data-export-enabled="false"')
         self.assertContains(response, 'data-total-column="1"')
         self.assertContains(response, 'data-swal-filter')

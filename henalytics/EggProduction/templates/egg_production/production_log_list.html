@@ -39,7 +39,7 @@
 </form>
 
 <div class="table-responsive">
-    <table class="table table-striped table-hover prototype-table js-data-table"
+    <table class="table table-striped table-hover prototype-table production-log-table js-data-table"
         data-export-title="Egg Production"
         data-export-enabled="{% if user.is_superuser or user.userprofile.role == 'admin' %}true{% else %}false{% endif %}"
         data-total-column="1"
@@ -49,6 +49,7 @@
                 <th>Date</th>
                 <th>Total<br>Eggs Collected</th>
                 <th>Flock Info</th>
+                <th>Flock<br>Status</th>
                 <th>% HEN-day</th>
                 <th>% HEN-housed</th>
                 <th>FCR/<br>kg eggs</th>
@@ -61,6 +62,10 @@
                 <td>{{ log.log_date|date:"M d, Y" }}</td>
                 <td><strong>{{ log.eggs_total|intcomma }}</strong></td>
                 <td>House {{ log.flock.house_no }} | Week {{ log.age_weeks }}</td>
+                <td>
+                    <span class="table-subline">Live: {{ log.hen_count|intcomma }}</span>
+                    <span class="table-subline">Loss: {{ log.dead_count|add:log.culled_count|intcomma }}</span>
+                </td>
                 <td>{{ log.pct_hen_day }}%</td>
                 <td>{{ log.pct_hen_housed }}%</td>
                 <td>{{ log.fcr|default:"N/A" }}</td>
@@ -78,7 +83,7 @@
             <tr>
                 <th>Filtered Egg Total</th>
                 <th data-table-total>0</th>
-                <th colspan="5"></th>
+                <th colspan="6"></th>
             </tr>
         </tfoot>
     </table>

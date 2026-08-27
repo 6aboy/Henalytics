@@ -1029,6 +1029,26 @@ input[readonly].readonly-metric {
     font-weight: 700;
 }
 
+.production-log-table thead th,
+.dataTables_wrapper .production-log-table.dataTable thead th {
+    min-width: 88px;
+    padding: 12px 18px 12px 12px !important;
+    font-size: 0.88rem;
+}
+
+.production-log-table tbody td {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+}
+
+.production-log-table .table-subline {
+    display: block;
+    white-space: nowrap;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
 .table thead th.no-export,
 .table tbody td.no-export {
     min-width: 132px;
