@@ -1025,6 +1025,26 @@ class TemplateRenderTest(TestCase):
         self.assertContains(list_response, 'alert-success swal')
         self.assertContains(list_response, 'Egg production record created successfully.')
 
+    def test_production_log_rejects_impossible_egg_total(self):
+        log_date = timezone.localdate()
+
+        response = self.client.post(reverse('eggproduction:production-log-create'), {
+            'flock': self.flock.id,
+            'log_date': log_date,
+            'dead_count': 0,
+            'culled_count': 0,
+            'feed_bags': 12,
+            'eggs_total': 1000000,
+            'pct_hen_day': '',
+            'pct_hen_housed': '',
+            'fcr': '',
+            'remarks': '',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Eggs total cannot exceed the calculated live hen count')
+        self.assertFalse(ProductionLog.objects.filter(flock=self.flock, log_date=log_date).exists())
+
     def test_production_log_create_auto_calculates_flock_age(self):
         log_date = timezone.now().date()
         self.flock.date_started = log_date - timedelta(days=24)
