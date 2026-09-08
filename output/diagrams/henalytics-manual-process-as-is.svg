@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980">
+  <defs>
+    <style>
+      .bg { fill: #f4f7fb; }
+      .lane-blue { fill: #eef4ff; stroke: #cbd7f4; stroke-width: 1.5; }
+      .lane { fill: #ffffff; stroke: #d7dfec; stroke-width: 1.5; }
+      .lane-yellow { fill: #fff8e8; stroke: #ead7a4; stroke-width: 1.5; }
+      .lane-soft { fill: #f8fbff; stroke: #cbd7f4; stroke-width: 1.5; }
+      .lane-label { font: 800 14px Arial, sans-serif; fill: #526274; text-anchor: middle; }
+      .box { fill: #ffffff; stroke: #2f5fd0; stroke-width: 2.5; }
+      .box-green { fill: #eafff1; stroke: #20c768; stroke-width: 2.5; }
+      .box-paper { fill: #ffffff; stroke: #f2a900; stroke-width: 2.5; }
+      .box-archive { fill: #ffffff; stroke: #64748b; stroke-width: 2.5; }
+      .text { font: 800 15px Arial, sans-serif; fill: #102a43; text-anchor: middle; }
+      .small { font: 700 13px Arial, sans-serif; fill: #526274; text-anchor: middle; }
+      .flow-blue { stroke: #2f5fd0; stroke-width: 2.3; fill: none; marker-end: url(#arrowBlue); }
+      .flow-green { stroke: #20c768; stroke-width: 2.3; fill: none; marker-end: url(#arrowGreen); }
+      .flow-yellow { stroke: #f2a900; stroke-width: 2.3; fill: none; marker-end: url(#arrowYellow); }
+      .flow-gray { stroke: #64748b; stroke-width: 2.3; fill: none; marker-end: url(#arrowGray); }
+    </style>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2f5fd0" /></marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#20c768" /></marker>
+    <marker id="arrowYellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#f2a900" /></marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#64748b" /></marker>
+  </defs>
+
+  <rect class="bg" width="1500" height="980" />
+  <rect class="lane-blue" x="35" y="120" width="350" height="770" rx="14" />
+  <text class="lane-label" x="210" y="148">Poultry Staff / Manual Work</text>
+  <rect class="lane" x="430" y="120" width="245" height="770" rx="14" />
+  <text class="lane-label" x="552" y="148">Egg Grading Machine</text>
+  <rect class="lane-yellow" x="720" y="120" width="290" height="770" rx="14" />
+  <text class="lane-label" x="865" y="148">Paper Records</text>
+  <rect class="lane-soft" x="1055" y="120" width="390" height="770" rx="14" />
+  <text class="lane-label" x="1250" y="148">UBAP / Business Affairs Archive</text>
+
+  <rect class="box" x="75" y="185" width="270" height="78" rx="10" />
+  <text class="text" x="210" y="215">1. Collect eggs three times a day</text>
+  <text class="small" x="210" y="238">Morning, after lunch, afternoon</text>
+
+  <rect class="box" x="465" y="185" width="175" height="72" rx="10" />
+  <text class="text" x="552" y="216">2. Place eggs into</text>
+  <text class="text" x="552" y="236">grading machine</text>
+
+  <rect class="box-green" x="465" y="315" width="175" height="86" rx="10" />
+  <text class="text" x="552" y="349">3. Machine lines up</text>
+  <text class="text" x="552" y="369">eggs by size</text>
+
+  <rect class="box" x="75" y="330" width="270" height="72" rx="10" />
+  <text class="text" x="210" y="360">4. Staff manually counts</text>
+  <text class="text" x="210" y="380">eggs by size</text>
+
+  <rect class="box-paper" x="755" y="315" width="220" height="100" rx="8" />
+  <path class="box-paper" d="M755 315 h190 l30 30 v70 h-220 z" fill="none" />
+  <text class="text" x="865" y="353">Egg Production Form</text>
+  <text class="text" x="865" y="373">/ Logbook</text>
+  <text class="small" x="865" y="393">Counts are written manually</text>
+
+  <rect class="box" x="75" y="475" width="270" height="72" rx="10" />
+  <text class="text" x="210" y="505">5. Daily egg totals are</text>
+  <text class="text" x="210" y="525">computed manually</text>
+
+  <rect class="box" x="75" y="610" width="270" height="72" rx="10" />
+  <text class="text" x="210" y="640">6. Sales transactions are</text>
+  <text class="text" x="210" y="660">written on paper</text>
+
+  <rect class="box-paper" x="755" y="590" width="220" height="100" rx="8" />
+  <path class="box-paper" d="M755 590 h190 l30 30 v70 h-220 z" fill="none" />
+  <text class="text" x="865" y="628">Sales Record Form</text>
+  <text class="small" x="865" y="652">Paper-based sales entries</text>
+
+  <rect class="box" x="755" y="725" width="220" height="82" rx="10" />
+  <text class="text" x="865" y="758">7. Production and sales</text>
+  <text class="text" x="865" y="778">records are compiled monthly</text>
+
+  <rect class="box-archive" x="1105" y="445" width="285" height="100" rx="8" />
+  <path class="box-archive" d="M1105 445 h255 l30 30 v70 h-285 z" fill="none" />
+  <text class="text" x="1248" y="483">UBAP Archive Copy</text>
+  <text class="small" x="1248" y="507">Photocopied records for checking</text>
+  <text class="small" x="1248" y="526">and storage</text>
+
+  <rect class="box" x="1105" y="610" width="285" height="72" rx="10" />
+  <text class="text" x="1248" y="640">8. Monthly records are</text>
+  <text class="text" x="1248" y="660">submitted to UBAP</text>
+
+  <rect class="box" x="1105" y="725" width="285" height="82" rx="10" />
+  <text class="text" x="1248" y="758">9. UBAP photocopies, checks,</text>
+  <text class="text" x="1248" y="778">and archives the records</text>
+
+  <path class="flow-blue" d="M345 224 H465" />
+  <path class="flow-green" d="M552 257 V315" />
+  <path class="flow-blue" d="M465 358 H345" />
+  <path class="flow-yellow" d="M345 366 H390 V430 H705 V365 H755" />
+  <path class="flow-blue" d="M210 402 V475" />
+  <path class="flow-blue" d="M210 547 V610" />
+  <path class="flow-yellow" d="M345 646 H705 V640 H755" />
+  <path class="flow-yellow" d="M975 365 H1025 V766 H975" />
+  <path class="flow-yellow" d="M865 690 V725" />
+  <path class="flow-blue" d="M975 766 H1030 V646 H1105" />
+  <path class="flow-blue" d="M1248 682 V725" />
+  <path class="flow-gray" d="M1390 766 H1410 V495 H1390" />
+</svg>

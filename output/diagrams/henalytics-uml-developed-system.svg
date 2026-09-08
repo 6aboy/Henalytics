@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1150" viewBox="0 0 1800 1150">
+  <defs>
+    <style>
+      .bg { fill: #f4f7fb; }
+      .title { font: 800 30px Arial, sans-serif; fill: #2f5fd0; text-anchor: middle; }
+      .subtitle { font: 600 15px Arial, sans-serif; fill: #526274; text-anchor: middle; }
+      .class { fill: #ffffff; stroke: #2f5fd0; stroke-width: 2.2; }
+      .auth { fill: #f7f7f7; stroke: #64748b; }
+      .flock { fill: #fff8e8; stroke: #f2a900; }
+      .prod { fill: #eafff1; stroke: #20c768; }
+      .sales { fill: #eaf1ff; stroke: #2f5fd0; }
+      .ml { fill: #f1e7ff; stroke: #8b5cf6; }
+      .head { font: 800 16px Arial, sans-serif; fill: #102a43; }
+      .field { font: 600 13px Arial, sans-serif; fill: #102a43; }
+      .note { font: 600 13px Arial, sans-serif; fill: #526274; }
+      .sep { stroke: #94a3b8; stroke-width: 1.5; }
+      .rel-gray { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#grayArrow); }
+      .rel-blue { stroke: #2f5fd0; stroke-width: 2; fill: none; marker-end: url(#blueArrow); }
+      .rel-amber { stroke: #f2a900; stroke-width: 2; fill: none; marker-end: url(#amberArrow); }
+      .rel-purple { stroke: #8b5cf6; stroke-width: 2; fill: none; marker-end: url(#purpleArrow); }
+      .legend { fill: #eef4ff; stroke: #cbd7f4; stroke-width: 1.5; }
+    </style>
+    <marker id="grayArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker>
+    <marker id="blueArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2f5fd0"/></marker>
+    <marker id="amberArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#f2a900"/></marker>
+    <marker id="purpleArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6"/></marker>
+  </defs>
+  <rect class="bg" width="1800" height="1150"/>
+  <text class="title" x="900" y="58">HENalytics Developed System - UML Class Diagram</text>
+  <text class="subtitle" x="900" y="88">Implemented Django classes with key fields, computed properties, and automated calculation methods.</text>
+
+  <path class="rel-gray" d="M320 270 H395"/>
+  <path class="rel-gray" d="M195 405 V465 H235 V520"/>
+  <path class="rel-gray" d="M195 405 V465 H962 V555"/>
+  <path class="rel-gray" d="M195 135 V95 H1300 V115"/>
+  <path class="rel-amber" d="M875 415 V475 H235 V520"/>
+  <path class="rel-amber" d="M735 340 H612 V560"/>
+  <path class="rel-amber" d="M875 415 V555"/>
+  <path class="rel-amber" d="M1015 270 H1080 V715 H1190"/>
+  <path class="rel-blue" d="M962 830 V900"/>
+  <path class="rel-purple" d="M1300 520 V585"/>
+  <path class="rel-purple" d="M1465 320 H1525 V1008 H1485"/>
+
+  <g transform="translate(70 135)"><rect class="class auth" width="250" height="270" rx="8"/><text class="head" x="14" y="28">User</text><text class="note" x="14" y="50">&lt;&lt;Django built-in&gt;&gt;</text><line class="sep" x1="0" y1="62" x2="250" y2="62"/><text class="field" x="14" y="85">- id, username, password</text><text class="field" x="14" y="107">- email, is_active</text><text class="field" x="14" y="129">- is_staff, is_superuser</text><text class="field" x="14" y="151">- date_joined</text><line class="sep" x1="0" y1="170" x2="250" y2="170"/><text class="field" x="14" y="195">+ check_password(): bool</text><text class="field" x="14" y="217">+ get_full_name(): str</text></g>
+  <g transform="translate(395 145)"><rect class="class auth" width="250" height="235" rx="8"/><text class="head" x="14" y="28">UserProfile</text><line class="sep" x1="0" y1="42" x2="250" y2="42"/><text class="field" x="14" y="67">- user: User</text><text class="field" x="14" y="89">- role: str</text><text class="field" x="14" y="111">- assigned_house: str?</text><text class="field" x="14" y="133">- created_at / updated_at</text><line class="sep" x1="0" y1="152" x2="250" y2="152"/><text class="field" x="14" y="177">+ display_role: str</text><text class="field" x="14" y="199">+ __str__(): str</text></g>
+  <g transform="translate(735 130)"><rect class="class flock" width="280" height="285" rx="8"/><text class="head" x="14" y="28">Flock</text><line class="sep" x1="0" y1="42" x2="280" y2="42"/><text class="field" x="14" y="67">- house_no: int</text><text class="field" x="14" y="89">- breed_strain: str</text><text class="field" x="14" y="111">- date_started: date</text><text class="field" x="14" y="133">- initial_hen_count: int</text><text class="field" x="14" y="155">- status: str</text><text class="field" x="14" y="177">- notes: str?</text><text class="field" x="14" y="199">- created_at / updated_at</text><line class="sep" x1="0" y1="218" x2="280" y2="218"/><text class="field" x="14" y="243">+ save(): void</text><text class="field" x="14" y="265">+ __str__(): str</text></g>
+  <g transform="translate(1135 115)"><rect class="class ml" width="330" height="405" rx="8"/><text class="head" x="14" y="28">ModelVersion</text><line class="sep" x1="0" y1="42" x2="330" y2="42"/><text class="field" x="14" y="66">- model_type, trained_at</text><text class="field" x="14" y="88">- triggered_by: User?</text><text class="field" x="14" y="110">- rmse, mae, mape</text><text class="field" x="14" y="132">- baseline_rmse, aic_score</text><text class="field" x="14" y="154">- arima_order, pkl_path</text><text class="field" x="14" y="176">- feature_set, selection_metric</text><text class="field" x="14" y="198">- comparison_summary: json</text><text class="field" x="14" y="220">- is_active, training_rows</text><text class="field" x="14" y="242">- created_at</text><line class="sep" x1="0" y1="262" x2="330" y2="262"/><text class="field" x="14" y="287">+ __str__(): str</text></g>
+  <g transform="translate(70 520)"><rect class="class prod" width="330" height="500" rx="8"/><text class="head" x="14" y="28">ProductionLog</text><line class="sep" x1="0" y1="42" x2="330" y2="42"/><text class="field" x="14" y="66">- flock: Flock, log_date: date</text><text class="field" x="14" y="88">- age_weeks, age_days</text><text class="field" x="14" y="110">- hen_count, dead_count, culled_count</text><text class="field" x="14" y="132">- feed_bags, eggs_total</text><text class="field" x="14" y="154">- pct_hen_day, pct_hen_housed</text><text class="field" x="14" y="176">- fcr, remarks</text><text class="field" x="14" y="198">- entered_by: User?</text><text class="field" x="14" y="220">- created_at / updated_at</text><line class="sep" x1="0" y1="240" x2="330" y2="240"/><text class="field" x="14" y="265">+ update_live_hen_count()</text><text class="field" x="14" y="287">+ update_flock_age()</text><text class="field" x="14" y="309">+ update_laying_percentages()</text><text class="field" x="14" y="331">+ update_fcr()</text><text class="field" x="14" y="353">+ save(), delete()</text><text class="field" x="14" y="375">+ recalculate_flock_snapshots()</text></g>
+  <g transform="translate(470 560)"><rect class="class flock" width="285" height="345" rx="8"/><text class="head" x="14" y="28">GradingLog</text><line class="sep" x1="0" y1="42" x2="285" y2="42"/><text class="field" x="14" y="67">- flock: Flock</text><text class="field" x="14" y="89">- log_date, age_weeks</text><text class="field" x="14" y="111">- eggs_total</text><text class="field" x="14" y="133">- eggs_aa, eggs_a, eggs_b</text><text class="field" x="14" y="155">- eggs_small, eggs_broken</text><text class="field" x="14" y="177">- eggs_decode, eggs_source</text><text class="field" x="14" y="199">- created_at / updated_at</text><line class="sep" x1="0" y1="220" x2="285" y2="220"/><text class="field" x="14" y="245">+ __str__(): str</text></g>
+  <g transform="translate(815 555)"><rect class="class sales" width="295" height="275" rx="8"/><text class="head" x="14" y="28">SalesTransaction</text><line class="sep" x1="0" y1="42" x2="295" y2="42"/><text class="field" x="14" y="67">- flock: Flock</text><text class="field" x="14" y="89">- sale_date, or_number</text><text class="field" x="14" y="111">- recorded_by: User?</text><text class="field" x="14" y="133">- notes</text><text class="field" x="14" y="155">- created_at / updated_at</text><line class="sep" x1="0" y1="176" x2="295" y2="176"/><text class="field" x="14" y="201">+ total_amount: decimal</text><text class="field" x="14" y="223">+ total_pieces: int</text><text class="field" x="14" y="245">+ __str__(): str</text></g>
+  <g transform="translate(825 900)"><rect class="class sales" width="275" height="215" rx="8"/><text class="head" x="14" y="28">SalesItem</text><line class="sep" x1="0" y1="42" x2="275" y2="42"/><text class="field" x="14" y="67">- transaction: SalesTransaction</text><text class="field" x="14" y="89">- grade: str</text><text class="field" x="14" y="111">- quantity_pieces: int</text><text class="field" x="14" y="133">- amount, unit_price</text><line class="sep" x1="0" y1="152" x2="275" y2="152"/><text class="field" x="14" y="177">+ save(): void</text><text class="field" x="14" y="199">+ total_amount: decimal</text></g>
+  <g transform="translate(1190 585)"><rect class="class ml" width="295" height="260" rx="8"/><text class="head" x="14" y="28">HarvestForecast</text><line class="sep" x1="0" y1="42" x2="295" y2="42"/><text class="field" x="14" y="67">- flock: Flock</text><text class="field" x="14" y="89">- model_version: ModelVersion</text><text class="field" x="14" y="111">- forecast_date, grade</text><text class="field" x="14" y="133">- predicted_qty</text><text class="field" x="14" y="155">- lower_qty, upper_qty</text><text class="field" x="14" y="177">- created_at</text><line class="sep" x1="0" y1="198" x2="295" y2="198"/><text class="field" x="14" y="223">+ __str__(): str</text></g>
+  <g transform="translate(1190 900)"><rect class="class ml" width="295" height="215" rx="8"/><text class="head" x="14" y="28">SalesForecast</text><line class="sep" x1="0" y1="42" x2="295" y2="42"/><text class="field" x="14" y="67">- model_version: ModelVersion</text><text class="field" x="14" y="89">- forecast_date, grade</text><text class="field" x="14" y="111">- predicted_trays</text><text class="field" x="14" y="133">- predicted_amount</text><text class="field" x="14" y="155">- created_at</text><line class="sep" x1="0" y1="174" x2="295" y2="174"/><text class="field" x="14" y="199">+ __str__(): str</text></g>
+  <rect class="legend" x="315" y="1070" width="860" height="45" rx="8"/><text class="note" x="335" y="1098">Notation: 1 : 1 = one-to-one, 1 : M = one-to-many, ? = nullable/optional. Methods show implemented model behavior.</text>
+</svg>

@@ -37,6 +37,8 @@ class ForecastingService:
     DEFAULT_ORDERS = ((1, 1, 1), (1, 0, 0), (0, 1, 1), (0, 0, 0))
     SEASONAL_PERIOD = 7
     SEASONAL_ORDERS = ((1, 0, 1, SEASONAL_PERIOD), (0, 1, 1, SEASONAL_PERIOD))
+    EGG_USE_SEASONALITY = False
+    SALES_USE_SEASONALITY = True
     HORIZONS = {
         'week': 7,
         'three_weeks': 21,
@@ -59,10 +61,8 @@ class ForecastingService:
         'fcr',
     )
     EGG_TIME_FEATURE_FIELDS = (
-        # Calendar/trend predictors let the model see direction and weekly rhythm.
+        # Trend-only egg predictor. Weekly seasonality is intentionally tested separately, not forced.
         'trend_day',
-        'weekday_sin',
-        'weekday_cos',
     )
     EGG_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_DERIVED_FEATURE_FIELDS + EGG_TIME_FEATURE_FIELDS
     EGG_SAFE_FEATURE_FIELDS = EGG_SOURCE_FEATURE_FIELDS + EGG_TIME_FEATURE_FIELDS
@@ -146,7 +146,7 @@ class ForecastingService:
     @classmethod
     def evaluate_egg_forecasts(cls, flock, include_sizes=False):
         series_map = cls._egg_series_map(flock)
-        return cls._evaluate_series_map(series_map, allow_seasonal=True, use_exog=True)
+        return cls._evaluate_series_map(series_map, allow_seasonal=cls.EGG_USE_SEASONALITY, use_exog=True)
 
     @classmethod
     def evaluate_sales_forecasts(cls, include_sizes=True):
@@ -176,7 +176,7 @@ class ForecastingService:
             result = cls._forecast_series(
                 prepared,
                 periods,
-                allow_seasonal=model_kind in ('egg', 'sales'),
+                allow_seasonal=cls._uses_seasonality(model_kind),
                 compare_models=model_kind in ('egg', 'sales'),
                 forecast_start_date=forecast_start_date,
             )
@@ -322,6 +322,8 @@ class ForecastingService:
             comparison_candidates.append({**candidate, 'metrics': metrics})
             if candidate['kind'] == 'baseline' or candidate.get('feature_set') == 'diagnostic':
                 continue
+            if prepared.get('dataset_kind') == 'egg' and candidate.get('feature_set') != 'safe':
+                continue
             try:
                 exog = cls._exog_for_candidate(prepared, candidate)
                 model = cls._fit_model(values, candidate['spec'], exog=exog)
@@ -393,11 +395,19 @@ class ForecastingService:
         feature_profiles = ['safe', 'diagnostic'] if dataset_kind == 'egg' else ['safe']
         for spec in cls._candidate_model_specs(series_length, allow_seasonal):
             candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none', 'dataset_kind': dataset_kind})
-            if allow_seasonal and 'safe' in feature_profiles:
+            if 'safe' in feature_profiles:
                 candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe', 'dataset_kind': dataset_kind})
-            if allow_seasonal and 'diagnostic' in feature_profiles:
+            if 'diagnostic' in feature_profiles:
                 candidates.append({'name': 'SARIMAX Diagnostic', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'diagnostic', 'dataset_kind': dataset_kind})
         return candidates
+
+    @classmethod
+    def _uses_seasonality(cls, model_kind):
+        if model_kind == 'egg':
+            return cls.EGG_USE_SEASONALITY
+        if model_kind == 'sales':
+            return cls.SALES_USE_SEASONALITY
+        return False
 
     @classmethod
     def _exog_for_candidate(cls, prepared, candidate):
@@ -553,8 +563,8 @@ class ForecastingService:
 
         labels = [
             ('baseline', 'Weekly Baseline', 'Simple repeat of recent weekly pattern'),
-            ('sarima', 'SARIMA', 'Uses historical values and weekly seasonality'),
-            ('safe_sarimax', 'SARIMAX', 'Uses lagged operational predictors plus calendar rhythm'),
+            ('sarima', 'SARIMA', 'Uses historical values and selected time-series order'),
+            ('safe_sarimax', 'SARIMAX', 'Uses lagged operational predictors plus trend direction'),
             ('diagnostic_sarimax', 'Diagnostic SARIMAX', 'Tests lagged derived performance indicators separately'),
         ]
         cards = []
@@ -618,15 +628,20 @@ class ForecastingService:
             ]
         if candidate.get('feature_set') == 'safe':
             return [
-                'Age and calendar features continue naturally into future dates.',
+                'Age and trend features continue naturally into future dates.',
                 'Live hen count, dead/cull count, and feed bags use the latest recorded conditions.',
                 'Derived production rates are not used for model selection to reduce target leakage.',
             ]
         if candidate.get('feature_set') == 'diagnostic':
             return [
-                'Age and calendar features continue naturally into future dates.',
+                'Age and trend features continue naturally into future dates.',
                 'Latest flock condition and lagged derived indicators are carried forward.',
                 'Hen-day, hen-housed, and FCR are diagnostic features and may be close to the target.',
+            ]
+        if candidate.get('dataset_kind') == 'egg':
+            return [
+                'Forecast uses historical egg totals without a forced weekly seasonal cycle.',
+                'No future flock-condition assumptions are required.',
             ]
         return [
             'Forecast uses historical egg totals and weekly seasonality only.',

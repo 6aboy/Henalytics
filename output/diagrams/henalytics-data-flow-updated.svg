@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980">
+  <defs>
+    <style>
+      .bg { fill: #f4f7fb; }
+      .title { font: 800 30px Arial, sans-serif; fill: #2f5fd0; text-anchor: middle; }
+      .subtitle { font: 600 15px Arial, sans-serif; fill: #526274; text-anchor: middle; }
+      .lane-blue { fill: #eef4ff; stroke: #cbd7f4; stroke-width: 1.5; }
+      .lane { fill: #ffffff; stroke: #d7dfec; stroke-width: 1.5; }
+      .lane-soft { fill: #f8fbff; stroke: #d7dfec; stroke-width: 1.5; }
+      .lane-label { font: 800 14px Arial, sans-serif; fill: #526274; text-anchor: middle; }
+      .entity { fill: #ffffff; stroke: #2f5fd0; stroke-width: 2.5; }
+      .entity-red { fill: #ffffff; stroke: #ef4444; stroke-width: 2.5; }
+      .entity-yellow { fill: #fff8e8; stroke: #f2a900; stroke-width: 2.5; }
+      .process { fill: #ffffff; stroke: #2f5fd0; stroke-width: 2.5; }
+      .process-soft { fill: #eaf1ff; stroke: #2f5fd0; stroke-width: 2.5; }
+      .process-green { fill: #eafff1; stroke: #20c768; stroke-width: 2.5; }
+      .process-red { fill: #fff1f1; stroke: #ef4444; stroke-width: 2.5; }
+      .store { fill: #ffffff; stroke: #64748b; stroke-width: 2.5; }
+      .label { font: 800 18px Arial, sans-serif; fill: #102a43; text-anchor: middle; }
+      .small { font: 700 14px Arial, sans-serif; fill: #102a43; text-anchor: middle; }
+      .note { font: 600 13px Arial, sans-serif; fill: #526274; }
+      .flow-blue { stroke: #2f5fd0; stroke-width: 2.2; fill: none; marker-end: url(#arrowBlue); }
+      .flow-gray { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#arrowGray); }
+      .flow-green { stroke: #20c768; stroke-width: 2.2; fill: none; marker-end: url(#arrowGreen); }
+      .flow-red { stroke: #ef4444; stroke-width: 2.2; fill: none; marker-end: url(#arrowRed); }
+      .flow-yellow { stroke: #f2a900; stroke-width: 2.2; fill: none; marker-end: url(#arrowYellow); }
+    </style>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2f5fd0" /></marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#64748b" /></marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#20c768" /></marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#ef4444" /></marker>
+    <marker id="arrowYellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#f2a900" /></marker>
+  </defs>
+
+  <rect class="bg" width="1500" height="980" />
+  <text class="title" x="750" y="58">HENalytics Updated Data Flow Diagram</text>
+  <text class="subtitle" x="750" y="88">Staff handles operational CRUD. Administrator handles reports, exports, and forecasting.</text>
+  <rect class="lane-blue" x="35" y="115" width="200" height="750" rx="14" />
+  <text class="lane-label" x="135" y="142">External Sources</text>
+  <rect class="lane" x="280" y="115" width="310" height="750" rx="14" />
+  <text class="lane-label" x="435" y="142">System Processes</text>
+  <rect class="lane-soft" x="640" y="115" width="300" height="750" rx="14" />
+  <text class="lane-label" x="790" y="142">Database Stores</text>
+  <rect class="lane" x="990" y="115" width="310" height="750" rx="14" />
+  <text class="lane-label" x="1145" y="142">Admin Outputs</text>
+
+  <rect class="entity" x="70" y="235" width="130" height="62" rx="8" />
+  <text class="label" x="135" y="273">Staff</text>
+  <rect class="entity-yellow" x="70" y="385" width="130" height="74" rx="8" />
+  <text class="small" x="135" y="416">Historical Dataset</text>
+  <text class="small" x="135" y="436">Files</text>
+  <rect class="entity-red" x="70" y="740" width="130" height="70" rx="8" />
+  <text class="small" x="135" y="770">Developer /</text>
+  <text class="small" x="135" y="790">Superuser</text>
+  <rect class="entity" x="1325" y="420" width="140" height="70" rx="8" />
+  <text class="label" x="1395" y="462">Administrator</text>
+
+  <ellipse class="process-soft" cx="435" cy="191" rx="110" ry="41" />
+  <text class="small" x="435" y="179">1.0</text>
+  <text class="small" x="435" y="198">Authenticate User</text>
+  <text class="small" x="435" y="216">and Check Role</text>
+  <ellipse class="process" cx="435" cy="321" rx="115" ry="46" />
+  <text class="small" x="435" y="306">2.0</text>
+  <text class="small" x="435" y="326">Maintain Operational Records</text>
+  <text class="note" x="358" y="346">Flock, production, sales CRUD</text>
+  <ellipse class="process-green" cx="435" cy="474" rx="115" ry="44" />
+  <text class="small" x="435" y="460">3.0</text>
+  <text class="small" x="435" y="480">Calculate Production Metrics</text>
+  <text class="note" x="360" y="499">Live hens, HEN-day, FCR</text>
+  <ellipse class="process-red" cx="435" cy="781" rx="105" ry="39" />
+  <text class="small" x="435" y="772">7.0</text>
+  <text class="small" x="435" y="792">Maintain Users and Roles</text>
+
+  <path class="store" d="M675 155 h230 v70 h-230 z M705 155 v70 M875 155 v70" />
+  <text class="small" x="790" y="196">D1 User and Profile Data</text>
+  <path class="store" d="M675 275 h230 v70 h-230 z M705 275 v70 M875 275 v70" />
+  <text class="small" x="790" y="316">D2 Flock Records</text>
+  <path class="store" d="M675 395 h230 v70 h-230 z M705 395 v70 M875 395 v70" />
+  <text class="small" x="790" y="436">D3 Egg Production Logs</text>
+  <path class="store" d="M675 515 h230 v70 h-230 z M705 515 v70 M875 515 v70" />
+  <text class="small" x="790" y="556">D4 Sales Transactions and Items</text>
+  <path class="store" d="M675 695 h230 v78 h-230 z M705 695 v78 M875 695 v78" />
+  <text class="small" x="790" y="728">D5 Model Versions and</text>
+  <text class="small" x="790" y="748">Forecast Outputs</text>
+
+  <ellipse class="process" cx="1142" cy="288" rx="112" ry="43" />
+  <text class="small" x="1142" y="276">4.0</text>
+  <text class="small" x="1142" y="296">Generate Reports</text>
+  <text class="small" x="1142" y="314">and Exports</text>
+  <ellipse class="process" cx="1142" cy="498" rx="112" ry="43" />
+  <text class="small" x="1142" y="486">5.0</text>
+  <text class="small" x="1142" y="506">Run Egg and Sales</text>
+  <text class="small" x="1142" y="524">Forecasting</text>
+  <ellipse class="process-soft" cx="1142" cy="706" rx="132" ry="46" />
+  <text class="small" x="1142" y="692">6.0</text>
+  <text class="small" x="1142" y="712">Display Charts, Tables,</text>
+  <text class="small" x="1142" y="730">Cards, and Validation</text>
+
+  <rect class="lane-blue" x="330" y="885" width="820" height="45" rx="8" />
+  <text class="note" x="350" y="912">Flow notes: Staff manages CRUD inputs. Administrator handles reports and forecasting. Forecasting reads historical records and writes model outputs.</text>
+
+  <path class="flow-gray" d="M200 266 H260 V191 H325" />
+  <path class="flow-blue" d="M200 266 H260 V321 H320" />
+  <path class="flow-yellow" d="M200 422 H260 V321 H320" />
+  <path class="flow-gray" d="M545 191 H675" />
+  <path class="flow-blue" d="M550 321 H615 V310 H675" />
+  <path class="flow-blue" d="M550 321 H615 V430 H675" />
+  <path class="flow-blue" d="M550 321 H615 V550 H675" />
+  <path class="flow-green" d="M435 367 V430" />
+  <path class="flow-green" d="M550 474 H600 V430 H675" />
+  <path class="flow-red" d="M200 775 H330" />
+  <path class="flow-red" d="M540 781 H600 V190 H675" />
+  <path class="flow-gray" d="M905 310 H965 V288 H1030" />
+  <path class="flow-gray" d="M905 430 H950 V288 H1030" />
+  <path class="flow-gray" d="M905 550 H965 V288 H1030" />
+  <path class="flow-blue" d="M1325 455 H1285 V288 H1254" />
+  <path class="flow-blue" d="M1254 330 H1285 V455 H1325" />
+  <path class="flow-blue" d="M1325 455 H1285 V498 H1254" />
+  <path class="flow-gray" d="M905 430 H950 V498 H1030" />
+  <path class="flow-gray" d="M905 550 H950 V498 H1030" />
+  <path class="flow-blue" d="M1030 498 H960 V734 H905" />
+  <path class="flow-gray" d="M905 734 H1010" />
+  <path class="flow-blue" d="M1274 706 H1285 V455 H1325" />
+</svg>

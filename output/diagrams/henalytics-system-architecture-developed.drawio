@@ -1,0 +1,91 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="henalytics-system-architecture-developed" name="Developed System Architecture">
+    <mxGraphModel dx="896" dy="458" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="980" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="staff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef4ff;strokeColor=#2f5fd0;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;Staff&lt;/b&gt;&lt;br&gt;CRUD records" vertex="1">
+          <mxGeometry height="95" width="170" x="145" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="admin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef4ff;strokeColor=#2f5fd0;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;Administrator&lt;/b&gt;&lt;br&gt;Reports and forecasts" vertex="1">
+          <mxGeometry height="95" width="170" x="585" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="browser" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ebfff4;strokeColor=#20c768;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;Web Browser&lt;/b&gt;&lt;br&gt;Forms, tables, dashboard, charts" vertex="1">
+          <mxGeometry height="100" width="220" x="340" y="285" as="geometry" />
+        </mxCell>
+        <mxCell id="network" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#64748b;strokeWidth=2;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;LAN / Internet&lt;/b&gt;&lt;br&gt;HTTP communication" vertex="1">
+          <mxGeometry height="80" width="180" x="360" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="app" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef4ff;strokeColor=#2f5fd0;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;HENalytics Django App&lt;/b&gt;&lt;br&gt;Authentication, role access, views,&lt;br&gt;forms, validation, and business logic" vertex="1">
+          <mxGeometry height="125" width="270" x="315" y="605" as="geometry" />
+        </mxCell>
+        <mxCell id="forecasting" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4efff;strokeColor=#8b5cf6;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;Forecasting&lt;/b&gt;&lt;br&gt;Egg and sales forecasts&lt;br&gt;with validation metrics" vertex="1">
+          <mxGeometry height="115" width="190" x="80" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="reports" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ebfff4;strokeColor=#20c768;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;Reports / Exports&lt;/b&gt;&lt;br&gt;Dashboard summaries, CSV,&lt;br&gt;Excel, PDF, and print" vertex="1">
+          <mxGeometry height="115" width="190" x="630" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="orm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ebfff4;strokeColor=#20c768;strokeWidth=2.5;fontColor=#102a43;fontSize=14;align=center;verticalAlign=middle;" value="&lt;b&gt;Django ORM&lt;/b&gt;&lt;br&gt;Model-based database access" vertex="1">
+          <mxGeometry height="80" width="180" x="360" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6e0f5;strokeWidth=1.5;fontColor=#526274;fontSize=12;align=center;verticalAlign=middle;" value="The Django application connects user actions, analytics, reports, forecasts, and stored poultry records in one centralized system." vertex="1">
+          <mxGeometry height="42" width="640" x="130" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="e-staff-browser" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#2f5fd0;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="395" y="172" />
+            </Array>
+            <mxPoint x="315" y="172" as="sourcePoint" />
+            <mxPoint x="395" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-admin-browser" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;strokeColor=#2f5fd0;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="505" y="172" />
+            </Array>
+            <mxPoint x="585" y="172" as="sourcePoint" />
+            <mxPoint x="505" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-browser-network" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeColor=#20c768;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="385" as="sourcePoint" />
+            <mxPoint x="450" y="455" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-network-app" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeColor=#20c768;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="535" as="sourcePoint" />
+            <mxPoint x="450" y="605" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-app-forecast" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeColor=#8b5cf6;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="315" y="668" as="sourcePoint" />
+            <mxPoint x="270" y="668" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-app-reports" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeColor=#20c768;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="585" y="668" as="sourcePoint" />
+            <mxPoint x="630" y="668" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-app-orm" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeColor=#20c768;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="730" as="sourcePoint" />
+            <mxPoint x="450" y="790" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-orm-db" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;strokeColor=#2f5fd0;strokeWidth=2.3;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="870" as="sourcePoint" />
+            <mxPoint x="450" y="895" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

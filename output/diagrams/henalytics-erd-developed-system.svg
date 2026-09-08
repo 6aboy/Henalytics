@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100">
+  <defs>
+    <style>
+      .bg { fill: #f4f7fb; }
+      .title { font: 800 30px Arial, sans-serif; fill: #2f5fd0; text-anchor: middle; }
+      .subtitle { font: 600 15px Arial, sans-serif; fill: #526274; text-anchor: middle; }
+      .table { fill: #ffffff; stroke: #2f5fd0; stroke-width: 2.2; }
+      .auth { fill: #f7f7f7; stroke: #64748b; }
+      .flock { fill: #fff8e8; stroke: #f2a900; }
+      .prod { fill: #eafff1; stroke: #20c768; }
+      .sales { fill: #eaf1ff; stroke: #2f5fd0; }
+      .ml { fill: #f1e7ff; stroke: #8b5cf6; }
+      .head { font: 800 16px Arial, sans-serif; fill: #102a43; }
+      .field { font: 600 13px Arial, sans-serif; fill: #102a43; }
+      .note { font: 600 13px Arial, sans-serif; fill: #526274; }
+      .rel-gray { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#grayArrow); }
+      .rel-blue { stroke: #2f5fd0; stroke-width: 2; fill: none; marker-end: url(#blueArrow); }
+      .rel-amber { stroke: #f2a900; stroke-width: 2; fill: none; marker-end: url(#amberArrow); }
+      .rel-purple { stroke: #8b5cf6; stroke-width: 2; fill: none; marker-end: url(#purpleArrow); }
+      .legend { fill: #eef4ff; stroke: #cbd7f4; stroke-width: 1.5; }
+    </style>
+    <marker id="grayArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker>
+    <marker id="blueArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2f5fd0"/></marker>
+    <marker id="amberArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#f2a900"/></marker>
+    <marker id="purpleArrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6"/></marker>
+  </defs>
+  <rect class="bg" width="1800" height="1100"/>
+  <text class="title" x="900" y="58">HENalytics Developed System - Entity Relationship Diagram</text>
+  <text class="subtitle" x="900" y="88">Actual Django model structure: automated production metrics, piece-based sales, and forecast validation outputs.</text>
+
+  <path class="rel-gray" d="M315 242 H405"/>
+  <path class="rel-gray" d="M190 345 V455 H210 V500"/>
+  <path class="rel-gray" d="M190 345 V430 H902 V520"/>
+  <path class="rel-gray" d="M190 140 V95 H1315 V115"/>
+  <path class="rel-amber" d="M885 370 V455 H210 V500"/>
+  <path class="rel-amber" d="M745 320 H555 V525"/>
+  <path class="rel-amber" d="M885 370 V520"/>
+  <path class="rel-amber" d="M1025 245 H1105 V660 H1155"/>
+  <path class="rel-blue" d="M902 765 V845"/>
+  <path class="rel-purple" d="M1315 475 V545"/>
+  <path class="rel-purple" d="M1475 295 H1515 V912 H1475"/>
+
+  <g transform="translate(70 140)"><rect class="table auth" width="245" height="205" rx="8"/><text class="head" x="14" y="28">auth_user</text><text class="field" x="14" y="58">PK id INT</text><text class="field" x="14" y="80">username VARCHAR</text><text class="field" x="14" y="102">password VARCHAR</text><text class="field" x="14" y="124">email VARCHAR</text><text class="field" x="14" y="146">is_active BOOLEAN</text><text class="field" x="14" y="168">is_staff / is_superuser</text><text class="field" x="14" y="190">date_joined DATETIME</text></g>
+  <g transform="translate(405 150)"><rect class="table auth" width="250" height="170" rx="8"/><text class="head" x="14" y="28">UserProfile</text><text class="field" x="14" y="58">PK id INT</text><text class="field" x="14" y="80">FK user_id INT UNIQUE</text><text class="field" x="14" y="102">role VARCHAR</text><text class="field" x="14" y="124">assigned_house VARCHAR NULL</text><text class="field" x="14" y="146">created_at / updated_at</text></g>
+  <g transform="translate(745 125)"><rect class="table flock" width="280" height="245" rx="8"/><text class="head" x="14" y="28">Flock</text><text class="field" x="14" y="58">PK id INT</text><text class="field" x="14" y="80">house_no INT</text><text class="field" x="14" y="102">breed_strain VARCHAR</text><text class="field" x="14" y="124">date_started DATE</text><text class="field" x="14" y="146">initial_hen_count INT</text><text class="field" x="14" y="168">status VARCHAR</text><text class="field" x="14" y="190">notes TEXT NULL</text><text class="field" x="14" y="212">created_at / updated_at</text><text class="field" x="14" y="234">UQ house_no + date_started</text></g>
+  <g transform="translate(1155 115)"><rect class="table ml" width="320" height="360" rx="8"/><text class="head" x="14" y="28">ModelVersion</text><text class="field" x="14" y="56">PK id INT</text><text class="field" x="14" y="78">model_type, trained_at</text><text class="field" x="14" y="100">FK triggered_by_id INT NULL</text><text class="field" x="14" y="122">rmse, mae, mape, baseline_rmse</text><text class="field" x="14" y="144">aic_score, arima_order</text><text class="field" x="14" y="166">pkl_path, feature_set</text><text class="field" x="14" y="188">selection_metric</text><text class="field" x="14" y="210">comparison_summary JSON</text><text class="field" x="14" y="232">is_active BOOLEAN</text><text class="field" x="14" y="254">training_rows INT NULL</text><text class="field" x="14" y="276">created_at DATETIME</text></g>
+  <g transform="translate(70 500)"><rect class="table prod" width="280" height="360" rx="8"/><text class="head" x="14" y="28">ProductionLog</text><text class="field" x="14" y="56">PK id INT, FK flock_id INT</text><text class="field" x="14" y="78">log_date DATE</text><text class="field" x="14" y="100">age_weeks / age_days AUTO</text><text class="field" x="14" y="122">hen_count AUTO</text><text class="field" x="14" y="144">dead_count, culled_count</text><text class="field" x="14" y="166">feed_bags, eggs_total</text><text class="field" x="14" y="188">pct_hen_day AUTO</text><text class="field" x="14" y="210">pct_hen_housed AUTO</text><text class="field" x="14" y="232">fcr AUTO</text><text class="field" x="14" y="254">remarks TEXT NULL</text><text class="field" x="14" y="276">FK entered_by_id INT NULL</text><text class="field" x="14" y="298">created_at / updated_at</text><text class="field" x="14" y="320">UQ flock + log_date</text></g>
+  <g transform="translate(420 525)"><rect class="table flock" width="270" height="315" rx="8"/><text class="head" x="14" y="28">GradingLog</text><text class="field" x="14" y="58">PK id INT, FK flock_id INT</text><text class="field" x="14" y="80">log_date, age_weeks</text><text class="field" x="14" y="102">eggs_total</text><text class="field" x="14" y="124">eggs_aa, eggs_a, eggs_b</text><text class="field" x="14" y="146">eggs_small, eggs_broken</text><text class="field" x="14" y="168">eggs_decode</text><text class="field" x="14" y="190">eggs_source VARCHAR NULL</text><text class="field" x="14" y="212">created_at / updated_at</text><text class="field" x="14" y="234">UQ flock + log_date</text></g>
+  <g transform="translate(760 520)"><rect class="table sales" width="285" height="245" rx="8"/><text class="head" x="14" y="28">SalesTransaction</text><text class="field" x="14" y="58">PK id INT, FK flock_id INT</text><text class="field" x="14" y="80">sale_date DATE</text><text class="field" x="14" y="102">or_number VARCHAR NULL</text><text class="field" x="14" y="124">FK recorded_by_id INT NULL</text><text class="field" x="14" y="146">notes TEXT NULL</text><text class="field" x="14" y="168">created_at / updated_at</text><text class="field" x="14" y="190">computed total_amount</text><text class="field" x="14" y="212">computed total_pieces</text></g>
+  <g transform="translate(770 845)"><rect class="table sales" width="265" height="155" rx="8"/><text class="head" x="14" y="28">SalesItem</text><text class="field" x="14" y="58">PK id INT</text><text class="field" x="14" y="80">FK transaction_id INT</text><text class="field" x="14" y="102">grade, quantity_pieces</text><text class="field" x="14" y="124">amount, unit_price AUTO</text></g>
+  <g transform="translate(1155 545)"><rect class="table ml" width="320" height="230" rx="8"/><text class="head" x="14" y="28">HarvestForecast</text><text class="field" x="14" y="58">PK id INT</text><text class="field" x="14" y="80">FK flock_id, model_version_id</text><text class="field" x="14" y="102">forecast_date, grade</text><text class="field" x="14" y="124">predicted_qty</text><text class="field" x="14" y="146">lower_qty / upper_qty NULL</text><text class="field" x="14" y="168">created_at</text><text class="field" x="14" y="190">UQ flock + model + date + grade</text></g>
+  <g transform="translate(1155 820)"><rect class="table ml" width="320" height="185" rx="8"/><text class="head" x="14" y="28">SalesForecast</text><text class="field" x="14" y="58">PK id INT</text><text class="field" x="14" y="80">FK model_version_id</text><text class="field" x="14" y="102">forecast_date, grade</text><text class="field" x="14" y="124">predicted_trays</text><text class="field" x="14" y="146">predicted_amount</text><text class="field" x="14" y="168">UQ model + date + grade</text></g>
+  <rect class="legend" x="250" y="1030" width="1050" height="45" rx="8"/><text class="note" x="270" y="1058">Notation: PK = Primary Key, FK = Foreign Key, UQ = Unique constraint, AUTO = calculated by system logic. Colors match the updated HENalytics diagrams.</text>
+</svg>

@@ -261,6 +261,11 @@ class ForecastModelTest(TestCase):
         self.assertTrue(sales_result['success'])
         self.assertTrue(HarvestForecast.objects.filter(grade='overall').exists())
         self.assertFalse(HarvestForecast.objects.exclude(grade='overall').exists())
+        egg_model = ModelVersion.objects.filter(harvest_forecasts__isnull=False).first()
+        self.assertIsNotNone(egg_model)
+        self.assertEqual(egg_model.feature_set, 'safe')
+        self.assertIn('+ features', egg_model.arima_order)
+        self.assertNotIn('x(', egg_model.arima_order)
         self.assertTrue(SalesForecast.objects.filter(grade='overall', predicted_amount__gt=0).exists())
         self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
         sales_model = ModelVersion.objects.filter(sales_forecasts__isnull=False).first()
@@ -328,11 +333,10 @@ class ForecastModelTest(TestCase):
                 'pct_hen_housed',
                 'fcr',
                 'trend_day',
-                'weekday_sin',
-                'weekday_cos',
             ),
         )
         self.assertEqual(ForecastingService.SEASONAL_PERIOD, 7)
+        self.assertFalse(ForecastingService.EGG_USE_SEASONALITY)
 
         start_date = timezone.now().date() - timedelta(days=20)
         rows = []
@@ -367,8 +371,6 @@ class ForecastModelTest(TestCase):
                 'pct_hen_housed',
                 'fcr',
                 'trend_day',
-                'weekday_sin',
-                'weekday_cos',
             ],
         )
 

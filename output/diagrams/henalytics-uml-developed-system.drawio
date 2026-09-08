@@ -1,0 +1,128 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="henalytics-uml-developed-system" name="Developed System UML">
+    <mxGraphModel dx="515" dy="264" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1150" background="#f4f7fb" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#64748b;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="User&#xa;&lt;&lt;Django built-in&gt;&gt;&#xa;- id: int&#xa;- username: str&#xa;- password: str&#xa;- email: str&#xa;- is_active: bool&#xa;- is_staff: bool&#xa;- is_superuser: bool&#xa;- date_joined: datetime&#xa;---------------------------&#xa;+ check_password(): bool&#xa;+ get_full_name(): str" vertex="1">
+          <mxGeometry height="270" width="250" x="70" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="profile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#64748b;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="UserProfile&#xa;- id: int&#xa;- user: User&#xa;- role: str&#xa;- assigned_house: str?&#xa;- created_at: datetime&#xa;- updated_at: datetime&#xa;---------------------------&#xa;+ display_role: str&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="235" width="250" x="395" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="flock" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e8;strokeColor=#f2a900;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="Flock&#xa;- id: int&#xa;- house_no: int&#xa;- breed_strain: str&#xa;- date_started: date&#xa;- initial_hen_count: int&#xa;- status: str&#xa;- notes: str?&#xa;- created_at: datetime&#xa;- updated_at: datetime&#xa;---------------------------&#xa;+ save(): void&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="285" width="280" x="735" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="model" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="ModelVersion&#xa;- id: int&#xa;- model_type: str&#xa;- trained_at: datetime&#xa;- triggered_by: User?&#xa;- r2_score: decimal?&#xa;- rmse: decimal?&#xa;- mae: decimal?&#xa;- mape: decimal?&#xa;- baseline_rmse: decimal?&#xa;- aic_score: decimal?&#xa;- arima_order: str?&#xa;- pkl_path: str?&#xa;- feature_set: str&#xa;- selection_metric: str&#xa;- comparison_summary: json&#xa;- is_active: bool&#xa;- training_rows: int?&#xa;- created_at: datetime&#xa;---------------------------&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="405" width="330" x="1135" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="production" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eafff1;strokeColor=#20c768;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="ProductionLog&#xa;- id: int&#xa;- flock: Flock&#xa;- log_date: date&#xa;- age_weeks: int&#xa;- age_days: int&#xa;- hen_count: int&#xa;- dead_count: int&#xa;- culled_count: int&#xa;- feed_bags: int&#xa;- eggs_total: int&#xa;- pct_hen_day: decimal&#xa;- pct_hen_housed: decimal&#xa;- fcr: decimal?&#xa;- remarks: str?&#xa;- entered_by: User?&#xa;- created_at: datetime&#xa;- updated_at: datetime&#xa;---------------------------&#xa;+ update_live_hen_count(): void&#xa;+ update_flock_age(): void&#xa;+ update_laying_percentages(): void&#xa;+ update_fcr(): void&#xa;+ save(): void&#xa;+ delete(): void&#xa;+ recalculate_flock_snapshots(): void" vertex="1">
+          <mxGeometry height="500" width="330" x="70" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="grading" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3dc;strokeColor=#f2a900;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="GradingLog&#xa;- id: int&#xa;- flock: Flock&#xa;- log_date: date&#xa;- age_weeks: int&#xa;- eggs_total: int&#xa;- eggs_aa: int&#xa;- eggs_a: int&#xa;- eggs_b: int&#xa;- eggs_small: int&#xa;- eggs_broken: int&#xa;- eggs_decode: int&#xa;- eggs_source: str?&#xa;- created_at: datetime&#xa;- updated_at: datetime&#xa;---------------------------&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="345" width="285" x="470" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="salesTransaction" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf1ff;strokeColor=#2f5fd0;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="SalesTransaction&#xa;- id: int&#xa;- flock: Flock&#xa;- sale_date: date&#xa;- or_number: str?&#xa;- recorded_by: User?&#xa;- notes: str?&#xa;- created_at: datetime&#xa;- updated_at: datetime&#xa;---------------------------&#xa;+ total_amount: decimal&#xa;+ total_pieces: int&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="275" width="295" x="815" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="salesItem" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf1ff;strokeColor=#2f5fd0;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="SalesItem&#xa;- id: int&#xa;- transaction: SalesTransaction&#xa;- grade: str&#xa;- quantity_pieces: int&#xa;- amount: decimal&#xa;- unit_price: decimal&#xa;---------------------------&#xa;+ save(): void&#xa;+ total_amount: decimal&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="215" width="275" x="825" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="harvest" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="HarvestForecast&#xa;- id: int&#xa;- flock: Flock&#xa;- model_version: ModelVersion&#xa;- forecast_date: date&#xa;- grade: str&#xa;- predicted_qty: int&#xa;- lower_qty: int?&#xa;- upper_qty: int?&#xa;- created_at: datetime&#xa;---------------------------&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="260" width="295" x="1190" y="585" as="geometry" />
+        </mxCell>
+        <mxCell id="salesForecast" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="SalesForecast&#xa;- id: int&#xa;- model_version: ModelVersion&#xa;- forecast_date: date&#xa;- grade: str&#xa;- predicted_trays: int&#xa;- predicted_amount: decimal&#xa;- created_at: datetime&#xa;---------------------------&#xa;+ __str__(): str" vertex="1">
+          <mxGeometry height="215" width="295" x="1190" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef4ff;strokeColor=#cbd7f4;fontColor=#526274;fontSize=13;align=left;spacing=12;" value="Notation: 1 : 1 = one-to-one, 1 : M = one-to-many, ? = nullable/optional, computed properties and auto-calculation methods are shown below each class." vertex="1">
+          <mxGeometry height="45" width="860" x="320" y="1140" as="geometry" />
+        </mxCell>
+        <mxCell id="u1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" value="1 : 1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="249.98" />
+              <mxPoint x="380" y="249.98" />
+            </Array>
+            <mxPoint x="320" y="249.99694915254233" as="sourcePoint" />
+            <mxPoint x="395" y="249.99694915254233" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u2" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" target="production" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="195" y="480" />
+              <mxPoint x="195" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u3" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" target="salesTransaction" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="465" />
+              <mxPoint x="965" y="465" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u4" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" target="model" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="195" y="95" />
+              <mxPoint x="1300" y="95" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u5" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="production" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="875" y="500" />
+              <mxPoint x="235" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u6" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="grading" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="705" y="272.52" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u7" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="salesTransaction" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="520" />
+              <mxPoint x="910" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u8" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="harvest" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1080.04" y="272.52" />
+              <mxPoint x="1080.04" y="540" />
+              <mxPoint x="1290.04" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u9" edge="1" parent="1" source="salesTransaction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#2f5fd0;strokeWidth=2;fontColor=#2f5fd0;fontSize=12;" target="salesItem" value="1 : M">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="u10" edge="1" parent="1" source="model" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#6d28d9;fontSize=12;" target="harvest" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="530" />
+              <mxPoint x="1350" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="u11" edge="1" parent="1" source="model" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#6d28d9;fontSize=12;" target="salesForecast" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1525" y="320" />
+              <mxPoint x="1525" y="1008" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

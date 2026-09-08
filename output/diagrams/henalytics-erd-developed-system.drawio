@@ -1,0 +1,131 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="henalytics-erd-developed-system" name="Developed System ERD">
+    <mxGraphModel dx="2575" dy="1318" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1100" background="#f4f7fb" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="authUser" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#64748b;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="auth_user&#xa;PK id INT&#xa;username VARCHAR&#xa;password VARCHAR&#xa;email VARCHAR&#xa;is_active BOOLEAN&#xa;is_staff BOOLEAN&#xa;is_superuser BOOLEAN&#xa;date_joined DATETIME" vertex="1">
+          <mxGeometry height="205" width="245" x="70" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="userProfile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#64748b;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="UserProfile&#xa;PK id INT&#xa;FK user_id INT UNIQUE&#xa;role VARCHAR&#xa;assigned_house VARCHAR NULL&#xa;created_at DATETIME&#xa;updated_at DATETIME" vertex="1">
+          <mxGeometry height="170" width="250" x="405" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="flock" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e8;strokeColor=#f2a900;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="Flock&#xa;PK id INT&#xa;house_no INT&#xa;breed_strain VARCHAR&#xa;date_started DATE&#xa;initial_hen_count INT&#xa;status VARCHAR&#xa;notes TEXT NULL&#xa;created_at DATETIME&#xa;updated_at DATETIME&#xa;UQ house_no + date_started" vertex="1">
+          <mxGeometry height="245" width="280" x="745" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="modelVersion" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="ModelVersion&#xa;PK id INT&#xa;model_type VARCHAR&#xa;trained_at DATETIME&#xa;FK triggered_by_id INT NULL&#xa;r2_score DECIMAL NULL&#xa;rmse DECIMAL NULL&#xa;mae DECIMAL NULL&#xa;mape DECIMAL NULL&#xa;baseline_rmse DECIMAL NULL&#xa;aic_score DECIMAL NULL&#xa;arima_order VARCHAR NULL&#xa;pkl_path VARCHAR NULL&#xa;feature_set VARCHAR&#xa;selection_metric VARCHAR&#xa;comparison_summary JSON&#xa;is_active BOOLEAN&#xa;training_rows INT NULL&#xa;created_at DATETIME" vertex="1">
+          <mxGeometry height="360" width="320" x="1155" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="productionLog" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eafff1;strokeColor=#20c768;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="ProductionLog&#xa;PK id INT&#xa;FK flock_id INT&#xa;log_date DATE&#xa;age_weeks INT AUTO&#xa;age_days INT AUTO&#xa;hen_count INT AUTO&#xa;dead_count INT&#xa;culled_count INT&#xa;feed_bags INT&#xa;eggs_total INT&#xa;pct_hen_day DECIMAL AUTO&#xa;pct_hen_housed DECIMAL AUTO&#xa;fcr DECIMAL AUTO&#xa;remarks TEXT NULL&#xa;FK entered_by_id INT NULL&#xa;created_at DATETIME&#xa;updated_at DATETIME&#xa;UQ flock + log_date" vertex="1">
+          <mxGeometry height="360" width="280" x="70" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="gradingLog" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3dc;strokeColor=#f2a900;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="GradingLog&#xa;PK id INT&#xa;FK flock_id INT&#xa;log_date DATE&#xa;age_weeks INT&#xa;eggs_total INT&#xa;eggs_aa INT&#xa;eggs_a INT&#xa;eggs_b INT&#xa;eggs_small INT&#xa;eggs_broken INT&#xa;eggs_decode INT&#xa;eggs_source VARCHAR NULL&#xa;created_at DATETIME&#xa;updated_at DATETIME&#xa;UQ flock + log_date" vertex="1">
+          <mxGeometry height="315" width="270" x="420" y="525" as="geometry" />
+        </mxCell>
+        <mxCell id="salesTransaction" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf1ff;strokeColor=#2f5fd0;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="SalesTransaction&#xa;PK id INT&#xa;FK flock_id INT&#xa;sale_date DATE&#xa;or_number VARCHAR NULL&#xa;FK recorded_by_id INT NULL&#xa;notes TEXT NULL&#xa;created_at DATETIME&#xa;updated_at DATETIME&#xa;computed total_amount&#xa;computed total_pieces" vertex="1">
+          <mxGeometry height="245" width="285" x="760" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="salesItem" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf1ff;strokeColor=#2f5fd0;strokeWidth=2;fontColor=#102a43;fontSize=13;fontStyle=1;align=left;spacing=12;" value="SalesItem&#xa;PK id INT&#xa;FK transaction_id INT&#xa;grade VARCHAR&#xa;quantity_pieces INT&#xa;amount DECIMAL&#xa;unit_price DECIMAL AUTO" vertex="1">
+          <mxGeometry height="155" width="265" x="770" y="845" as="geometry" />
+        </mxCell>
+        <mxCell id="harvestForecast" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="HarvestForecast&#xa;PK id INT&#xa;FK flock_id INT&#xa;FK model_version_id INT&#xa;forecast_date DATE&#xa;grade VARCHAR&#xa;predicted_qty INT&#xa;lower_qty INT NULL&#xa;upper_qty INT NULL&#xa;created_at DATETIME&#xa;UQ flock + model + date + grade" vertex="1">
+          <mxGeometry height="230" width="320" x="1155" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="salesForecast" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e7ff;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#102a43;fontSize=12;fontStyle=1;align=left;spacing=12;" value="SalesForecast&#xa;PK id INT&#xa;FK model_version_id INT&#xa;forecast_date DATE&#xa;grade VARCHAR&#xa;predicted_trays INT&#xa;predicted_amount DECIMAL&#xa;created_at DATETIME&#xa;UQ model + date + grade" vertex="1">
+          <mxGeometry height="185" width="320" x="1155" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef4ff;strokeColor=#cbd7f4;fontColor=#526274;fontSize=13;align=left;spacing=12;" value="Notation: PK = Primary Key, FK = Foreign Key, UQ = Unique constraint, AUTO = calculated by system logic. Colors: gray = auth, amber = flock/grading, green = production, blue = sales, purple = forecasting." vertex="1">
+          <mxGeometry height="45" width="1050" x="250" y="1030" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" edge="1" parent="1" source="authUser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=none;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" target="userProfile" value="1 : 1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="242.49" />
+              <mxPoint x="380" y="242.49" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r2" edge="1" parent="1" source="authUser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" target="productionLog" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="210" y="430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r3" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" value="1 : M">
+          <mxGeometry relative="1" x="-0.0959" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="360" y="280.03000000000003" />
+              <mxPoint x="360" y="467.53999999999996" />
+              <mxPoint x="950" y="467.53999999999996" />
+            </Array>
+            <mxPoint x="315" y="280.0033333333333" as="sourcePoint" />
+            <mxPoint x="950.0133333333333" y="557.51" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r4" edge="1" parent="1" source="authUser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#64748b;strokeWidth=2;fontColor=#64748b;fontSize=12;" target="modelVersion" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="210" y="95" />
+              <mxPoint x="1315" y="95" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r5" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="productionLog" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="885.03" y="410.03" />
+              <mxPoint x="240" y="410.03" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r6" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="gradingLog" value="1 : M">
+          <mxGeometry relative="1" x="0.1734" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="710" y="247.5" />
+              <mxPoint x="710" y="682.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r7" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="salesTransaction" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="400" />
+              <mxPoint x="910" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r8" edge="1" parent="1" source="flock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#f2a900;strokeWidth=2;fontColor=#9a6500;fontSize=12;" target="harvestForecast" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1105" y="247.54" />
+              <mxPoint x="1105" y="500" />
+              <mxPoint x="1315" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r9" edge="1" parent="1" source="salesTransaction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#2f5fd0;strokeWidth=2;fontColor=#2f5fd0;fontSize=12;" target="salesItem" value="1 : M">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r10" edge="1" parent="1" source="modelVersion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#6d28d9;fontSize=12;" target="harvestForecast" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="520" />
+              <mxPoint x="1350" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r11" edge="1" parent="1" source="modelVersion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#6d28d9;fontSize=12;" target="salesForecast" value="1 : M">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1515" y="295" />
+              <mxPoint x="1515" y="912" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
