@@ -46,6 +46,8 @@ class ForecastingService:
     EGG_RATE_SIMILAR_ROWS = 10
     EGG_RATE_MIN_PERCENT = 5
     EGG_RATE_MAX_PERCENT = 92
+    EGG_RATE_MAX_DAILY_CHANGE = 2.0
+    EGG_RATE_SHOCK_THRESHOLD = 0.55
     HORIZONS = {
         'week': 7,
         'three_weeks': 21,
@@ -483,6 +485,7 @@ class ForecastingService:
                 continue
             try:
                 prediction = cls._candidate_backtest_prediction(prepared, candidate, train_values, test_start, len(test_values))
+                prediction = cls._apply_backtest_rate_limits(prepared, prediction, test_start, len(test_values))
             except Exception:
                 logger.debug("Rolling backtest failed for %s", candidate, exc_info=True)
                 continue
@@ -1007,24 +1010,84 @@ class ForecastingService:
             return None
 
         frame = prepared.get('raw_feature_frame')
+        return cls._egg_rate_capacity_limits_from_frame(frame, periods)
+
+    @classmethod
+    def _egg_rate_capacity_limits_from_frame(cls, frame, periods, future_frame=None):
         if frame is None or frame.empty or 'hen_count' not in frame.columns:
             return None
+
+        live_hens = cls._future_live_hen_values(frame, periods, future_frame=future_frame)
+        if live_hens is None or not np.any(live_hens > 0):
+            return None
+
+        hen_day_rates = cls._expected_rate_path_from_history(frame, 'pct_hen_day', periods)
+        hen_housed_rates = cls._expected_rate_path_from_history(frame, 'pct_hen_housed', periods)
+        capacities = [live_hens * (hen_day_rates / 100)]
+
+        initial_hens = cls._estimate_initial_hens(frame)
+        if initial_hens is not None and hen_housed_rates is not None:
+            capacities.append(initial_hens * (hen_housed_rates / 100))
+
+        capacities.append(live_hens * (cls.EGG_RATE_MAX_PERCENT / 100))
+        capacity = np.minimum.reduce([values for values in capacities if values is not None])
+        return np.maximum(capacity, 0)
+
+    @classmethod
+    def _apply_backtest_rate_limits(cls, prepared, prediction, test_start, test_size):
+        if prepared.get('dataset_kind') != 'egg':
+            return prediction
+
+        frame = prepared.get('raw_feature_frame')
+        if frame is None or frame.empty:
+            return prediction
+
+        training_frame = frame.iloc[:test_start]
+        future_frame = frame.iloc[test_start:test_start + test_size]
+        rate_limits = cls._egg_rate_capacity_limits_from_frame(
+            training_frame,
+            test_size,
+            future_frame=future_frame,
+        )
+        return cls._cap_values_by_rate_limits(prediction, rate_limits)
+
+    @classmethod
+    def _future_live_hen_values(cls, frame, periods, future_frame=None):
+        if future_frame is not None and 'hen_count' in future_frame.columns and not future_frame.empty:
+            values = pd.to_numeric(future_frame['hen_count'], errors='coerce').ffill().bfill().to_numpy(dtype=float)
+            if len(values):
+                if len(values) < periods:
+                    values = np.pad(values, (0, periods - len(values)), mode='edge')
+                return np.maximum(values[:periods], 0)
 
         latest_live_hens = cls._series_last_number(frame['hen_count'])
         if latest_live_hens is None or latest_live_hens <= 0:
             return None
+        return np.full(periods, latest_live_hens, dtype=float)
 
-        hen_day_rate = cls._expected_rate_from_history(frame, 'pct_hen_day')
-        hen_housed_rate = cls._expected_rate_from_history(frame, 'pct_hen_housed')
-        capacities = [latest_live_hens * (cls._bounded_rate(hen_day_rate) / 100)]
+    @classmethod
+    def _expected_rate_path_from_history(cls, frame, rate_column, periods):
+        base_rate = cls._expected_rate_from_history(frame, rate_column)
+        if base_rate is None:
+            return np.full(periods, cls.EGG_RATE_MAX_PERCENT, dtype=float)
 
-        initial_hens = cls._estimate_initial_hens(frame)
-        if initial_hens is not None and hen_housed_rate is not None:
-            capacities.append(initial_hens * (cls._bounded_rate(hen_housed_rate) / 100))
+        trend_source = cls._valid_rate_series(frame, rate_column).tail(cls.EGG_RATE_LOOKBACK_DAYS)
+        slope = 0.0
+        if len(trend_source) >= cls.OUTLIER_MIN_HISTORY_DAYS:
+            x_values = np.arange(len(trend_source), dtype=float)
+            slope, _intercept = np.polyfit(x_values, trend_source.to_numpy(dtype=float), 1)
+            slope = float(np.clip(slope, -cls.EGG_RATE_MAX_DAILY_CHANGE, cls.EGG_RATE_MAX_DAILY_CHANGE))
 
-        capacities.append(latest_live_hens * (cls.EGG_RATE_MAX_PERCENT / 100))
-        capacity = min(value for value in capacities if value is not None and np.isfinite(value))
-        return np.full(periods, max(float(capacity), 0), dtype=float)
+        steps = np.arange(1, periods + 1, dtype=float)
+        damping = np.linspace(0.85, 0.35, periods)
+        rate_path = base_rate + (slope * steps * damping)
+        latest_rate = cls._series_last_number(frame[rate_column])
+        if latest_rate is not None and 0 < latest_rate < base_rate * cls.EGG_RATE_SHOCK_THRESHOLD:
+            latest_rate = min(max(float(latest_rate), 0), 100)
+            shock_weight = np.linspace(0.25, 0.55, periods)
+            shock_path = base_rate - ((base_rate - latest_rate) * shock_weight)
+            rate_path = np.minimum(rate_path, shock_path)
+        return np.clip(rate_path, cls.EGG_RATE_MIN_PERCENT, cls.EGG_RATE_MAX_PERCENT)
 
     @classmethod
     def _expected_rate_from_history(cls, frame, rate_column):
@@ -1068,14 +1131,20 @@ class ForecastingService:
 
     @classmethod
     def _robust_rate_median(cls, series):
-        rates = pd.to_numeric(series, errors='coerce').dropna()
-        rates = rates[rates.between(cls.EGG_RATE_MIN_PERCENT, 100)]
+        rates = cls._valid_rate_series(pd.DataFrame({'rate': series}), 'rate')
         if rates.empty:
             return None
         lower = rates.quantile(0.10)
         upper = rates.quantile(0.90)
         trimmed = rates[rates.between(lower, upper)]
         return float((trimmed if not trimmed.empty else rates).median())
+
+    @classmethod
+    def _valid_rate_series(cls, frame, rate_column):
+        if rate_column not in frame:
+            return pd.Series(dtype=float)
+        rates = pd.to_numeric(frame[rate_column], errors='coerce').dropna()
+        return rates[rates.between(cls.EGG_RATE_MIN_PERCENT, 100)]
 
     @classmethod
     def _bounded_rate(cls, rate):

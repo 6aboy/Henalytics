@@ -458,35 +458,7 @@
             modeBarButtonsToRemove: ['select2d', 'lasso2d']
         };
 
-        const forecastTraces = [];
-        if (actualForecastPayload.upper && actualForecastPayload.upper.some((value) => value !== null)) {
-            forecastTraces.push(
-                {
-                    x: actualForecastPayload.iso_labels,
-                    customdata: actualForecastPayload.labels,
-                    y: actualForecastPayload.lower,
-                    name: 'Forecast Lower Range',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { color: 'rgba(51, 96, 207, 0)', shape: 'spline' },
-                    hoverinfo: 'skip',
-                    showlegend: false
-                },
-                {
-                    x: actualForecastPayload.iso_labels,
-                    customdata: actualForecastPayload.labels,
-                    y: actualForecastPayload.upper,
-                    name: 'Forecast Expected Range',
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { color: 'rgba(51, 96, 207, 0)', shape: 'spline' },
-                    fill: 'tonexty',
-                    fillcolor: 'rgba(51, 96, 207, 0.14)',
-                    hoverinfo: 'skip'
-                }
-            );
-        }
-        forecastTraces.push(
+        const forecastTraces = [
             {
                 x: actualForecastPayload.iso_labels,
                 customdata: actualForecastPayload.labels,
@@ -511,15 +483,13 @@
                 connectgaps: false,
                 hovertemplate: '%{customdata}<br>%{y:,.0f} eggs<extra></extra>'
             }
-        );
+        ];
         Plotly.newPlot(
             document.getElementById('actualForecastChart'),
             forecastTraces,
             forecastLayout('Eggs', chartYBounds([
                 actualForecastPayload.actual,
-                actualForecastPayload.forecast,
-                actualForecastPayload.lower,
-                actualForecastPayload.upper
+                actualForecastPayload.forecast
             ])),
             plotConfig
         );

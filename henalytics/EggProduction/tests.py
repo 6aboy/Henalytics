@@ -422,8 +422,60 @@ class ForecastModelTest(TestCase):
         self.assertIsNotNone(limits)
         self.assertLess(limits[0], 250)
         self.assertGreater(limits[0], 220)
-        self.assertTrue(all(value <= limits[0] for value in forecast))
-        self.assertTrue(all(value <= limits[0] for value in upper))
+        self.assertTrue(all(value <= limit for value, limit in zip(forecast, limits)))
+        self.assertTrue(all(value <= limit for value, limit in zip(upper, limits)))
+
+    def test_egg_rate_cap_slopes_after_latest_low_hen_day_shock(self):
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(15):
+            pct_hen_day = Decimal('75.00')
+            eggs_total = 750
+            if day == 14:
+                pct_hen_day = Decimal('1.60')
+                eggs_total = 5
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': eggs_total,
+                'hen_count': 312,
+                'dead_count': 0,
+                'culled_count': 0,
+                'feed_bags': 12,
+                'age_weeks': 30,
+                'age_days': 210 + day,
+                'pct_hen_day': pct_hen_day,
+                'pct_hen_housed': Decimal('75.00'),
+                'fcr': Decimal('8.000'),
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True, dataset_kind='egg')
+        limits = ForecastingService._egg_rate_capacity_limits(prepared, periods=7)
+
+        self.assertIsNotNone(limits)
+        self.assertGreater(limits[0], limits[-1])
+
+    def test_rolling_backtest_applies_egg_rate_cap_to_predictions(self):
+        dates = pd.date_range(timezone.localdate() - timedelta(days=12), periods=12, freq='D')
+        frame = pd.DataFrame({
+            'value': [750] * 12,
+            'hen_count': [1000] * 10 + [312, 312],
+            'pct_hen_day': [75] * 12,
+            'pct_hen_housed': [75] * 12,
+            'age_days': list(range(210, 222)),
+        }, index=dates)
+        prepared = {
+            'dataset_kind': 'egg',
+            'raw_feature_frame': frame,
+        }
+
+        capped = ForecastingService._apply_backtest_rate_limits(
+            prepared,
+            np.array([900, 900], dtype=float),
+            test_start=10,
+            test_size=2,
+        )
+
+        self.assertTrue(all(value < 300 for value in capped))
 
     def test_forecast_metrics_compare_against_raw_actual_values(self):
         dates = pd.date_range(timezone.localdate() - timedelta(days=10), periods=10, freq='D')
