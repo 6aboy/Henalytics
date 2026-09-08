@@ -1,6 +1,8 @@
 from decimal import Decimal
 from datetime import timedelta
 
+import numpy as np
+import pandas as pd
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.messages.storage.fallback import FallbackStorage
@@ -318,6 +320,43 @@ class ForecastModelTest(TestCase):
         self.assertIsNotNone(prepared)
         self.assertEqual(prepared['series'].loc[str(missing_date)], 1050)
         self.assertNotEqual(prepared['series'].loc[str(missing_date)], 0)
+
+    def test_egg_training_series_smooths_short_extreme_outliers(self):
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(15):
+            value = 900
+            if day == 12:
+                value = 5
+            elif day == 13:
+                value = 300
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': value,
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, dataset_kind='egg')
+
+        self.assertIsNotNone(prepared)
+        self.assertGreater(prepared['series'].iloc[12], 500)
+        self.assertGreater(prepared['series'].iloc[13], 500)
+
+    def test_bounded_fallback_replaces_negative_egg_forecast(self):
+        dates = pd.date_range(timezone.localdate() - timedelta(days=30), periods=30, freq='D')
+        series = pd.Series([900 - day for day in range(30)], index=dates)
+        fallback = ForecastingService._fallback_forecast_if_needed(
+            series,
+            np.array([-800, -700, -600], dtype=float),
+            3,
+            {'rmse': 20, 'mae': 15, 'mape': 2},
+            forecast_start_date=dates[-1].date() + timedelta(days=1),
+            allow_seasonal=False,
+        )
+
+        self.assertIsNotNone(fallback)
+        self.assertEqual(fallback['order'], 'bounded trend guard')
+        self.assertTrue(all(value > 0 for value in fallback['forecasted_values']))
+        self.assertLess(fallback['forecasted_values'][-1], series.iloc[-1])
 
     def test_egg_sarimax_features_match_notebook_predictors(self):
         self.assertEqual(

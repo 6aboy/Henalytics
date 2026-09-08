@@ -39,6 +39,9 @@ class ForecastingService:
     SEASONAL_ORDERS = ((1, 0, 1, SEASONAL_PERIOD), (0, 1, 1, SEASONAL_PERIOD))
     EGG_USE_SEASONALITY = False
     SALES_USE_SEASONALITY = True
+    OUTLIER_WINDOW_DAYS = 14
+    OUTLIER_MIN_HISTORY_DAYS = 7
+    OUTLIER_RELATIVE_BAND = 0.35
     HORIZONS = {
         'week': 7,
         'three_weeks': 21,
@@ -261,17 +264,20 @@ class ForecastingService:
             future_exog=future_exog,
         )
         metrics = best.get('metrics') or cls._score_series(prepared, best['spec'], feature_set=best.get('feature_set', 'all'))
-        if not compare_models:
-            fallback = cls._fallback_forecast_if_needed(
-                series,
-                forecast_values,
-                periods,
-                metrics,
-                forecast_start_date=forecast_start_date,
-                exog=exog,
-            )
-            if fallback is not None:
-                return fallback
+        fallback = cls._fallback_forecast_if_needed(
+            series,
+            forecast_values,
+            periods,
+            metrics,
+            forecast_start_date=forecast_start_date,
+            exog=exog,
+            allow_seasonal=allow_seasonal,
+        )
+        if fallback is not None and (prepared.get('dataset_kind') == 'egg' or not compare_models):
+            fallback.setdefault('feature_set', best.get('feature_set', ''))
+            fallback.setdefault('selection_metric', 'rolling_mae_mape' if compare_models else 'aic')
+            fallback.setdefault('comparison_summary', selection.get('comparison_summary') if selection else {})
+            return fallback
 
         return {
             'success': True,
@@ -649,7 +655,7 @@ class ForecastingService:
         ]
 
     @classmethod
-    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None):
+    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None, allow_seasonal=False):
         if not len(forecast_values):
             return None
 
@@ -658,20 +664,20 @@ class ForecastingService:
         recent_mean = float(np.mean(recent)) if len(recent) else 0
         unreasonable = cls._forecast_is_unreasonable(recent, forecast_values, exog)
         if unreasonable:
-            return cls._trend_seasonal_guard(series, periods, model_metrics, forecast_start_date)
+            return cls._bounded_trend_guard(series, periods, model_metrics, forecast_start_date, allow_seasonal=allow_seasonal)
 
         trend_fallback = cls._trend_forecast_if_model_is_flat(series, forecast_values, periods, model_metrics, forecast_start_date)
         if trend_fallback is not None:
             return trend_fallback
-
-        if periods < 90:
-            return None
 
         zero_share = float(np.mean(forecast_values <= 0))
         final_value = float(forecast_values[-1])
         collapsed = zero_share > 0.10 or (recent_mean and final_value < recent_mean * 0.35)
         if not collapsed:
             return None
+
+        if periods < 90:
+            return cls._bounded_trend_guard(series, periods, model_metrics, forecast_start_date, allow_seasonal=allow_seasonal)
 
         baseline_values = cls._seasonal_naive_forecast(series, periods)
         baseline_rmse, baseline_r2 = cls._score_seasonal_naive(series)
@@ -701,6 +707,12 @@ class ForecastingService:
         recent_max = float(np.max(recent))
         recent_mean = float(np.mean(recent))
         forecast_max = float(np.max(forecast_values))
+        forecast_min = float(np.min(forecast_values))
+        if recent_mean > 0 and forecast_min < 0:
+            return True
+        if recent_mean > 0 and forecast_min < recent_mean * 0.25:
+            return True
+
         recent_limit = max(recent_max * 1.25, recent_mean * 1.35)
         if forecast_max > recent_limit:
             return True
@@ -713,7 +725,7 @@ class ForecastingService:
         return False
 
     @classmethod
-    def _trend_seasonal_guard(cls, series, periods, model_metrics, forecast_start_date=None):
+    def _bounded_trend_guard(cls, series, periods, model_metrics, forecast_start_date=None, allow_seasonal=False):
         model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         window_size = min(45, len(values))
@@ -724,9 +736,11 @@ class ForecastingService:
         damping = np.linspace(0.80, 0.35, periods)
         trend_values = recent[-1] + (slope * steps * damping)
 
-        seasonal = values[-cls.SEASONAL_PERIOD:] if len(values) >= cls.SEASONAL_PERIOD else values[-1:]
-        seasonal_offsets = seasonal - np.mean(seasonal)
-        guarded_values = trend_values + np.resize(seasonal_offsets, periods)
+        guarded_values = trend_values
+        if allow_seasonal and len(values) >= cls.SEASONAL_PERIOD:
+            seasonal = values[-cls.SEASONAL_PERIOD:]
+            seasonal_offsets = seasonal - np.mean(seasonal)
+            guarded_values = trend_values + np.resize(seasonal_offsets, periods)
         recent_floor = max(float(np.min(recent)) * 0.80, 0)
         recent_ceiling = float(np.max(recent)) * 1.10
         guarded_values = np.clip(guarded_values, recent_floor, recent_ceiling)
@@ -738,7 +752,7 @@ class ForecastingService:
             'forecasted_values': guarded_values,
             'lower_values': cls._interval_from_rmse(guarded_values, interval_rmse),
             'upper_values': cls._interval_from_rmse(guarded_values, interval_rmse, upper=True),
-            'order': 'bounded trend + weekly seasonality guard',
+            'order': 'bounded trend guard',
             'aic_score': None,
             'rmse': interval_rmse,
             'mae': model_metrics.get('mae') if model_metrics else None,
@@ -1104,6 +1118,8 @@ class ForecastingService:
         df = df.groupby('date', as_index=True).agg(aggregations).sort_index()
         df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
         df = df.interpolate(method='time').ffill().bfill()
+        if dataset_kind == 'egg':
+            df['value'] = cls._smooth_egg_training_outliers(df['value'])
         if use_exog:
             cls._add_time_features(df)
 
@@ -1122,6 +1138,44 @@ class ForecastingService:
             exog.attrs['dataset_kind'] = dataset_kind
 
         return {'series': df['value'], 'exog': exog, 'dataset_kind': dataset_kind}
+
+    @classmethod
+    def _smooth_egg_training_outliers(cls, series):
+        values = pd.to_numeric(series, errors='coerce').astype(float).copy()
+        if len(values) < cls.OUTLIER_MIN_HISTORY_DAYS + 1:
+            return values
+
+        smoothed = values.copy()
+        consecutive_outliers = 0
+        for index in range(len(values)):
+            if index < cls.OUTLIER_MIN_HISTORY_DAYS or pd.isna(values.iloc[index]):
+                continue
+
+            start = max(0, index - cls.OUTLIER_WINDOW_DAYS)
+            history = smoothed.iloc[start:index].dropna()
+            if len(history) < cls.OUTLIER_MIN_HISTORY_DAYS:
+                continue
+
+            median = float(history.median())
+            if median <= 0:
+                continue
+
+            mad = float(np.median(np.abs(history.to_numpy(dtype=float) - median)))
+            robust_width = max(median * cls.OUTLIER_RELATIVE_BAND, mad * 4.5, 1)
+            lower_bound = max(0, median - robust_width)
+            upper_bound = median + robust_width
+            current = float(values.iloc[index])
+            is_outlier = current < lower_bound or current > upper_bound
+
+            if is_outlier:
+                consecutive_outliers += 1
+                if consecutive_outliers < 3:
+                    smoothed.iloc[index] = min(max(current, lower_bound), upper_bound)
+                continue
+
+            consecutive_outliers = 0
+
+        return smoothed
 
     @staticmethod
     def _add_time_features(df):
