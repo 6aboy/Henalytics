@@ -42,6 +42,10 @@ class ForecastingService:
     OUTLIER_WINDOW_DAYS = 14
     OUTLIER_MIN_HISTORY_DAYS = 7
     OUTLIER_RELATIVE_BAND = 0.35
+    EGG_RATE_LOOKBACK_DAYS = 21
+    EGG_RATE_SIMILAR_ROWS = 10
+    EGG_RATE_MIN_PERCENT = 5
+    EGG_RATE_MAX_PERCENT = 92
     HORIZONS = {
         'week': 7,
         'three_weeks': 21,
@@ -264,6 +268,7 @@ class ForecastingService:
             future_exog=future_exog,
         )
         metrics = best.get('metrics') or cls._score_series(prepared, best['spec'], feature_set=best.get('feature_set', 'all'))
+        rate_limits = cls._egg_rate_capacity_limits(prepared, periods)
         fallback = cls._fallback_forecast_if_needed(
             series,
             forecast_values,
@@ -272,12 +277,21 @@ class ForecastingService:
             forecast_start_date=forecast_start_date,
             exog=exog,
             allow_seasonal=allow_seasonal,
+            rate_limits=rate_limits,
         )
         if fallback is not None and (prepared.get('dataset_kind') == 'egg' or not compare_models):
             fallback.setdefault('feature_set', best.get('feature_set', ''))
             fallback.setdefault('selection_metric', 'rolling_mae_mape' if compare_models else 'aic')
             fallback.setdefault('comparison_summary', selection.get('comparison_summary') if selection else {})
             return fallback
+
+        if prepared.get('dataset_kind') == 'egg':
+            forecast_values, lower_values, upper_values = cls._apply_egg_rate_limits(
+                forecast_values,
+                lower_values,
+                upper_values,
+                rate_limits,
+            )
 
         return {
             'success': True,
@@ -656,7 +670,17 @@ class ForecastingService:
         ]
 
     @classmethod
-    def _fallback_forecast_if_needed(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None, allow_seasonal=False):
+    def _fallback_forecast_if_needed(
+        cls,
+        series,
+        forecast_values,
+        periods,
+        model_metrics,
+        forecast_start_date=None,
+        exog=None,
+        allow_seasonal=False,
+        rate_limits=None,
+    ):
         if not len(forecast_values):
             return None
 
@@ -672,6 +696,7 @@ class ForecastingService:
                 forecast_start_date,
                 allow_seasonal=allow_seasonal,
                 exog=exog,
+                rate_limits=rate_limits,
             )
 
         trend_fallback = cls._trend_forecast_if_model_is_flat(
@@ -681,6 +706,7 @@ class ForecastingService:
             model_metrics,
             forecast_start_date,
             exog=exog,
+            rate_limits=rate_limits,
         )
         if trend_fallback is not None:
             return trend_fallback
@@ -699,6 +725,7 @@ class ForecastingService:
                 forecast_start_date,
                 allow_seasonal=allow_seasonal,
                 exog=exog,
+                rate_limits=rate_limits,
             )
 
         baseline_values = cls._seasonal_naive_forecast(series, periods)
@@ -706,11 +733,18 @@ class ForecastingService:
         if model_rmse is not None and baseline_rmse is not None and baseline_rmse > model_rmse and zero_share <= 0.25:
             return None
 
+        baseline_values, lower_values, upper_values = cls._apply_egg_rate_limits(
+            baseline_values,
+            cls._interval_from_rmse(baseline_values, baseline_rmse),
+            cls._interval_from_rmse(baseline_values, baseline_rmse, upper=True),
+            rate_limits,
+        )
+
         return {
             'success': True,
             'forecasted_values': baseline_values,
-            'lower_values': cls._interval_from_rmse(baseline_values, baseline_rmse),
-            'upper_values': cls._interval_from_rmse(baseline_values, baseline_rmse, upper=True),
+            'lower_values': lower_values,
+            'upper_values': upper_values,
             'order': 'seasonal naive baseline (7-day)',
             'aic_score': None,
             'rmse': baseline_rmse,
@@ -747,7 +781,7 @@ class ForecastingService:
         return False
 
     @classmethod
-    def _bounded_trend_guard(cls, series, periods, model_metrics, forecast_start_date=None, allow_seasonal=False, exog=None):
+    def _bounded_trend_guard(cls, series, periods, model_metrics, forecast_start_date=None, allow_seasonal=False, exog=None, rate_limits=None):
         model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         window_size = min(45, len(values))
@@ -768,10 +802,16 @@ class ForecastingService:
         guarded_values = np.clip(guarded_values, recent_floor, recent_ceiling)
         live_hens = cls._latest_live_hen_limit(exog)
         guarded_values = cls._cap_values_by_live_hens(guarded_values, live_hens)
+        guarded_values = cls._cap_values_by_rate_limits(guarded_values, rate_limits)
 
         baseline_rmse, baseline_r2 = cls._score_seasonal_naive(series)
         interval_rmse = baseline_rmse if baseline_rmse is not None else model_rmse
-        lower_values, upper_values = cls._interval_bounds(guarded_values, interval_rmse, live_hens=live_hens)
+        lower_values, upper_values = cls._interval_bounds(
+            guarded_values,
+            interval_rmse,
+            live_hens=live_hens,
+            rate_limits=rate_limits,
+        )
         return {
             'success': True,
             'forecasted_values': guarded_values,
@@ -788,7 +828,7 @@ class ForecastingService:
         }
 
     @classmethod
-    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None):
+    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None, rate_limits=None):
         model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         if len(values) < cls.MIN_POINTS:
@@ -831,11 +871,13 @@ class ForecastingService:
         trend_values = np.maximum(trend_values, 0)
         live_hens = cls._latest_live_hen_limit(exog)
         trend_values = cls._cap_values_by_live_hens(trend_values, live_hens)
+        trend_values = cls._cap_values_by_rate_limits(trend_values, rate_limits)
         trend_rmse, trend_r2 = cls._score_trend_baseline(series)
         lower_values, upper_values = cls._interval_bounds(
             trend_values,
             trend_rmse if trend_rmse is not None else model_rmse,
             live_hens=live_hens,
+            rate_limits=rate_limits,
         )
 
         return {
@@ -898,12 +940,16 @@ class ForecastingService:
         return np.maximum(values - padding, 0)
 
     @classmethod
-    def _interval_bounds(cls, values, rmse, live_hens=None):
+    def _interval_bounds(cls, values, rmse, live_hens=None, rate_limits=None):
         lower_values = cls._interval_from_rmse(values, rmse)
         upper_values = cls._interval_from_rmse(values, rmse, upper=True)
         if live_hens is not None:
             lower_values = cls._cap_values_by_live_hens(lower_values, live_hens)
             upper_values = cls._cap_values_by_live_hens(upper_values, live_hens)
+            lower_values = np.minimum(lower_values, upper_values)
+        if rate_limits is not None:
+            lower_values = cls._cap_values_by_rate_limits(lower_values, rate_limits)
+            upper_values = cls._cap_values_by_rate_limits(upper_values, rate_limits)
             lower_values = np.minimum(lower_values, upper_values)
         return lower_values, upper_values
 
@@ -931,6 +977,133 @@ class ForecastingService:
         if live_hens is None:
             return values
         return np.minimum(values, float(live_hens))
+
+    @classmethod
+    def _apply_egg_rate_limits(cls, forecast_values, lower_values, upper_values, rate_limits):
+        if rate_limits is None:
+            return forecast_values, lower_values, upper_values
+
+        forecast_values = cls._cap_values_by_rate_limits(forecast_values, rate_limits)
+        lower_values = cls._cap_values_by_rate_limits(lower_values, rate_limits)
+        upper_values = cls._cap_values_by_rate_limits(upper_values, rate_limits)
+        lower_values = np.minimum(lower_values, forecast_values)
+        upper_values = np.maximum(forecast_values, upper_values)
+        upper_values = cls._cap_values_by_rate_limits(upper_values, rate_limits)
+        return forecast_values, lower_values, upper_values
+
+    @staticmethod
+    def _cap_values_by_rate_limits(values, rate_limits):
+        values = np.maximum(np.asarray(values, dtype=float), 0)
+        if rate_limits is None:
+            return values
+        limits = np.asarray(rate_limits, dtype=float)
+        if len(limits) != len(values):
+            limits = np.resize(limits, len(values))
+        return np.minimum(values, limits)
+
+    @classmethod
+    def _egg_rate_capacity_limits(cls, prepared, periods):
+        if prepared.get('dataset_kind') != 'egg':
+            return None
+
+        frame = prepared.get('raw_feature_frame')
+        if frame is None or frame.empty or 'hen_count' not in frame.columns:
+            return None
+
+        latest_live_hens = cls._series_last_number(frame['hen_count'])
+        if latest_live_hens is None or latest_live_hens <= 0:
+            return None
+
+        hen_day_rate = cls._expected_rate_from_history(frame, 'pct_hen_day')
+        hen_housed_rate = cls._expected_rate_from_history(frame, 'pct_hen_housed')
+        capacities = [latest_live_hens * (cls._bounded_rate(hen_day_rate) / 100)]
+
+        initial_hens = cls._estimate_initial_hens(frame)
+        if initial_hens is not None and hen_housed_rate is not None:
+            capacities.append(initial_hens * (cls._bounded_rate(hen_housed_rate) / 100))
+
+        capacities.append(latest_live_hens * (cls.EGG_RATE_MAX_PERCENT / 100))
+        capacity = min(value for value in capacities if value is not None and np.isfinite(value))
+        return np.full(periods, max(float(capacity), 0), dtype=float)
+
+    @classmethod
+    def _expected_rate_from_history(cls, frame, rate_column):
+        if rate_column not in frame.columns:
+            return None
+
+        working = frame.copy()
+        working[rate_column] = pd.to_numeric(working[rate_column], errors='coerce')
+        working['hen_count'] = pd.to_numeric(working.get('hen_count'), errors='coerce')
+        working = working[
+            working[rate_column].between(cls.EGG_RATE_MIN_PERCENT, 100)
+            & working['hen_count'].gt(0)
+        ]
+        if working.empty:
+            return None
+
+        recent = working.tail(cls.EGG_RATE_LOOKBACK_DAYS)
+        recent_rate = cls._robust_rate_median(recent[rate_column])
+        latest_live_hens = cls._series_last_number(frame['hen_count'])
+        if latest_live_hens is None:
+            return recent_rate
+
+        median_hens = float(working['hen_count'].median()) if not working['hen_count'].dropna().empty else latest_live_hens
+        scale_hens = max(latest_live_hens, median_hens, 1)
+        distance = (working['hen_count'] - latest_live_hens).abs() / scale_hens
+        if recent_rate is not None:
+            distance = distance + ((working[rate_column] - recent_rate).abs() / max(recent_rate, 1))
+        if 'age_days' in working.columns:
+            working['age_days'] = pd.to_numeric(working['age_days'], errors='coerce')
+            latest_age = cls._series_last_number(frame['age_days'])
+            if latest_age is not None and working['age_days'].notna().any():
+                distance = distance + ((working['age_days'] - latest_age).abs() / 365).fillna(0)
+
+        similar = working.assign(_distance=distance).nsmallest(cls.EGG_RATE_SIMILAR_ROWS, '_distance')
+        similar_rate = cls._robust_rate_median(similar[rate_column])
+        if recent_rate is None:
+            return similar_rate
+        if similar_rate is None:
+            return recent_rate
+        return (recent_rate * 0.65) + (similar_rate * 0.35)
+
+    @classmethod
+    def _robust_rate_median(cls, series):
+        rates = pd.to_numeric(series, errors='coerce').dropna()
+        rates = rates[rates.between(cls.EGG_RATE_MIN_PERCENT, 100)]
+        if rates.empty:
+            return None
+        lower = rates.quantile(0.10)
+        upper = rates.quantile(0.90)
+        trimmed = rates[rates.between(lower, upper)]
+        return float((trimmed if not trimmed.empty else rates).median())
+
+    @classmethod
+    def _bounded_rate(cls, rate):
+        if rate is None or not np.isfinite(rate):
+            return cls.EGG_RATE_MAX_PERCENT
+        return min(max(float(rate), cls.EGG_RATE_MIN_PERCENT), cls.EGG_RATE_MAX_PERCENT)
+
+    @staticmethod
+    def _estimate_initial_hens(frame):
+        if 'pct_hen_housed' not in frame.columns or 'value' not in frame.columns:
+            return None
+        values = pd.to_numeric(frame['value'], errors='coerce')
+        rates = pd.to_numeric(frame['pct_hen_housed'], errors='coerce')
+        valid = values.gt(0) & rates.gt(0)
+        if not valid.any():
+            return None
+        estimates = values[valid] / (rates[valid] / 100)
+        estimates = estimates.replace([np.inf, -np.inf], np.nan).dropna()
+        if estimates.empty:
+            return None
+        return float(estimates.median())
+
+    @staticmethod
+    def _series_last_number(series):
+        values = pd.to_numeric(series, errors='coerce').dropna()
+        if values.empty:
+            return None
+        return float(values.iloc[-1])
 
     @classmethod
     def _score_seasonal_naive(cls, series):
@@ -1189,6 +1362,7 @@ class ForecastingService:
         df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
         df = df.interpolate(method='time').ffill().bfill()
         raw_series = df['value'].copy()
+        raw_feature_frame = df.copy()
         if dataset_kind == 'egg':
             live_hens = df['hen_count'] if 'hen_count' in df.columns else None
             df['value'] = cls._smooth_egg_training_outliers(df['value'], live_hens=live_hens)
@@ -1212,6 +1386,7 @@ class ForecastingService:
         return {
             'series': df['value'],
             'raw_series': raw_series,
+            'raw_feature_frame': raw_feature_frame,
             'exog': exog,
             'dataset_kind': dataset_kind,
         }

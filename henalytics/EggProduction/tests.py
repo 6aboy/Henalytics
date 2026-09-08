@@ -383,6 +383,48 @@ class ForecastModelTest(TestCase):
         self.assertTrue(all(value <= 312 for value in fallback['forecasted_values']))
         self.assertTrue(all(value <= 312 for value in fallback['upper_values']))
 
+    def test_egg_rate_cap_uses_recent_hen_day_performance(self):
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(15):
+            hen_count = 1000
+            eggs_total = 750
+            pct_hen_day = Decimal('75.00')
+            pct_hen_housed = Decimal('75.00')
+            if day == 14:
+                hen_count = 312
+                eggs_total = 300
+                pct_hen_day = Decimal('96.15')
+                pct_hen_housed = Decimal('30.00')
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': eggs_total,
+                'hen_count': hen_count,
+                'dead_count': 0,
+                'culled_count': 0,
+                'feed_bags': 12,
+                'age_weeks': 30,
+                'age_days': 210 + day,
+                'pct_hen_day': pct_hen_day,
+                'pct_hen_housed': pct_hen_housed,
+                'fcr': Decimal('8.000'),
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True, dataset_kind='egg')
+        limits = ForecastingService._egg_rate_capacity_limits(prepared, periods=3)
+        forecast, lower, upper = ForecastingService._apply_egg_rate_limits(
+            np.array([300, 310, 320], dtype=float),
+            np.array([260, 270, 280], dtype=float),
+            np.array([330, 340, 350], dtype=float),
+            limits,
+        )
+
+        self.assertIsNotNone(limits)
+        self.assertLess(limits[0], 250)
+        self.assertGreater(limits[0], 220)
+        self.assertTrue(all(value <= limits[0] for value in forecast))
+        self.assertTrue(all(value <= limits[0] for value in upper))
+
     def test_forecast_metrics_compare_against_raw_actual_values(self):
         dates = pd.date_range(timezone.localdate() - timedelta(days=10), periods=10, freq='D')
         series = pd.Series([900] * 10, index=dates)
