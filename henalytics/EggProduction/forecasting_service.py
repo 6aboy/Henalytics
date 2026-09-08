@@ -748,7 +748,7 @@ class ForecastingService:
             'forecasted_values': baseline_values,
             'lower_values': lower_values,
             'upper_values': upper_values,
-            'order': 'seasonal naive baseline (7-day)',
+            'order': 'seasonal naive 7d',
             'aic_score': None,
             'rmse': baseline_rmse,
             'mae': model_metrics.get('mae') if model_metrics else None,
@@ -800,7 +800,7 @@ class ForecastingService:
             seasonal = values[-cls.SEASONAL_PERIOD:]
             seasonal_offsets = seasonal - np.mean(seasonal)
             guarded_values = trend_values + np.resize(seasonal_offsets, periods)
-        recent_floor = max(float(np.min(recent)) * 0.80, 0)
+        recent_floor = cls._horizon_floor_values(recent, periods)
         recent_ceiling = float(np.max(recent)) * 1.10
         guarded_values = np.clip(guarded_values, recent_floor, recent_ceiling)
         live_hens = cls._latest_live_hen_limit(exog)
@@ -888,7 +888,7 @@ class ForecastingService:
             'forecasted_values': trend_values,
             'lower_values': lower_values,
             'upper_values': upper_values,
-            'order': 'trend-adjusted ARIMA fallback',
+            'order': 'trend fallback',
             'aic_score': None,
             'rmse': trend_rmse if trend_rmse is not None else model_rmse,
             'mae': model_metrics.get('mae') if model_metrics else None,
@@ -980,6 +980,17 @@ class ForecastingService:
         if live_hens is None:
             return values
         return np.minimum(values, float(live_hens))
+
+    @staticmethod
+    def _horizon_floor_values(recent, periods):
+        recent = np.asarray(recent, dtype=float)
+        base_floor = max(float(np.min(recent)) * 0.80, 0) if len(recent) else 0
+        end_factor = float(np.interp(
+            periods,
+            [1, 14, 30, 90, 180],
+            [1.0, 1.0, 0.75, 0.25, 0.15],
+        ))
+        return base_floor * np.linspace(1.0, end_factor, periods)
 
     @classmethod
     def _apply_egg_rate_limits(cls, forecast_values, lower_values, upper_values, rate_limits):

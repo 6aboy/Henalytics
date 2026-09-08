@@ -102,7 +102,7 @@ class ModelVersion(models.Model):
     mape = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     baseline_rmse = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     aic_score = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
-    arima_order = models.CharField(max_length=20, null=True, blank=True, help_text="Format: (p,d,q)")
+    arima_order = models.CharField(max_length=80, null=True, blank=True, help_text="Format: (p,d,q)")
     pkl_path = models.CharField(max_length=255, null=True, blank=True)
     feature_set = models.CharField(max_length=50, blank=True, default='')
     selection_metric = models.CharField(max_length=30, blank=True, default='rolling_mae_mape')
@@ -113,6 +113,31 @@ class ModelVersion(models.Model):
     
     def __str__(self):
         return f"{self.get_model_type_display()} - {self.trained_at.strftime('%Y-%m-%d %H:%M')}"
+
+    @property
+    def display_model_name(self):
+        order = (self.arima_order or '').lower()
+        if 'guard' in order or 'fallback' in order:
+            return 'Guarded Forecast'
+        if 'baseline' in order:
+            return 'Seasonal Baseline'
+        if self.feature_set and self.feature_set != 'none':
+            return 'SARIMAX'
+        if self.model_type == 'arima':
+            return 'SARIMA'
+        return self.get_model_type_display()
+
+    @property
+    def display_model_detail(self):
+        order = self.arima_order or ''
+        lowered_order = order.lower()
+        if 'guard' in lowered_order:
+            return 'SARIMAX adjusted by production guardrails'
+        if 'fallback' in lowered_order:
+            return 'SARIMAX adjusted by recent trend'
+        if 'baseline' in lowered_order:
+            return '7-day seasonal baseline fallback'
+        return order or 'Generate a forecast first'
     
     class Meta:
         ordering = ['-trained_at']

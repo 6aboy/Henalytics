@@ -155,12 +155,12 @@
                     <div class="metric-label">Model Used</div>
                     <div class="metric-value">
                         {% if latest_model %}
-                            {% if latest_model.feature_set and latest_model.feature_set != 'none' %}SARIMAX{% else %}SARIMA{% endif %}
+                            {{ latest_model.display_model_name }}
                         {% else %}
                             N/A
                         {% endif %}
                     </div>
-                    <div class="metric-meta">{% if latest_model %}{{ latest_model.arima_order|default:"Seasonal ARIMA" }}{% else %}Generate a forecast first{% endif %}</div>
+                    <div class="metric-meta">{% if latest_model %}{{ latest_model.display_model_detail }}{% else %}Generate a forecast first{% endif %}</div>
                 </div>
                 <span class="metric-icon blue">
                     <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">

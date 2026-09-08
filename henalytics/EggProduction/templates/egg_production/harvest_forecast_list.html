@@ -155,12 +155,12 @@
                     <div class="metric-label">Model Used</div>
                     <div class="metric-value">
                         {% if latest_model %}
-                            {% if latest_model.feature_set and latest_model.feature_set != 'none' %}SARIMAX{% else %}SARIMA{% endif %}
+                            {{ latest_model.display_model_name }}
                         {% else %}
                             N/A
                         {% endif %}
                     </div>
-                    <div class="metric-meta">{% if latest_model %}{{ latest_model.arima_order|default:"Seasonal ARIMA" }}{% else %}Generate a forecast first{% endif %}</div>
+                    <div class="metric-meta">{% if latest_model %}{{ latest_model.display_model_detail }}{% else %}Generate a forecast first{% endif %}</div>
                 </div>
                 <span class="metric-icon blue">
                     <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
@@ -347,7 +347,7 @@
                 <th>Predicted Qty</th>
                 <th>Lower Range</th>
                 <th>Upper Range</th>
-                <th>Model Order</th>
+                <th>Model Used</th>
                 <th>RMSE</th>
                 <th>MAPE</th>
                 <th>R2</th>
@@ -363,7 +363,7 @@
                 <td><strong>{{ forecast.predicted_qty|intcomma }}</strong></td>
                 <td>{{ forecast.lower_qty|default:"N/A"|intcomma }}</td>
                 <td>{{ forecast.upper_qty|default:"N/A"|intcomma }}</td>
-                <td>{{ forecast.model_version.arima_order|default:"ARIMA" }}</td>
+                <td>{{ forecast.model_version.display_model_name }}</td>
                 <td>{{ forecast.model_version.rmse|default:"N/A" }}</td>
                 <td>{% if forecast.model_version.mape %}{{ forecast.model_version.mape }}%{% else %}N/A{% endif %}</td>
                 <td>{{ forecast.model_version.r2_score|default:"N/A" }}</td>

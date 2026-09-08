@@ -383,6 +383,29 @@ class ForecastModelTest(TestCase):
         self.assertTrue(all(value <= 312 for value in fallback['forecasted_values']))
         self.assertTrue(all(value <= 312 for value in fallback['upper_values']))
 
+    def test_bounded_fallback_floor_relaxes_for_long_horizon(self):
+        recent = np.array([250, 260, 255, 270], dtype=float)
+
+        short_floor = ForecastingService._horizon_floor_values(recent, periods=7)
+        long_floor = ForecastingService._horizon_floor_values(recent, periods=90)
+        extra_long_floor = ForecastingService._horizon_floor_values(recent, periods=91)
+
+        self.assertEqual(short_floor[0], short_floor[-1])
+        self.assertEqual(long_floor[0], 200)
+        self.assertLess(long_floor[-1], long_floor[0])
+        self.assertEqual(long_floor[-1], 50)
+        self.assertLess(abs(extra_long_floor[-1] - long_floor[-1]), 2)
+
+    def test_model_version_display_name_identifies_guarded_forecast(self):
+        model = ModelVersion(
+            model_type='arima',
+            arima_order='trend fallback',
+            feature_set='safe',
+        )
+
+        self.assertEqual(model.display_model_name, 'Guarded Forecast')
+        self.assertEqual(model.display_model_detail, 'SARIMAX adjusted by recent trend')
+
     def test_egg_rate_cap_uses_recent_hen_day_performance(self):
         start_date = timezone.now().date() - timedelta(days=20)
         rows = []
