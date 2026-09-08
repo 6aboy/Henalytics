@@ -338,25 +338,60 @@ class ForecastModelTest(TestCase):
         prepared = ForecastingService._prepare_daily_dataset(rows, dataset_kind='egg')
 
         self.assertIsNotNone(prepared)
+        self.assertEqual(prepared['raw_series'].iloc[12], 5)
+        self.assertEqual(prepared['raw_series'].iloc[13], 300)
         self.assertGreater(prepared['series'].iloc[12], 500)
         self.assertGreater(prepared['series'].iloc[13], 500)
+
+    def test_egg_training_outlier_smoothing_respects_live_hens(self):
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = []
+        for day in range(15):
+            value = 900
+            hen_count = 1000
+            if day == 12:
+                value = 5
+                hen_count = 312
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': value,
+                'hen_count': hen_count,
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True, dataset_kind='egg')
+
+        self.assertIsNotNone(prepared)
+        self.assertLessEqual(prepared['series'].iloc[12], 312)
 
     def test_bounded_fallback_replaces_negative_egg_forecast(self):
         dates = pd.date_range(timezone.localdate() - timedelta(days=30), periods=30, freq='D')
         series = pd.Series([900 - day for day in range(30)], index=dates)
+        exog = pd.DataFrame({'hen_count': [1000] * 29 + [312]}, index=dates)
+        exog.attrs['latest_source_values'] = pd.Series({'hen_count': 312})
         fallback = ForecastingService._fallback_forecast_if_needed(
             series,
             np.array([-800, -700, -600], dtype=float),
             3,
             {'rmse': 20, 'mae': 15, 'mape': 2},
             forecast_start_date=dates[-1].date() + timedelta(days=1),
+            exog=exog,
             allow_seasonal=False,
         )
 
         self.assertIsNotNone(fallback)
         self.assertEqual(fallback['order'], 'bounded trend guard')
-        self.assertTrue(all(value > 0 for value in fallback['forecasted_values']))
-        self.assertLess(fallback['forecasted_values'][-1], series.iloc[-1])
+        self.assertTrue(all(value <= 312 for value in fallback['forecasted_values']))
+        self.assertTrue(all(value <= 312 for value in fallback['upper_values']))
+
+    def test_forecast_metrics_compare_against_raw_actual_values(self):
+        dates = pd.date_range(timezone.localdate() - timedelta(days=10), periods=10, freq='D')
+        series = pd.Series([900] * 10, index=dates)
+        raw_series = series.copy()
+        raw_series.iloc[-1] = 5
+
+        metrics = ForecastingService._seasonal_naive_metrics(series, actual_series=raw_series)
+
+        self.assertGreater(metrics['mae'], 400)
 
     def test_egg_sarimax_features_match_notebook_predictors(self):
         self.assertEqual(

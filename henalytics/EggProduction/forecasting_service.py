@@ -446,9 +446,10 @@ class ForecastingService:
         series = prepared['series']
         values = series.to_numpy(dtype=float)
         if candidate['kind'] == 'baseline':
-            return cls._seasonal_naive_metrics(series)
+            return cls._seasonal_naive_metrics(series, actual_series=prepared.get('raw_series'))
         if len(values) < cls.MIN_POINTS + 7:
             return cls._score_series(prepared, candidate['spec'], feature_set=candidate.get('feature_set', 'none'))
+        raw_values = prepared.get('raw_series', series).to_numpy(dtype=float)
 
         horizon = min(14, max(3, len(values) // 12))
         min_train_size = max(cls.MIN_POINTS, min(90, len(values) // 2))
@@ -471,7 +472,7 @@ class ForecastingService:
             except Exception:
                 logger.debug("Rolling backtest failed for %s", candidate, exc_info=True)
                 continue
-            actual_values.extend(test_values.tolist())
+            actual_values.extend(raw_values[test_start:test_start + len(test_values)].tolist())
             predicted_values.extend(prediction.tolist())
 
         if not actual_values:
@@ -664,9 +665,23 @@ class ForecastingService:
         recent_mean = float(np.mean(recent)) if len(recent) else 0
         unreasonable = cls._forecast_is_unreasonable(recent, forecast_values, exog)
         if unreasonable:
-            return cls._bounded_trend_guard(series, periods, model_metrics, forecast_start_date, allow_seasonal=allow_seasonal)
+            return cls._bounded_trend_guard(
+                series,
+                periods,
+                model_metrics,
+                forecast_start_date,
+                allow_seasonal=allow_seasonal,
+                exog=exog,
+            )
 
-        trend_fallback = cls._trend_forecast_if_model_is_flat(series, forecast_values, periods, model_metrics, forecast_start_date)
+        trend_fallback = cls._trend_forecast_if_model_is_flat(
+            series,
+            forecast_values,
+            periods,
+            model_metrics,
+            forecast_start_date,
+            exog=exog,
+        )
         if trend_fallback is not None:
             return trend_fallback
 
@@ -677,7 +692,14 @@ class ForecastingService:
             return None
 
         if periods < 90:
-            return cls._bounded_trend_guard(series, periods, model_metrics, forecast_start_date, allow_seasonal=allow_seasonal)
+            return cls._bounded_trend_guard(
+                series,
+                periods,
+                model_metrics,
+                forecast_start_date,
+                allow_seasonal=allow_seasonal,
+                exog=exog,
+            )
 
         baseline_values = cls._seasonal_naive_forecast(series, periods)
         baseline_rmse, baseline_r2 = cls._score_seasonal_naive(series)
@@ -699,8 +721,8 @@ class ForecastingService:
             'start_date': forecast_start_date or series.index.max().date() + timedelta(days=1),
         }
 
-    @staticmethod
-    def _forecast_is_unreasonable(recent, forecast_values, exog=None):
+    @classmethod
+    def _forecast_is_unreasonable(cls, recent, forecast_values, exog=None):
         if not len(recent) or not len(forecast_values):
             return False
 
@@ -718,14 +740,14 @@ class ForecastingService:
             return True
 
         if exog is not None and 'hen_count' in exog.columns:
-            live_hens = float(exog['hen_count'].iloc[-1])
-            if live_hens > 0 and forecast_max > live_hens * 1.02:
+            live_hens = cls._latest_live_hen_limit(exog)
+            if live_hens is not None and live_hens > 0 and forecast_max > live_hens * 1.02:
                 return True
 
         return False
 
     @classmethod
-    def _bounded_trend_guard(cls, series, periods, model_metrics, forecast_start_date=None, allow_seasonal=False):
+    def _bounded_trend_guard(cls, series, periods, model_metrics, forecast_start_date=None, allow_seasonal=False, exog=None):
         model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         window_size = min(45, len(values))
@@ -744,14 +766,17 @@ class ForecastingService:
         recent_floor = max(float(np.min(recent)) * 0.80, 0)
         recent_ceiling = float(np.max(recent)) * 1.10
         guarded_values = np.clip(guarded_values, recent_floor, recent_ceiling)
+        live_hens = cls._latest_live_hen_limit(exog)
+        guarded_values = cls._cap_values_by_live_hens(guarded_values, live_hens)
 
         baseline_rmse, baseline_r2 = cls._score_seasonal_naive(series)
         interval_rmse = baseline_rmse if baseline_rmse is not None else model_rmse
+        lower_values, upper_values = cls._interval_bounds(guarded_values, interval_rmse, live_hens=live_hens)
         return {
             'success': True,
             'forecasted_values': guarded_values,
-            'lower_values': cls._interval_from_rmse(guarded_values, interval_rmse),
-            'upper_values': cls._interval_from_rmse(guarded_values, interval_rmse, upper=True),
+            'lower_values': lower_values,
+            'upper_values': upper_values,
             'order': 'bounded trend guard',
             'aic_score': None,
             'rmse': interval_rmse,
@@ -763,7 +788,7 @@ class ForecastingService:
         }
 
     @classmethod
-    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None):
+    def _trend_forecast_if_model_is_flat(cls, series, forecast_values, periods, model_metrics, forecast_start_date=None, exog=None):
         model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
         if len(values) < cls.MIN_POINTS:
@@ -804,13 +829,20 @@ class ForecastingService:
         steps = np.arange(1, periods + 1, dtype=float)
         trend_values = recent[-1] + (slope * steps * damping)
         trend_values = np.maximum(trend_values, 0)
+        live_hens = cls._latest_live_hen_limit(exog)
+        trend_values = cls._cap_values_by_live_hens(trend_values, live_hens)
         trend_rmse, trend_r2 = cls._score_trend_baseline(series)
+        lower_values, upper_values = cls._interval_bounds(
+            trend_values,
+            trend_rmse if trend_rmse is not None else model_rmse,
+            live_hens=live_hens,
+        )
 
         return {
             'success': True,
             'forecasted_values': trend_values,
-            'lower_values': cls._interval_from_rmse(trend_values, trend_rmse if trend_rmse is not None else model_rmse),
-            'upper_values': cls._interval_from_rmse(trend_values, trend_rmse if trend_rmse is not None else model_rmse, upper=True),
+            'lower_values': lower_values,
+            'upper_values': upper_values,
             'order': 'trend-adjusted ARIMA fallback',
             'aic_score': None,
             'rmse': trend_rmse if trend_rmse is not None else model_rmse,
@@ -866,6 +898,41 @@ class ForecastingService:
         return np.maximum(values - padding, 0)
 
     @classmethod
+    def _interval_bounds(cls, values, rmse, live_hens=None):
+        lower_values = cls._interval_from_rmse(values, rmse)
+        upper_values = cls._interval_from_rmse(values, rmse, upper=True)
+        if live_hens is not None:
+            lower_values = cls._cap_values_by_live_hens(lower_values, live_hens)
+            upper_values = cls._cap_values_by_live_hens(upper_values, live_hens)
+            lower_values = np.minimum(lower_values, upper_values)
+        return lower_values, upper_values
+
+    @staticmethod
+    def _latest_live_hen_limit(exog):
+        if exog is None or 'hen_count' not in exog.columns:
+            return None
+
+        latest_source_values = exog.attrs.get('latest_source_values')
+        if latest_source_values is not None and 'hen_count' in latest_source_values.index:
+            value = latest_source_values['hen_count']
+        else:
+            value = exog['hen_count'].iloc[-1]
+
+        try:
+            if pd.isna(value):
+                return None
+        except TypeError:
+            return None
+        return max(float(value), 0)
+
+    @staticmethod
+    def _cap_values_by_live_hens(values, live_hens):
+        values = np.maximum(np.asarray(values, dtype=float), 0)
+        if live_hens is None:
+            return values
+        return np.minimum(values, float(live_hens))
+
+    @classmethod
     def _score_seasonal_naive(cls, series):
         values = series.to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
@@ -881,8 +948,9 @@ class ForecastingService:
         return rmse, r_squared
 
     @classmethod
-    def _seasonal_naive_metrics(cls, series):
+    def _seasonal_naive_metrics(cls, series, actual_series=None):
         values = series.to_numpy(dtype=float)
+        actual_values = (actual_series if actual_series is not None else series).to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
         if len(values) <= cls.SEASONAL_PERIOD or test_size <= 0:
             return {
@@ -894,7 +962,7 @@ class ForecastingService:
             }
 
         train = values[:-test_size]
-        test = values[-test_size:]
+        test = actual_values[-test_size:]
         predictions = cls._seasonal_naive_from_train(train, test_size)
         metrics = cls._prediction_metrics(test, predictions)
         return {
@@ -910,6 +978,7 @@ class ForecastingService:
         series = prepared['series']
         exog = cls._exog_for_candidate(prepared, {'spec': spec, 'feature_set': feature_set})
         values = series.to_numpy(dtype=float)
+        actual_values = prepared.get('raw_series', series).to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
         empty = {
             'rmse': None,
@@ -923,7 +992,7 @@ class ForecastingService:
             test_exog = exog.iloc[-test_size:] if exog is not None else None
             model = cls._fit_model(values[:-test_size], spec, exog=train_exog)
             predictions = np.asarray(model.forecast(steps=test_size, exog=test_exog), dtype=float)
-            actual = values[-test_size:]
+            actual = actual_values[-test_size:]
             metrics = cls._prediction_metrics(actual, predictions)
             baseline_predictions = cls._seasonal_naive_from_train(values[:-test_size], test_size)
             baseline_metrics = cls._prediction_metrics(actual, baseline_predictions)
@@ -960,9 +1029,10 @@ class ForecastingService:
     def _evaluate_series(cls, prepared, allow_seasonal=False):
         series = prepared['series']
         values = series.to_numpy(dtype=float)
+        actual_values = prepared.get('raw_series', series).to_numpy(dtype=float)
         test_size = max(2, min(int(len(values) * 0.2), len(values) - 2))
         train = values[:-test_size]
-        test = values[-test_size:]
+        test = actual_values[-test_size:]
 
         best = None
         for candidate in cls._model_candidates(len(train), allow_seasonal, prepared.get('dataset_kind', 'egg')):
@@ -1118,8 +1188,10 @@ class ForecastingService:
         df = df.groupby('date', as_index=True).agg(aggregations).sort_index()
         df = df.reindex(pd.date_range(df.index.min(), df.index.max(), freq='D'))
         df = df.interpolate(method='time').ffill().bfill()
+        raw_series = df['value'].copy()
         if dataset_kind == 'egg':
-            df['value'] = cls._smooth_egg_training_outliers(df['value'])
+            live_hens = df['hen_count'] if 'hen_count' in df.columns else None
+            df['value'] = cls._smooth_egg_training_outliers(df['value'], live_hens=live_hens)
         if use_exog:
             cls._add_time_features(df)
 
@@ -1137,10 +1209,15 @@ class ForecastingService:
             exog.attrs['latest_source_values'] = df[source_columns].iloc[-1].copy() if source_columns else None
             exog.attrs['dataset_kind'] = dataset_kind
 
-        return {'series': df['value'], 'exog': exog, 'dataset_kind': dataset_kind}
+        return {
+            'series': df['value'],
+            'raw_series': raw_series,
+            'exog': exog,
+            'dataset_kind': dataset_kind,
+        }
 
     @classmethod
-    def _smooth_egg_training_outliers(cls, series):
+    def _smooth_egg_training_outliers(cls, series, live_hens=None):
         values = pd.to_numeric(series, errors='coerce').astype(float).copy()
         if len(values) < cls.OUTLIER_MIN_HISTORY_DAYS + 1:
             return values
@@ -1174,6 +1251,15 @@ class ForecastingService:
                 continue
 
             consecutive_outliers = 0
+
+        if live_hens is not None:
+            hen_limits = pd.to_numeric(live_hens, errors='coerce').astype(float).reindex(smoothed.index)
+            if not hen_limits.isna().all():
+                hen_limits = hen_limits.ffill().bfill()
+                smoothed = pd.Series(
+                    np.minimum(smoothed.to_numpy(dtype=float), hen_limits.to_numpy(dtype=float)),
+                    index=smoothed.index,
+                )
 
         return smoothed
 
