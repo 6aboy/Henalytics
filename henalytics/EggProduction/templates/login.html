@@ -20,16 +20,46 @@
                     {% endfor %}
                 </div>
                 <div class="mb-3 text-start form-group">
-                    <label class="form-label">Password</label>
-                    <input name="password" type="password"
-                        class="form-control" required>
+                    <label class="form-label" for="id_password">Password</label>
+                    <div class="password-field">
+                        <input name="password" type="password" id="id_password"
+                            class="form-control" required>
+                        <button type="button" class="password-toggle" aria-label="Show password"
+                            aria-pressed="false" data-password-toggle data-password-target="#id_password">
+                            <span class="password-eye" aria-hidden="true"></span>
+                        </button>
+                    </div>
                     {% for err in form.password.errors %}
                     <small class="form-error">{{ err }}</small>
                     {% endfor %}
+                </div>
+                <div class="login-options">
+                    <label class="remember-me">
+                        <input type="checkbox" name="remember_me" value="1">
+                        <span>Remember me</span>
+                    </label>
                 </div>
                 <button class="btn btn-primary w-50">Login</button>
             </form>
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
+            var target = document.querySelector(button.dataset.passwordTarget);
+            if (!target) {
+                return;
+            }
+
+            button.addEventListener('click', function () {
+                var isHidden = target.type === 'password';
+                target.type = isHidden ? 'text' : 'password';
+                button.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+                button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+                button.classList.toggle('is-visible', isHidden);
+            });
+        });
+    });
+</script>
 {% endblock %}

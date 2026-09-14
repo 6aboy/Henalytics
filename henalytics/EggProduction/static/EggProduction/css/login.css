@@ -72,6 +72,97 @@
     box-shadow: 0 0 0 0.2rem rgba(51, 96, 207, 0.14);
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field .form-control {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    color: #667085;
+    background: transparent;
+    transform: translateY(-50%);
+}
+
+.password-toggle:hover,
+.password-toggle:focus {
+    color: #3360cf;
+    background: #eef4ff;
+    outline: none;
+}
+
+.password-eye {
+    position: relative;
+    width: 20px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-radius: 50% / 65%;
+}
+
+.password-eye::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    transform: translate(-50%, -50%);
+}
+
+.password-eye::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 8px;
+    display: none;
+    width: 2px;
+    height: 22px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: rotate(45deg);
+}
+
+.password-toggle.is-visible .password-eye::after {
+    display: block;
+}
+
+.login-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: -2px 0 8px;
+}
+
+.remember-me {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    margin: 0 !important;
+    color: #475467 !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+}
+
+.remember-me input {
+    width: 16px;
+    height: 16px;
+    accent-color: #3360cf;
+}
+
 .login-card .btn {
     width: 100% !important;
     min-width: 0;

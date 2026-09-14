@@ -455,6 +455,14 @@ def build_sales_insights(actual_rows, forecasts):
 
 # Custom login view so staff users land on the dashboard instead of admin
 class CustomLoginView(LoginView):
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.request.POST.get('remember_me'):
+            self.request.session.set_expiry(None)
+        else:
+            self.request.session.set_expiry(0)
+        return response
+
     def get_success_url(self):
         # Superusers keep default behavior (may use next)
         if self.request.user.is_superuser:
