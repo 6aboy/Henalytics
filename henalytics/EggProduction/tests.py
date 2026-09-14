@@ -1105,11 +1105,12 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Overview')
+        self.assertNotContains(response, 'Overview')
         self.assertNotContains(response, 'HEN Analytics')
+        self.assertNotContains(response, 'Forecasting')
         self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
 
-    def test_admin_dashboard_shows_hen_analytics_tab(self):
+    def test_admin_dashboard_hides_hen_analytics_tab(self):
         admin = User.objects.create_user(username='dashboardadmin', password='pass12345')
         UserProfile.objects.create(user=admin, role='admin')
         self.client.force_login(admin)
@@ -1117,7 +1118,9 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'HEN Analytics')
+        self.assertNotContains(response, 'Overview')
+        self.assertNotContains(response, 'HEN Analytics')
+        self.assertContains(response, 'Forecasting')
         self.assertContains(response, reverse('eggproduction:harvest-forecast-list'))
 
     def test_sidebar_account_uses_direct_logout_button(self):
@@ -1151,6 +1154,8 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'Generating egg forecast')
         self.assertContains(response, 'do not close the system')
+        self.assertContains(response, 'Forecast values are estimates')
+        self.assertContains(response, 'not guaranteed results')
 
     def test_forecast_chart_uses_latest_actual_date_for_all_active_flocks(self):
         admin = User.objects.create_user(username='forecastfreshadmin', password='pass12345')
@@ -1320,6 +1325,8 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'Generating sales forecast')
         self.assertContains(response, 'do not close the system')
+        self.assertContains(response, 'Forecast values are estimates')
+        self.assertContains(response, 'not guaranteed results')
 
     def test_admin_can_access_database_forecasting_page(self):
         admin = User.objects.create_superuser(
@@ -1342,6 +1349,8 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Chart Reading')
         self.assertContains(response, 'Forecast Direction')
         self.assertContains(response, 'Expected Average')
+        self.assertContains(response, 'Forecast values are estimates')
+        self.assertContains(response, 'not guaranteed results')
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'do not close the system')
         self.assertContains(response, 'vendor/plotly/plotly-2.35.2.min.js')
