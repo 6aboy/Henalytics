@@ -455,6 +455,8 @@ def build_sales_insights(actual_rows, forecasts):
 
 # Custom login view so staff users land on the dashboard instead of admin
 class CustomLoginView(LoginView):
+    redirect_authenticated_user = True
+
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.POST.get('remember_me'):

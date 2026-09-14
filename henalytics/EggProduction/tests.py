@@ -1191,6 +1191,11 @@ class TemplateRenderTest(TestCase):
         self.assertRedirects(response, reverse('eggproduction:dashboard'), fetch_redirect_response=False)
         self.assertFalse(self.client.session.get_expire_at_browser_close())
 
+    def test_authenticated_user_is_redirected_from_login_page(self):
+        response = self.client.get(reverse('login'))
+
+        self.assertRedirects(response, reverse('eggproduction:dashboard'), fetch_redirect_response=False)
+
     def test_admin_can_access_forecast_pages_without_analytics_nav(self):
         admin = User.objects.create_superuser(
             username='analyticsadmin',
