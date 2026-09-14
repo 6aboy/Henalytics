@@ -1157,39 +1157,16 @@ class TemplateRenderTest(TestCase):
             fetch_redirect_response=False,
         )
 
-    def test_login_page_has_remember_me_and_password_toggle(self):
+    def test_login_page_has_password_toggle(self):
         self.client.logout()
 
         response = self.client.get(reverse('login'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'name="remember_me"')
-        self.assertContains(response, 'Remember me')
         self.assertContains(response, 'data-password-toggle')
         self.assertContains(response, 'aria-label="Show password"')
-
-    def test_login_without_remember_me_expires_when_browser_closes(self):
-        self.client.logout()
-
-        response = self.client.post(reverse('login'), {
-            'username': 'staffer',
-            'password': 'pass12345',
-        })
-
-        self.assertRedirects(response, reverse('eggproduction:dashboard'), fetch_redirect_response=False)
-        self.assertTrue(self.client.session.get_expire_at_browser_close())
-
-    def test_login_with_remember_me_keeps_default_session_age(self):
-        self.client.logout()
-
-        response = self.client.post(reverse('login'), {
-            'username': 'staffer',
-            'password': 'pass12345',
-            'remember_me': '1',
-        })
-
-        self.assertRedirects(response, reverse('eggproduction:dashboard'), fetch_redirect_response=False)
-        self.assertFalse(self.client.session.get_expire_at_browser_close())
+        self.assertNotContains(response, 'name="remember_me"')
+        self.assertNotContains(response, 'Remember me')
 
     def test_authenticated_user_is_redirected_from_login_page(self):
         response = self.client.get(reverse('login'))
