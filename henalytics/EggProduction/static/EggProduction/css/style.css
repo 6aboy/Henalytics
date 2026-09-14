@@ -1717,6 +1717,18 @@ input[readonly].readonly-metric {
     padding: 22px;
 }
 
+.forecast-disclaimer {
+    margin: -6px 0 14px;
+    padding: 10px 12px;
+    border-left: 4px solid #f79009;
+    border-radius: 6px;
+    color: #7a2e0e;
+    background: #fff6e6;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
 #actualForecastChart,
 #actualSalesForecastChart,
 #experimentalForecastChart {

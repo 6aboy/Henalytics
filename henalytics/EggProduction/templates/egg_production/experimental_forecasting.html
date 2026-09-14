@@ -5,10 +5,6 @@
 {% block page_title %}Forecasting{% endblock %}
 
 {% block content %}
-<div class="alert alert-warning forecast-disclaimer">
-    Forecast values are estimates generated from historical records and model assumptions. They are not guaranteed results and may differ from actual future values.
-</div>
-
 <section class="analytics-section">
     <div class="section-heading">
         <div>
@@ -55,6 +51,9 @@
                 </div>
             </div>
             <span class="forecast-range-pill">{{ selected_range_label }}</span>
+        </div>
+        <div class="forecast-disclaimer">
+            Forecast values are estimates generated from historical records and model assumptions. They are not guaranteed results and may differ from actual future values.
         </div>
         {% if forecast_daily_points %}
         <div id="databaseForecastChart" class="plotly-forecast-chart" aria-label="Database egg production forecast chart"></div>

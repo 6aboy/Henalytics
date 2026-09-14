@@ -142,6 +142,12 @@
     <script src="{% static 'vendor/datatables-buttons/js/buttons.print.min.js' %}"></script>
     <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
     <script>
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.message-stack .alert.swal').forEach(function (alert) {
                 var icon = 'info';

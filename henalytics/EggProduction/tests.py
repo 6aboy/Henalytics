@@ -1133,6 +1133,29 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'data-swal-logout')
         self.assertNotContains(response, 'account-dropdown')
         self.assertNotContains(response, 'data-bs-toggle="dropdown"')
+        self.assertContains(response, 'event.persisted')
+
+    def test_authenticated_pages_disable_browser_cache(self):
+        response = self.client.get(reverse('eggproduction:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        cache_control = response.headers.get('Cache-Control', '')
+        self.assertIn('no-store', cache_control)
+        self.assertIn('no-cache', cache_control)
+        self.assertIn('max-age=0', cache_control)
+        self.assertEqual(response.headers.get('Pragma'), 'no-cache')
+        self.assertEqual(response.headers.get('Expires'), '0')
+
+    def test_logout_clears_session_and_protected_page_redirects(self):
+        response = self.client.post(reverse('logout'))
+
+        self.assertRedirects(response, reverse('eggproduction:login'), fetch_redirect_response=False)
+        response = self.client.get(reverse('eggproduction:dashboard'))
+        self.assertRedirects(
+            response,
+            f"{reverse('eggproduction:login')}?next={reverse('eggproduction:dashboard')}",
+            fetch_redirect_response=False,
+        )
 
     def test_admin_can_access_forecast_pages_without_analytics_nav(self):
         admin = User.objects.create_superuser(
