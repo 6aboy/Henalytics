@@ -142,44 +142,6 @@
             </div>
         </article>
     </div>
-    <article class="dashboard-notebook-card monthly-notebook-card">
-        <div class="notebook-paper">
-            <div class="notebook-chart-heading">
-                <div>
-                    <h3 id="monthlyNotebookTitle">Monthly Egg Production</h3>
-                    <p id="monthlyNotebookDescription">Total eggs grouped by month to show longer-term production direction.</p>
-                </div>
-                <span id="monthlyNotebookMeta">Eggs</span>
-            </div>
-            <div class="dashboard-notebook-plot-wrap">
-                <div class="dashboard-chart-empty monthly-chart-empty">No monthly records yet.</div>
-                <div id="monthlyNotebookChart" class="dashboard-notebook-chart" aria-label="Monthly analytics chart"></div>
-            </div>
-        </div>
-        <div class="notebook-bookmarks monthly-bookmarks" aria-label="Monthly chart bookmarks">
-            <button type="button" class="notebook-bookmark active" data-chart-key="monthly_eggs">
-                <span>Eggs</span>
-            </button>
-            <button type="button" class="notebook-bookmark green" data-chart-key="monthly_revenue">
-                <span>Revenue</span>
-            </button>
-            <button type="button" class="notebook-bookmark violet" data-chart-key="monthly_hen_day">
-                <span>Hen Day</span>
-            </button>
-            <button type="button" class="notebook-bookmark green" data-chart-key="monthly_hen_housed">
-                <span>Housed</span>
-            </button>
-            <button type="button" class="notebook-bookmark amber" data-chart-key="monthly_feed">
-                <span>Feed</span>
-            </button>
-            <button type="button" class="notebook-bookmark red" data-chart-key="monthly_losses">
-                <span>Losses</span>
-            </button>
-            <button type="button" class="notebook-bookmark red" data-chart-key="monthly_cracked">
-                <span>Cracked</span>
-            </button>
-        </div>
-    </article>
     <div class="monthly-analysis-notes">
         <strong>Monthly Reading</strong>
         <ul>
@@ -270,7 +232,14 @@
                     <h3 id="dashboardNotebookTitle">Egg Production Trend</h3>
                     <p id="dashboardNotebookDescription">Daily total eggs recorded in the database.</p>
                 </div>
-                <span id="dashboardNotebookMeta">Eggs</span>
+                <div class="notebook-heading-actions">
+                    <div class="chart-granularity-controls" aria-label="Dashboard chart data grouping">
+                        <button type="button" class="chart-granularity-button active" data-granularity="daily">Daily</button>
+                        <button type="button" class="chart-granularity-button" data-granularity="monthly">Monthly</button>
+                        <button type="button" class="chart-granularity-button" data-granularity="yearly">Yearly</button>
+                    </div>
+                    <span class="notebook-chart-meta" id="dashboardNotebookMeta">Eggs</span>
+                </div>
             </div>
             <div class="dashboard-notebook-plot-wrap">
                 <div class="dashboard-chart-empty">No production records yet.</div>
@@ -327,7 +296,6 @@
 
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script id="dashboard-charts-payload" type="application/json">{{ dashboard_charts_payload_json|safe }}</script>
-<script id="monthly-dashboard-payload" type="application/json">{{ monthly_dashboard_payload_json|safe }}</script>
 <script>
     (function () {
         const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
@@ -343,9 +311,20 @@
             const description = document.getElementById(config.descriptionId);
             const meta = document.getElementById(config.metaId);
             const bookmarks = document.querySelectorAll(config.bookmarksSelector);
-            const labels = payload.iso_labels || payload.labels || [];
+            const granularityButtons = config.granularitySelector
+                ? document.querySelectorAll(config.granularitySelector)
+                : [];
+            let activeGranularity = payload.default_granularity || 'daily';
+            let activeKey = config.defaultKey;
 
-            if (!chart || !labels.length || !payload.charts) {
+            const activePayload = () => {
+                if (!payload.granularities) {
+                    return payload;
+                }
+                return payload.granularities[activeGranularity] || payload.granularities[payload.default_granularity] || {};
+            };
+
+            if (!chart || !activePayload().charts) {
                 if (chart) {
                     chart.style.display = 'none';
                 }
@@ -356,24 +335,36 @@
             }
 
             const plotChart = (key) => {
-                const selected = payload.charts[key] || payload.charts[config.defaultKey];
+                const currentPayload = activePayload();
+                const labels = currentPayload.iso_labels || currentPayload.labels || [];
+                const selected = currentPayload.charts?.[key] || currentPayload.charts?.[config.defaultKey];
+                if (!selected || !labels.length) {
+                    chart.style.display = 'none';
+                    if (empty) {
+                        empty.style.display = 'block';
+                    }
+                    return;
+                }
+                chart.style.display = 'block';
+                if (empty) {
+                    empty.style.display = 'none';
+                }
                 const suffix = valueSuffix(selected.unit);
                 const prefix = valuePrefix(selected.unit);
-                const isBar = selected.type === 'bar';
+                const hoverFormat = currentPayload.hover_format || config.dateFormat;
+                const tickFormat = currentPayload.tick_format || config.tickFormat;
                 const mainTrace = {
                     x: labels,
                     y: selected.values,
                     name: selected.title,
-                    type: isBar ? 'bar' : 'scatter',
+                    type: 'scatter',
+                    mode: labels.length > 120 ? 'lines' : 'lines+markers',
+                    line: { color: selected.color, width: 3, shape: 'spline' },
                     marker: { color: selected.color, size: 5 },
-                    hovertemplate: `<b>%{x|${config.dateFormat}}</b><br>${selected.title}: ${prefix}%{y:,.2f}${suffix}<extra></extra>`
+                    fill: key === 'eggs' ? 'tozeroy' : 'none',
+                    fillcolor: 'rgba(51, 96, 207, 0.10)',
+                    hovertemplate: `<b>%{x|${hoverFormat}}</b><br>${selected.title}: ${prefix}%{y:,.2f}${suffix}<extra></extra>`
                 };
-                if (!isBar) {
-                    mainTrace.mode = labels.length > 120 ? 'lines' : 'lines+markers';
-                    mainTrace.line = { color: selected.color, width: 3, shape: 'spline' };
-                    mainTrace.fill = key === 'eggs' ? 'tozeroy' : 'none';
-                    mainTrace.fillcolor = 'rgba(51, 96, 207, 0.10)';
-                }
                 const traces = [mainTrace];
 
                 if (selected.threshold) {
@@ -384,7 +375,7 @@
                         type: 'scatter',
                         mode: 'lines',
                         line: { color: '#d92d20', width: 2, dash: 'dash' },
-                        hovertemplate: `<b>%{x|${config.dateFormat}}</b><br>${selected.threshold_label || 'Threshold'}: %{y:,.2f}${suffix}<extra></extra>`
+                        hovertemplate: `<b>%{x|${hoverFormat}}</b><br>${selected.threshold_label || 'Threshold'}: %{y:,.2f}${suffix}<extra></extra>`
                     });
                 }
 
@@ -409,7 +400,7 @@
                     },
                     xaxis: {
                         type: 'date',
-                        tickformat: config.tickFormat,
+                        tickformat: tickFormat,
                         nticks: 8,
                         tickangle: 0,
                         showgrid: true,
@@ -445,11 +436,21 @@
                 button.addEventListener('click', () => {
                     bookmarks.forEach((item) => item.classList.remove('active'));
                     button.classList.add('active');
-                    plotChart(button.dataset.chartKey);
+                    activeKey = button.dataset.chartKey;
+                    plotChart(activeKey);
                 });
             });
 
-            plotChart(config.defaultKey);
+            granularityButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    granularityButtons.forEach((item) => item.classList.remove('active'));
+                    button.classList.add('active');
+                    activeGranularity = button.dataset.granularity;
+                    plotChart(activeKey);
+                });
+            });
+
+            plotChart(activeKey);
         };
 
         createNotebookChart({
@@ -460,24 +461,12 @@
             descriptionId: 'dashboardNotebookDescription',
             metaId: 'dashboardNotebookMeta',
             bookmarksSelector: '.daily-bookmarks .notebook-bookmark',
+            granularitySelector: '.chart-granularity-button',
             defaultKey: 'eggs',
             tickFormat: '%b %d',
             dateFormat: '%b %d, %Y'
         });
 
-        createNotebookChart({
-            payloadId: 'monthly-dashboard-payload',
-            chartId: 'monthlyNotebookChart',
-            emptySelector: '.monthly-chart-empty',
-            titleId: 'monthlyNotebookTitle',
-            descriptionId: 'monthlyNotebookDescription',
-            metaId: 'monthlyNotebookMeta',
-            bookmarksSelector: '.monthly-bookmarks .notebook-bookmark',
-            defaultKey: 'monthly_eggs',
-            tickFormat: '%b %Y',
-            dateFormat: '%b %Y',
-            height: 410
-        });
     })();
 </script>
 {% endblock %}

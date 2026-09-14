@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.db import models, transaction
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncYear
 from django.utils import timezone
 from django.conf import settings
 from datetime import date, timedelta
@@ -67,6 +67,7 @@ def build_forecast_chart_payload(queryset, value_field):
 
     return {
         'labels': labels,
+        'iso_labels': [forecast_date.isoformat() for forecast_date in dates],
         'series': series,
     }
 
@@ -138,24 +139,6 @@ def build_sales_actual_vs_forecast_payload(actual_rows, forecast_rows):
             actual_by_date.get(item) if item == last_actual_date else forecast_by_date.get(item)
             for item in dates
         ],
-    }
-
-
-def build_hen_performance_payload(logs):
-    rows = (
-        logs.values('log_date')
-        .annotate(
-            hen_day=models.Avg('pct_hen_day'),
-            hen_housed=models.Avg('pct_hen_housed'),
-        )
-        .order_by('log_date')
-    )
-    labels = [row['log_date'].strftime('%b %d, %Y') for row in rows]
-    return {
-        'labels': labels,
-        'hen_day': [float(row['hen_day'] or 0) for row in rows],
-        'hen_housed': [float(row['hen_housed'] or 0) for row in rows],
-        'threshold': [60 for _ in labels],
     }
 
 
@@ -766,6 +749,130 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         }
 
     @classmethod
+    def build_dashboard_chart_payload(cls):
+        return {
+            'default_granularity': 'daily',
+            'granularities': {
+                'daily': cls._build_dashboard_chart_payload_for_group('day'),
+                'monthly': cls._build_dashboard_chart_payload_for_group('month'),
+                'yearly': cls._build_dashboard_chart_payload_for_group('year'),
+            },
+        }
+
+    @classmethod
+    def _build_dashboard_chart_payload_for_group(cls, granularity):
+        logs = ProductionLog.objects.filter(flock__status='active')
+        if granularity == 'month':
+            rows = (
+                logs.annotate(period_date=TruncMonth('log_date'))
+                .values('period_date')
+                .annotate(
+                    eggs=models.Sum('eggs_total'),
+                    hen_housed=models.Avg('pct_hen_housed'),
+                    hen_day=models.Avg('pct_hen_day'),
+                    feed=models.Sum('feed_bags'),
+                    losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
+                )
+                .order_by('period_date')
+            )
+            label_format = '%b %Y'
+            date_format = '%Y-%m-01'
+            tick_format = '%b %Y'
+            hover_format = '%b %Y'
+            label = 'Monthly'
+        elif granularity == 'year':
+            rows = (
+                logs.annotate(period_date=TruncYear('log_date'))
+                .values('period_date')
+                .annotate(
+                    eggs=models.Sum('eggs_total'),
+                    hen_housed=models.Avg('pct_hen_housed'),
+                    hen_day=models.Avg('pct_hen_day'),
+                    feed=models.Sum('feed_bags'),
+                    losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
+                )
+                .order_by('period_date')
+            )
+            label_format = '%Y'
+            date_format = '%Y-01-01'
+            tick_format = '%Y'
+            hover_format = '%Y'
+            label = 'Yearly'
+        else:
+            rows = (
+                logs.values(period_date=models.F('log_date'))
+                .annotate(
+                    eggs=models.Sum('eggs_total'),
+                    hen_housed=models.Avg('pct_hen_housed'),
+                    hen_day=models.Avg('pct_hen_day'),
+                    feed=models.Sum('feed_bags'),
+                    losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
+                )
+                .order_by('period_date')
+            )
+            label_format = '%b %d, %Y'
+            date_format = None
+            tick_format = '%b %d'
+            hover_format = '%b %d, %Y'
+            label = 'Daily'
+
+        chart_rows = list(rows)
+        labels = [row['period_date'].strftime(label_format) for row in chart_rows]
+        iso_labels = []
+        for row in chart_rows:
+            period_date = row['period_date'].date() if hasattr(row['period_date'], 'date') else row['period_date']
+            iso_labels.append(period_date.strftime(date_format) if date_format else period_date.isoformat())
+
+        return {
+            'label': label,
+            'labels': labels,
+            'iso_labels': iso_labels,
+            'tick_format': tick_format,
+            'hover_format': hover_format,
+            'charts': {
+                'eggs': {
+                    'title': f'{label} Egg Production Trend',
+                    'description': f'{label} total eggs recorded in the database.',
+                    'unit': 'eggs',
+                    'color': '#3360cf',
+                    'values': [float(row['eggs'] or 0) for row in chart_rows],
+                },
+                'hen_housed': {
+                    'title': f'{label} Hen Housed Performance',
+                    'description': f'{label} average hen-housed percentage compared with the 60% warning threshold.',
+                    'unit': '%',
+                    'color': '#12a150',
+                    'values': [float(row['hen_housed'] or 0) for row in chart_rows],
+                    'threshold': [60 for _row in chart_rows],
+                    'threshold_label': '60% threshold',
+                },
+                'hen_day': {
+                    'title': f'{label} Hen Day Laying Rate',
+                    'description': f'{label} average hen-day percentage compared with the 60% warning threshold.',
+                    'unit': '%',
+                    'color': '#7c3aed',
+                    'values': [float(row['hen_day'] or 0) for row in chart_rows],
+                    'threshold': [60 for _row in chart_rows],
+                    'threshold_label': '60% threshold',
+                },
+                'feed': {
+                    'title': f'{label} Feed Consumption',
+                    'description': f'{label} feed bags recorded in the database.',
+                    'unit': 'bags',
+                    'color': '#e88411',
+                    'values': [float(row['feed'] or 0) for row in chart_rows],
+                },
+                'losses': {
+                    'title': f'{label} Mortality and Cull Trend',
+                    'description': f'{label} dead and culled hens from production records.',
+                    'unit': 'hens',
+                    'color': '#d92d20',
+                    'values': [float(row['losses'] or 0) for row in chart_rows],
+                },
+            },
+        }
+
+    @classmethod
     def build_monthly_notes(cls, monthly_payload):
         charts = monthly_payload.get('charts', {})
         eggs = charts.get('monthly_eggs', {}).get('values', [])
@@ -880,62 +987,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             recent_losses_60d = ProductionLog.objects.filter(log_date__gte=last_60_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            chart_rows = list(
-                ProductionLog.objects
-                .filter(flock__status='active')
-                .values('log_date')
-                .annotate(
-                    eggs=models.Sum('eggs_total'),
-                    hen_housed=models.Avg('pct_hen_housed'),
-                    hen_day=models.Avg('pct_hen_day'),
-                    feed=models.Sum('feed_bags'),
-                    losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
-                )
-                .order_by('log_date')
-            )
-            dashboard_chart_payload = {
-                'labels': [row['log_date'].strftime('%b %d, %Y') for row in chart_rows],
-                'iso_labels': [row['log_date'].isoformat() for row in chart_rows],
-                'charts': {
-                    'eggs': {
-                        'title': 'Egg Production Trend',
-                        'description': 'Daily total eggs recorded in the database.',
-                        'unit': 'eggs',
-                        'color': '#3360cf',
-                        'values': [float(row['eggs'] or 0) for row in chart_rows],
-                    },
-                    'hen_housed': {
-                        'title': 'Hen Housed Performance',
-                        'description': 'Daily hen-housed percentage compared with the 60% warning threshold.',
-                        'unit': '%',
-                        'color': '#12a150',
-                        'values': [float(row['hen_housed'] or 0) for row in chart_rows],
-                        'threshold': [60 for _row in chart_rows],
-                        'threshold_label': '60% threshold',
-                    },
-                    'hen_day': {
-                        'title': 'Hen Day Laying Rate',
-                        'description': 'Daily hen-day percentage from production records.',
-                        'unit': '%',
-                        'color': '#7c3aed',
-                        'values': [float(row['hen_day'] or 0) for row in chart_rows],
-                    },
-                    'feed': {
-                        'title': 'Feed Consumption',
-                        'description': 'Daily feed bags recorded in the database.',
-                        'unit': 'bags',
-                        'color': '#e88411',
-                        'values': [float(row['feed'] or 0) for row in chart_rows],
-                    },
-                    'losses': {
-                        'title': 'Mortality and Cull Trend',
-                        'description': 'Daily dead and culled hens from production records.',
-                        'unit': 'hens',
-                        'color': '#d92d20',
-                        'values': [float(row['losses'] or 0) for row in chart_rows],
-                    },
-                },
-            }
+            dashboard_chart_payload = self.build_dashboard_chart_payload()
             monthly_payload = self.build_monthly_payload()
             monthly_summary = self.build_monthly_summary(monthly_payload)
             month_value = self.request.GET.get('month_value') or today.strftime('%Y-%m')
@@ -976,7 +1028,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'monthly_dashboard_payload_json': json.dumps(monthly_payload),
                 'monthly_dashboard_notes': self.build_monthly_notes(monthly_payload),
                 'monthly_dashboard_summary': monthly_summary,
-                'hen_housed_payload_json': json.dumps(dashboard_chart_payload['charts']['hen_housed']),
+                'hen_housed_payload_json': json.dumps(dashboard_chart_payload['granularities']['daily']['charts']['hen_housed']),
             })
         except Exception as e:
             logger.exception("Dashboard error: %s", e)
@@ -1172,6 +1224,16 @@ class ProductionLogFormMixin:
             str(flock.id): flock.date_started.isoformat()
             for flock in Flock.objects.only('id', 'date_started')
         }
+        context['flock_loss_history'] = [
+            {
+                'id': log.id,
+                'flock_id': str(log.flock_id),
+                'date': log.log_date.isoformat(),
+                'dead_count': log.dead_count or 0,
+                'culled_count': log.culled_count or 0,
+            }
+            for log in ProductionLog.objects.only('id', 'flock_id', 'log_date', 'dead_count', 'culled_count')
+        ]
         context['feed_bag_kg'] = getattr(settings, 'HENALYTICS_FEED_BAG_KG', 50)
         context['avg_egg_kg'] = getattr(settings, 'HENALYTICS_AVG_EGG_KG', 0.06)
         return context
@@ -1512,7 +1574,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         latest_actual_date = self._latest_actual_date_for_request()
         if latest_actual_date:
             qs = qs.filter(forecast_date__gte=latest_actual_date + timedelta(days=1))
-        periods = self._get_display_periods(self.request)
+        range_key = self._get_selected_range_key(self.request, qs)
+        periods = self._get_display_periods(self.request, range_key=range_key, forecasts=qs)
         first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
         if first_date:
             qs = qs.filter(forecast_date__lte=first_date + timedelta(days=periods - 1))
@@ -1523,8 +1586,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         forecasts = self.get_queryset()
         overall_forecasts = forecasts.filter(grade='overall')
         flock_id = self.request.GET.get('flock_id', '')
-        selected_range = self.request.GET.get('range', 'month')
-        selected_periods = self._get_display_periods(self.request)
+        selected_range = self._get_selected_range_key(self.request, forecasts)
+        selected_periods = self._get_display_periods(self.request, range_key=selected_range, forecasts=forecasts)
         selected_range_label = self._range_label(selected_range, selected_periods)
         production_logs = ProductionLog.objects.select_related('flock')
         if flock_id:
@@ -1555,7 +1618,6 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             .order_by('forecast_date')
         )
         actual_forecast_payload = build_actual_vs_forecast_payload(actual_rows, forecast_rows)
-        hen_payload = build_hen_performance_payload(chart_logs)
         egg_insights = build_egg_insights(production_logs, forecasts)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
         latest_model = (
@@ -1586,7 +1648,6 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             'latest_model': latest_model,
             'model_comparison': model_comparison,
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
-            'hen_payload_json': json.dumps(hen_payload),
             'egg_insights': egg_insights,
         })
         return context
@@ -1622,8 +1683,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
 
     @classmethod
-    def _get_display_periods(cls, request):
-        range_key = request.GET.get('range', 'month')
+    def _get_display_periods(cls, request, range_key=None, forecasts=None):
+        range_key = range_key or cls._get_selected_range_key(request, forecasts)
         if range_key != 'custom':
             return ForecastingService.periods_for_range(range_key)
 
@@ -1631,8 +1692,49 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             custom_start = date.fromisoformat(request.GET.get('date_from'))
             custom_end = date.fromisoformat(request.GET.get('date_to'))
         except (TypeError, ValueError):
+            saved_periods = cls._latest_saved_periods(forecasts)
+            if saved_periods:
+                return saved_periods
             return ForecastingService.periods_for_range('month')
         return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
+
+    @classmethod
+    def _get_selected_range_key(cls, request, forecasts=None):
+        requested_range = request.GET.get('range')
+        if requested_range:
+            return requested_range
+
+        saved_periods = cls._latest_saved_periods(forecasts)
+        return cls._range_key_for_periods(saved_periods) or 'month'
+
+    @staticmethod
+    def _latest_saved_periods(forecasts):
+        if forecasts is None:
+            return None
+        latest_model_id = (
+            forecasts
+            .order_by('-model_version__trained_at', '-model_version_id')
+            .values_list('model_version_id', flat=True)
+            .first()
+        )
+        if not latest_model_id:
+            return None
+        return (
+            forecasts
+            .filter(model_version_id=latest_model_id)
+            .values('forecast_date')
+            .distinct()
+            .count()
+        )
+
+    @staticmethod
+    def _range_key_for_periods(periods):
+        return {
+            7: 'week',
+            21: 'three_weeks',
+            30: 'month',
+            90: 'three_months',
+        }.get(periods, 'custom' if periods else None)
 
     @staticmethod
     def _history_days_for_horizon(periods):
@@ -1957,7 +2059,8 @@ class SalesForecastListView(AdminAccessMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related('model_version')
-        periods = HarvestForecastListView._get_display_periods(self.request)
+        range_key = HarvestForecastListView._get_selected_range_key(self.request, qs)
+        periods = HarvestForecastListView._get_display_periods(self.request, range_key=range_key, forecasts=qs)
         first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
         if first_date:
             qs = qs.filter(forecast_date__lte=first_date + timedelta(days=periods - 1))
@@ -1967,9 +2070,9 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
         chart_payload = build_forecast_chart_payload(forecasts, 'predicted_amount')
-        selected_range = self.request.GET.get('range', 'month')
+        selected_range = HarvestForecastListView._get_selected_range_key(self.request, forecasts)
         selected_scope = self.request.GET.get('scope', 'both')
-        selected_periods = HarvestForecastListView._get_display_periods(self.request)
+        selected_periods = HarvestForecastListView._get_display_periods(self.request, range_key=selected_range, forecasts=forecasts)
         selected_range_label = HarvestForecastListView._range_label(selected_range, selected_periods)
         forecast_start_row = forecasts.order_by('forecast_date').first()
         if forecast_start_row:

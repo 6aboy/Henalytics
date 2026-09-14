@@ -39,6 +39,7 @@ class ForecastingService:
     SEASONAL_ORDERS = ((1, 0, 1, SEASONAL_PERIOD), (0, 1, 1, SEASONAL_PERIOD))
     EGG_USE_SEASONALITY = False
     SALES_USE_SEASONALITY = True
+    SALES_USE_EXOG = False
     OUTLIER_WINDOW_DAYS = 14
     OUTLIER_MIN_HISTORY_DAYS = 7
     OUTLIER_RELATIVE_BAND = 0.35
@@ -48,6 +49,9 @@ class ForecastingService:
     EGG_RATE_MAX_PERCENT = 92
     EGG_RATE_MAX_DAILY_CHANGE = 2.0
     EGG_RATE_SHOCK_THRESHOLD = 0.55
+    RECENT_SHIFT_CONFIRM_DAYS = 3
+    RECENT_SHIFT_LOOKBACK_DAYS = 14
+    RECENT_SHIFT_THRESHOLD = 0.12
     HORIZONS = {
         'week': 7,
         'three_weeks': 21,
@@ -162,7 +166,12 @@ class ForecastingService:
         series_map = {'overall': cls._sales_amount_series()}
         if include_sizes:
             series_map.update(cls._sales_amount_series_by_grade())
-        return cls._evaluate_series_map(series_map, allow_seasonal=True, use_exog=True, dataset_kind='sales')
+        return cls._evaluate_series_map(
+            series_map,
+            allow_seasonal=cls.SALES_USE_SEASONALITY,
+            use_exog=cls.SALES_USE_EXOG,
+            dataset_kind='sales',
+        )
 
     @classmethod
     def _generate_series_forecasts(cls, series_map, periods, user, model_kind, flock=None, forecast_start_date=None):
@@ -174,7 +183,11 @@ class ForecastingService:
         cls._clear_previous_forecasts(model_kind, flock)
 
         for grade, series in series_map.items():
-            prepared = cls._prepare_daily_dataset(series, use_exog=model_kind in ('egg', 'sales'), dataset_kind=model_kind)
+            prepared = cls._prepare_daily_dataset(
+                series,
+                use_exog=cls._uses_exogenous_features(model_kind),
+                dataset_kind=model_kind,
+            )
             if prepared is None:
                 errors.append(f'{grade}: at least {cls.MIN_POINTS} dated records are required')
                 continue
@@ -386,7 +399,8 @@ class ForecastingService:
 
         for spec in specs:
             candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none', 'dataset_kind': dataset_kind})
-            candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe', 'dataset_kind': dataset_kind})
+            if dataset_kind == 'egg':
+                candidates.append({'name': 'SARIMAX', 'kind': 'sarimax', 'spec': spec, 'feature_set': 'safe', 'dataset_kind': dataset_kind})
         return candidates
 
     @classmethod
@@ -414,7 +428,7 @@ class ForecastingService:
         candidates = [
             {'name': 'Seasonal Baseline', 'kind': 'baseline', 'spec': None, 'feature_set': 'none', 'dataset_kind': dataset_kind},
         ]
-        feature_profiles = ['safe', 'diagnostic'] if dataset_kind == 'egg' else ['safe']
+        feature_profiles = ['safe', 'diagnostic'] if dataset_kind == 'egg' else []
         for spec in cls._candidate_model_specs(series_length, allow_seasonal):
             candidates.append({'name': 'SARIMA', 'kind': 'sarima', 'spec': spec, 'feature_set': 'none', 'dataset_kind': dataset_kind})
             if 'safe' in feature_profiles:
@@ -429,6 +443,14 @@ class ForecastingService:
             return cls.EGG_USE_SEASONALITY
         if model_kind == 'sales':
             return cls.SALES_USE_SEASONALITY
+        return False
+
+    @classmethod
+    def _uses_exogenous_features(cls, model_kind):
+        if model_kind == 'egg':
+            return True
+        if model_kind == 'sales':
+            return cls.SALES_USE_EXOG
         return False
 
     @classmethod
@@ -582,15 +604,22 @@ class ForecastingService:
             ) < (
                 current.get('metrics', {}).get('mae'),
                 current.get('metrics', {}).get('mape') if current.get('metrics', {}).get('mape') is not None else float('inf'),
-            ):
+                ):
                 grouped[key] = candidate
 
-        labels = [
-            ('baseline', 'Weekly Baseline', 'Simple repeat of recent weekly pattern'),
-            ('sarima', 'SARIMA', 'Uses historical values and selected time-series order'),
-            ('safe_sarimax', 'SARIMAX', 'Uses lagged operational predictors plus trend direction'),
-            ('diagnostic_sarimax', 'Diagnostic SARIMAX', 'Tests lagged derived performance indicators separately'),
-        ]
+        dataset_kind = best.get('dataset_kind') or (candidates[0].get('dataset_kind') if candidates else 'egg')
+        if dataset_kind == 'sales':
+            labels = [
+                ('baseline', 'Weekly Baseline', 'Simple repeat of recent weekly revenue pattern'),
+                ('sarima', 'SARIMA', 'Uses historical sales revenue and selected time-series order'),
+            ]
+        else:
+            labels = [
+                ('baseline', 'Weekly Baseline', 'Simple repeat of recent weekly pattern'),
+                ('sarima', 'SARIMA', 'Uses historical values and selected time-series order'),
+                ('safe_sarimax', 'SARIMAX', 'Uses lagged operational predictors plus trend direction'),
+                ('diagnostic_sarimax', 'Diagnostic SARIMAX', 'Tests lagged derived performance indicators separately'),
+            ]
         cards = []
         for key, label, description in labels:
             candidate = grouped.get(key)
@@ -787,7 +816,7 @@ class ForecastingService:
     def _bounded_trend_guard(cls, series, periods, model_metrics, forecast_start_date=None, allow_seasonal=False, exog=None, rate_limits=None):
         model_rmse = model_metrics.get('rmse') if model_metrics else None
         values = series.to_numpy(dtype=float)
-        window_size = min(45, len(values))
+        window_size = cls._trend_window_size(values, min(45, len(values)))
         recent = values[-window_size:]
         x_values = np.arange(window_size, dtype=float)
         slope, _intercept = np.polyfit(x_values, recent, 1)
@@ -837,7 +866,7 @@ class ForecastingService:
         if len(values) < cls.MIN_POINTS:
             return None
 
-        window_size = min(60 if periods >= 30 else 30, len(values))
+        window_size = cls._trend_window_size(values, min(60 if periods >= 30 else 30, len(values)))
         recent = values[-window_size:]
         recent_mean = float(np.mean(recent)) if len(recent) else 0
         if recent_mean <= 0:
@@ -981,6 +1010,35 @@ class ForecastingService:
             return values
         return np.minimum(values, float(live_hens))
 
+    @classmethod
+    def _trend_window_size(cls, values, default_window):
+        if cls._confirmed_recent_level(values) is None:
+            return default_window
+        return min(max(cls.RECENT_SHIFT_LOOKBACK_DAYS, cls.RECENT_SHIFT_CONFIRM_DAYS), len(values))
+
+    @classmethod
+    def _confirmed_recent_level(cls, values):
+        series = pd.to_numeric(pd.Series(values), errors='coerce').dropna()
+        confirm_days = cls.RECENT_SHIFT_CONFIRM_DAYS
+        if len(series) < confirm_days + cls.OUTLIER_MIN_HISTORY_DAYS:
+            return None
+
+        latest = series.tail(confirm_days)
+        previous = series.iloc[:-confirm_days].tail(cls.RECENT_SHIFT_LOOKBACK_DAYS)
+        if previous.empty:
+            return None
+
+        previous_level = float(previous.median())
+        latest_level = float(latest.median())
+        if previous_level <= 0:
+            return None
+
+        high_threshold = previous_level * (1 + cls.RECENT_SHIFT_THRESHOLD)
+        low_threshold = previous_level * (1 - cls.RECENT_SHIFT_THRESHOLD)
+        if bool(latest.ge(high_threshold).all()) or bool(latest.le(low_threshold).all()):
+            return latest_level
+        return None
+
     @staticmethod
     def _horizon_floor_values(recent, periods):
         recent = np.asarray(recent, dtype=float)
@@ -1040,7 +1098,8 @@ class ForecastingService:
         if initial_hens is not None and hen_housed_rates is not None:
             capacities.append(initial_hens * (hen_housed_rates / 100))
 
-        capacities.append(live_hens * (cls.EGG_RATE_MAX_PERCENT / 100))
+        max_rate_path = cls._dynamic_max_rate_path_from_history(frame, periods)
+        capacities.append(live_hens * (max_rate_path / 100))
         capacity = np.minimum.reduce([values for values in capacities if values is not None])
         return np.maximum(capacity, 0)
 
@@ -1098,7 +1157,25 @@ class ForecastingService:
             shock_weight = np.linspace(0.25, 0.55, periods)
             shock_path = base_rate - ((base_rate - latest_rate) * shock_weight)
             rate_path = np.minimum(rate_path, shock_path)
-        return np.clip(rate_path, cls.EGG_RATE_MIN_PERCENT, cls.EGG_RATE_MAX_PERCENT)
+        return np.clip(rate_path, cls.EGG_RATE_MIN_PERCENT, cls._dynamic_max_rate_path_from_history(frame, periods, rate_column))
+
+    @classmethod
+    def _dynamic_max_rate_from_history(cls, frame, rate_column='pct_hen_day'):
+        max_rate = cls.EGG_RATE_MAX_PERCENT
+        if frame is not None and rate_column in frame.columns:
+            confirmed_rate = cls._confirmed_recent_level(frame[rate_column])
+            if confirmed_rate is not None:
+                max_rate = max(max_rate, confirmed_rate)
+        return min(max_rate, 100)
+
+    @classmethod
+    def _dynamic_max_rate_path_from_history(cls, frame, periods, rate_column='pct_hen_day'):
+        max_rate = cls._dynamic_max_rate_from_history(frame, rate_column)
+        if max_rate <= cls.EGG_RATE_MAX_PERCENT:
+            return np.full(periods, max_rate, dtype=float)
+
+        settle_target = max(cls.EGG_RATE_MAX_PERCENT, max_rate - 2.5)
+        return np.linspace(max_rate, settle_target, periods, dtype=float)
 
     @classmethod
     def _expected_rate_from_history(cls, frame, rate_column):
@@ -1117,6 +1194,13 @@ class ForecastingService:
 
         recent = working.tail(cls.EGG_RATE_LOOKBACK_DAYS)
         recent_rate = cls._robust_rate_median(recent[rate_column])
+        confirmed_recent_rate = cls._confirmed_recent_level(working[rate_column])
+        if confirmed_recent_rate is not None:
+            recent_rate = (
+                (confirmed_recent_rate * 0.90) + (recent_rate * 0.10)
+                if recent_rate is not None
+                else confirmed_recent_rate
+            )
         latest_live_hens = cls._series_last_number(frame['hen_count'])
         if latest_live_hens is None:
             return recent_rate
@@ -1138,6 +1222,8 @@ class ForecastingService:
             return similar_rate
         if similar_rate is None:
             return recent_rate
+        if confirmed_recent_rate is not None:
+            return (recent_rate * 0.95) + (similar_rate * 0.05)
         return (recent_rate * 0.65) + (similar_rate * 0.35)
 
     @classmethod
@@ -1503,6 +1589,9 @@ class ForecastingService:
                 consecutive_outliers += 1
                 if consecutive_outliers < 3:
                     smoothed.iloc[index] = min(max(current, lower_bound), upper_bound)
+                else:
+                    shift_start = index - consecutive_outliers + 1
+                    smoothed.iloc[shift_start:index + 1] = values.iloc[shift_start:index + 1]
                 continue
 
             consecutive_outliers = 0

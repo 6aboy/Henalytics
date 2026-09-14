@@ -1935,7 +1935,7 @@ input[readonly].readonly-metric {
     font-weight: 500;
 }
 
-.notebook-chart-heading span {
+.notebook-chart-meta {
     flex: 0 0 auto;
     padding: 6px 10px;
     color: #3153a8;
@@ -1944,6 +1944,46 @@ input[readonly].readonly-metric {
     border-radius: 6px;
     font-size: 0.78rem;
     font-weight: 800;
+}
+
+.notebook-heading-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.chart-granularity-controls {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid #d8e3ff;
+    border-radius: 6px;
+    background: #f8fbff;
+}
+
+.chart-granularity-button {
+    min-height: 31px;
+    padding: 6px 10px;
+    border: 0;
+    border-right: 1px solid #d8e3ff;
+    color: #3153a8;
+    background: transparent;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chart-granularity-button:last-child {
+    border-right: 0;
+}
+
+.chart-granularity-button.active,
+.chart-granularity-button:hover {
+    color: #fff;
+    background: var(--hen-blue);
 }
 
 .dashboard-notebook-plot-wrap {

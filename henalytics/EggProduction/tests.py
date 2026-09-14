@@ -1,5 +1,6 @@
 from decimal import Decimal
 from datetime import timedelta
+import json
 
 import numpy as np
 import pandas as pd
@@ -272,7 +273,13 @@ class ForecastModelTest(TestCase):
         self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
         sales_model = ModelVersion.objects.filter(sales_forecasts__isnull=False).first()
         self.assertIsNotNone(sales_model)
+        self.assertEqual(sales_model.feature_set, 'none')
+        self.assertNotIn('+ features', sales_model.arima_order)
         self.assertIn('cards', sales_model.comparison_summary)
+        self.assertEqual(
+            [card['label'] for card in sales_model.comparison_summary['cards']],
+            ['Weekly Baseline', 'SARIMA'],
+        )
         self.assertEqual(sales_model.selection_metric, 'rolling_mae_mape')
 
     def test_forecast_evaluation_compares_against_baseline(self):
@@ -342,6 +349,27 @@ class ForecastModelTest(TestCase):
         self.assertEqual(prepared['raw_series'].iloc[13], 300)
         self.assertGreater(prepared['series'].iloc[12], 500)
         self.assertGreater(prepared['series'].iloc[13], 500)
+
+    def test_egg_training_series_keeps_three_day_confirmed_shift(self):
+        start_date = timezone.now().date() - timedelta(days=24)
+        rows = []
+        for day in range(24):
+            value = 900
+            if day >= 21:
+                value = 1250 + ((day - 21) * 20)
+            rows.append({
+                'date': start_date + timedelta(days=day),
+                'value': value,
+            })
+
+        prepared = ForecastingService._prepare_daily_dataset(rows, dataset_kind='egg')
+
+        self.assertIsNotNone(prepared)
+        self.assertEqual(prepared['series'].iloc[-3:].tolist(), [1250, 1270, 1290])
+        self.assertEqual(
+            ForecastingService._trend_window_size(prepared['series'].to_numpy(dtype=float), 45),
+            14,
+        )
 
     def test_egg_training_outlier_smoothing_respects_live_hens(self):
         start_date = timezone.now().date() - timedelta(days=20)
@@ -447,6 +475,44 @@ class ForecastModelTest(TestCase):
         self.assertGreater(limits[0], 220)
         self.assertTrue(all(value <= limit for value, limit in zip(forecast, limits)))
         self.assertTrue(all(value <= limit for value, limit in zip(upper, limits)))
+
+    def test_egg_rate_cap_responds_to_three_day_high_hen_day_shift(self):
+        dates = pd.date_range(timezone.localdate() - timedelta(days=23), periods=24, freq='D')
+        rates = [70] * 21 + [88, 89, 90]
+        frame = pd.DataFrame({
+            'value': [rate * 10 for rate in rates],
+            'hen_count': [1000] * 24,
+            'pct_hen_day': rates,
+            'pct_hen_housed': rates,
+            'age_days': list(range(210, 234)),
+        }, index=dates)
+
+        limits = ForecastingService._egg_rate_capacity_limits_from_frame(frame, periods=3)
+
+        self.assertIsNotNone(limits)
+        self.assertGreater(limits[0], 800)
+
+    def test_egg_rate_cap_allows_confirmed_near_peak_hen_day_shift(self):
+        dates = pd.date_range(timezone.localdate() - timedelta(days=23), periods=24, freq='D')
+        initial_hens = 1985
+        live_hens = 1193
+        rates = [72] * 21 + [96.40, 99.75, 99.75]
+        values = [round(live_hens * rate / 100) for rate in rates]
+        frame = pd.DataFrame({
+            'value': values,
+            'hen_count': [live_hens] * 24,
+            'pct_hen_day': rates,
+            'pct_hen_housed': [(value / initial_hens) * 100 for value in values],
+            'age_days': list(range(210, 234)),
+        }, index=dates)
+
+        limits = ForecastingService._egg_rate_capacity_limits_from_frame(frame, periods=10)
+
+        self.assertIsNotNone(limits)
+        self.assertGreater(limits[0], 1150)
+        self.assertLessEqual(limits[0], live_hens)
+        self.assertGreater(max(limits), limits[0])
+        self.assertGreater(max(limits), limits[-1])
 
     def test_egg_rate_cap_slopes_after_latest_low_hen_day_shock(self):
         start_date = timezone.now().date() - timedelta(days=20)
@@ -565,20 +631,10 @@ class ForecastModelTest(TestCase):
             ],
         )
 
-    def test_sales_sarimax_features_use_lagged_sales_predictors(self):
-        self.assertEqual(
-            ForecastingService.SALES_FEATURE_FIELDS,
-            (
-                'quantity_pieces',
-                'avg_unit_price',
-                'transaction_count',
-                'trend_day',
-                'weekday_sin',
-                'weekday_cos',
-                'month_sin',
-                'month_cos',
-            ),
-        )
+    def test_sales_forecast_uses_simple_sarima_without_exogenous_features(self):
+        self.assertTrue(ForecastingService.SALES_USE_SEASONALITY)
+        self.assertFalse(ForecastingService.SALES_USE_EXOG)
+        self.assertFalse(ForecastingService._uses_exogenous_features('sales'))
 
         start_date = timezone.now().date() - timedelta(days=20)
         rows = []
@@ -591,13 +647,22 @@ class ForecastModelTest(TestCase):
                 'transaction_count': 1 + (day % 2),
             })
 
-        prepared = ForecastingService._prepare_daily_dataset(rows, use_exog=True, dataset_kind='sales')
+        prepared = ForecastingService._prepare_daily_dataset(
+            rows,
+            use_exog=ForecastingService._uses_exogenous_features('sales'),
+            dataset_kind='sales',
+        )
+        candidates = ForecastingService._web_forecast_candidates(
+            len(prepared['series']),
+            allow_seasonal=True,
+            dataset_kind='sales',
+        )
 
         self.assertIsNotNone(prepared)
         self.assertEqual(prepared['dataset_kind'], 'sales')
-        self.assertEqual(list(prepared['exog'].columns), list(ForecastingService.SALES_FEATURE_FIELDS))
-        self.assertEqual(prepared['exog'].iloc[1]['quantity_pieces'], 100)
-        self.assertIn('month_sin', prepared['exog'].columns)
+        self.assertIsNone(prepared['exog'])
+        self.assertTrue(any(candidate['kind'] == 'sarima' for candidate in candidates))
+        self.assertFalse(any(candidate['kind'] == 'sarimax' for candidate in candidates))
 
 
 class APIAuthenticationTest(APITestCase):
@@ -804,10 +869,50 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Production Notebook')
         self.assertContains(response, 'Monthly Analytics')
         self.assertContains(response, 'dashboardNotebookChart')
-        self.assertContains(response, 'monthlyNotebookChart')
         self.assertContains(response, 'notebook-bookmark')
+        self.assertNotContains(response, 'monthlyNotebookChart')
         self.assertIn('dashboard_charts_payload_json', response.context)
         self.assertIn('monthly_dashboard_payload_json', response.context)
+
+    def test_dashboard_chart_supports_daily_monthly_and_yearly_line_views(self):
+        older_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=500))
+        rows = [
+            (self.flock, timezone.localdate().replace(month=1, day=5), 1000),
+            (self.flock, timezone.localdate().replace(month=1, day=6), 1100),
+            (older_flock, timezone.localdate().replace(month=2, day=5), 1200),
+        ]
+        for flock, log_date, eggs_total in rows:
+            ProductionLog.objects.create(
+                flock=flock,
+                log_date=log_date,
+                age_weeks=30,
+                age_days=210,
+                hen_count=1780,
+                feed_bags=12,
+                eggs_total=eggs_total,
+                pct_hen_day=Decimal('70.00'),
+                pct_hen_housed=Decimal('65.00'),
+                entered_by=self.user,
+            )
+
+        response = self.client.get(reverse('eggproduction:dashboard'), {'period': 'all'})
+        payload = json.loads(response.context['dashboard_charts_payload_json'])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-granularity="daily"')
+        self.assertContains(response, 'data-granularity="monthly"')
+        self.assertContains(response, 'data-granularity="yearly"')
+        self.assertContains(response, "type: 'scatter'")
+        self.assertIn('daily', payload['granularities'])
+        self.assertIn('monthly', payload['granularities'])
+        self.assertIn('yearly', payload['granularities'])
+        self.assertEqual(len(payload['granularities']['daily']['labels']), 3)
+        self.assertEqual(len(payload['granularities']['monthly']['labels']), 2)
+        self.assertEqual(len(payload['granularities']['yearly']['labels']), 1)
+        self.assertEqual(payload['granularities']['daily']['charts']['hen_day']['threshold'], [60, 60, 60])
+        self.assertEqual(payload['granularities']['monthly']['charts']['hen_day']['threshold'], [60, 60])
+        self.assertEqual(payload['granularities']['yearly']['charts']['hen_day']['threshold'], [60])
+        self.assertEqual(payload['granularities']['daily']['charts']['hen_day']['threshold_label'], '60% threshold')
 
     def test_dashboard_specific_month_filter_uses_calendar_month(self):
         selected_month_date = timezone.localdate().replace(day=10)
@@ -1104,6 +1209,75 @@ class TemplateRenderTest(TestCase):
         self.assertIn((latest_actual_date + timedelta(days=1)).isoformat(), payload)
         self.assertNotIn((old_actual_date + timedelta(days=1)).isoformat(), payload)
 
+    def test_egg_forecast_dropdown_defaults_to_latest_saved_horizon(self):
+        admin = User.objects.create_user(username='eggrangeadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        self.client.force_login(admin)
+        model_version = ModelVersion.objects.create(model_type='arima', triggered_by=admin)
+        start_date = timezone.localdate() + timedelta(days=1)
+
+        for day in range(90):
+            HarvestForecast.objects.create(
+                flock=self.flock,
+                model_version=model_version,
+                forecast_date=start_date + timedelta(days=day),
+                grade='overall',
+                predicted_qty=1200,
+            )
+
+        response = self.client.get(reverse('eggproduction:harvest-forecast-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['selected_range'], 'three_months')
+        self.assertEqual(response.context['selected_periods'], 90)
+        self.assertContains(response, '<option value="three_months" selected>3 Months</option>', html=True)
+
+    def test_explicit_forecast_range_overrides_latest_saved_horizon(self):
+        admin = User.objects.create_user(username='eggrangeoverrideadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        self.client.force_login(admin)
+        model_version = ModelVersion.objects.create(model_type='arima', triggered_by=admin)
+        start_date = timezone.localdate() + timedelta(days=1)
+
+        for day in range(90):
+            HarvestForecast.objects.create(
+                flock=self.flock,
+                model_version=model_version,
+                forecast_date=start_date + timedelta(days=day),
+                grade='overall',
+                predicted_qty=1200,
+            )
+
+        response = self.client.get(reverse('eggproduction:harvest-forecast-list'), {'range': 'month'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['selected_range'], 'month')
+        self.assertEqual(response.context['selected_periods'], 30)
+        self.assertEqual(response.context['forecast_daily_points'], 30)
+
+    def test_sales_forecast_dropdown_defaults_to_latest_saved_horizon(self):
+        admin = User.objects.create_user(username='salesrangeadmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        self.client.force_login(admin)
+        model_version = ModelVersion.objects.create(model_type='arima', triggered_by=admin)
+        start_date = timezone.localdate() + timedelta(days=1)
+
+        for day in range(21):
+            SalesForecast.objects.create(
+                model_version=model_version,
+                forecast_date=start_date + timedelta(days=day),
+                grade='overall',
+                predicted_trays=0,
+                predicted_amount=Decimal('2500.00'),
+            )
+
+        response = self.client.get(reverse('eggproduction:sales-forecast-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['selected_range'], 'three_weeks')
+        self.assertEqual(response.context['selected_periods'], 21)
+        self.assertContains(response, '<option value="three_weeks" selected>3 Weeks</option>', html=True)
+
     def test_forecast_success_message_renders_status_card(self):
         admin = User.objects.create_user(username='forecastcardadmin', password='pass12345')
         UserProfile.objects.create(user=admin, role='admin')
@@ -1220,6 +1394,32 @@ class TemplateRenderTest(TestCase):
         list_response = self.client.get(reverse('eggproduction:production-log-list'))
         self.assertContains(list_response, 'alert-success swal')
         self.assertContains(list_response, 'Egg production record created successfully.')
+
+    def test_production_log_form_preview_has_loss_history_for_hen_day(self):
+        previous_date = timezone.localdate() - timedelta(days=2)
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=previous_date,
+            age_weeks=30,
+            age_days=210,
+            hen_count=0,
+            dead_count=10,
+            culled_count=5,
+            feed_bags=12,
+            eggs_total=1200,
+            pct_hen_day=Decimal('0.00'),
+            pct_hen_housed=Decimal('0.00'),
+            entered_by=self.user,
+        )
+
+        response = self.client.get(reverse('eggproduction:production-log-create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'liveHensPreview')
+        self.assertContains(response, 'flock-loss-history')
+        self.assertContains(response, 'Initial hens - previous and current depletion')
+        self.assertContains(response, '"dead_count": 10')
+        self.assertContains(response, '"culled_count": 5')
 
     def test_production_log_rejects_impossible_egg_total(self):
         log_date = timezone.localdate()

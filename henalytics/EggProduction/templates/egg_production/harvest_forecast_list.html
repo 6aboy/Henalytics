@@ -42,11 +42,11 @@
             </select>
         </div>
         <div>
-            <label for="date_from">Custom Start</label>
+            <label for="date_from">Custom Start (MM/DD/YYYY)</label>
             <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
         </div>
         <div>
-            <label for="date_to">Custom End</label>
+            <label for="date_to">Custom End (MM/DD/YYYY)</label>
             <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
         </div>
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
@@ -65,7 +65,7 @@
     <div class="section-heading">
         <div>
             <h2>Forecast Chart</h2>
-            <p>Actual production appears as the solid line; generated forecast output appears as the dashed line with its expected range.</p>
+            <p>Actual production appears as the solid line; generated forecast output appears as the dashed line.</p>
         </div>
         <span>{{ selected_range_label }}</span>
     </div>
@@ -248,25 +248,6 @@
 </section>
 {% endif %}
 
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Supporting Charts</h2>
-            <p>Use this secondary view to inspect hen performance thresholds beside the overall forecast.</p>
-        </div>
-        <span>Details</span>
-    </div>
-    <div class="action-panel forecast-chart-card">
-        <div class="detail-header">
-            <div>
-                <h2 class="detail-title">Hen Performance</h2>
-                <div class="detail-subtitle">Hen day and hen housed with a 60% threshold reference.</div>
-            </div>
-        </div>
-        <div id="henPerformanceChart" class="plotly-forecast-chart plotly-supporting-chart" aria-label="Hen performance chart"></div>
-    </div>
-</section>
-
 {% if user.userprofile.role == 'admin' or user.username == 'gabrielnicholas' %}
 <details class="action-panel forecast-maintenance-panel">
     <summary>Forecast Maintenance</summary>
@@ -385,7 +366,6 @@
 <script>
     (function () {
         const actualForecastPayload = {{ actual_forecast_payload_json|safe }};
-        const henPayload = {{ hen_payload_json|safe }};
 
         function chartYBounds(arrays, floor = 0) {
             const values = arrays
@@ -493,46 +473,6 @@
             ])),
             plotConfig
         );
-
-        const henMode = henPayload.labels.length > 140 ? 'lines' : 'lines+markers';
-        const henTraces = [
-            {
-                x: henPayload.labels,
-                y: henPayload.hen_day,
-                name: 'Hen Day %',
-                type: 'scatter',
-                mode: henMode,
-                line: { color: '#05853e', width: 3, shape: 'spline' },
-                marker: { color: '#05853e', size: 5 },
-                hovertemplate: '%{y:.2f}%<extra></extra>'
-            },
-            {
-                x: henPayload.labels,
-                y: henPayload.hen_housed,
-                name: 'Hen Housed %',
-                type: 'scatter',
-                mode: henMode,
-                line: { color: '#3360cf', width: 3, shape: 'spline' },
-                marker: { color: '#3360cf', size: 5 },
-                hovertemplate: '%{y:.2f}%<extra></extra>'
-            },
-            {
-                x: henPayload.labels,
-                y: henPayload.threshold,
-                name: '60% Threshold',
-                type: 'scatter',
-                mode: 'lines',
-                line: { color: '#ed0909', width: 2, dash: 'dash' },
-                hovertemplate: '%{y:.0f}% threshold<extra></extra>'
-            }
-        ];
-        Plotly.newPlot(
-            document.getElementById('henPerformanceChart'),
-            henTraces,
-            forecastLayout('Percent', [0, 110]),
-            plotConfig
-        );
-
     })();
 </script>
 {% endblock %}

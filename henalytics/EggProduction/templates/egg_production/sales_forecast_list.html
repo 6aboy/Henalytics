@@ -38,11 +38,11 @@
             </select>
         </div>
         <div>
-            <label for="date_from">Custom Start</label>
+            <label for="date_from">Custom Start (MM/DD/YYYY)</label>
             <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
         </div>
         <div>
-            <label for="date_to">Custom End</label>
+            <label for="date_to">Custom End (MM/DD/YYYY)</label>
             <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
         </div>
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
@@ -207,7 +207,7 @@
     <div class="section-heading">
         <div>
             <h2>Model Comparison</h2>
-            <p>Rolling backtesting compares candidate sales models and selects the forecast by lowest MAE, then MAPE.</p>
+            <p>Rolling backtesting compares simple sales models and selects the forecast by lowest MAE, then MAPE.</p>
         </div>
         <span>{{ model_comparison.selection_metric|default:"rolling MAE then MAPE" }}</span>
     </div>
@@ -234,7 +234,7 @@
         <div>
             <h2 class="detail-title">Forecast Assumptions</h2>
             <div class="detail-subtitle">
-                Future sales predictor values must be known or assumed; these are the assumptions used by the selected model.
+                Sales forecasting uses historical revenue only, so no future sales-volume inputs are required.
             </div>
         </div>
         <ul class="analytics-notes">
@@ -391,6 +391,10 @@
         const smoothToggle = document.getElementById('salesChartSmooth');
         const seriesKeys = Object.keys(payload.series || {});
         const preferred = seriesKeys.includes('overall') ? 'overall' : seriesKeys[0];
+        const forecastLabels = payload.iso_labels || payload.labels || [];
+        const forecastCustomLabels = payload.labels || forecastLabels;
+        const actualSalesLabels = actualForecastPayload.iso_labels || actualForecastPayload.labels || [];
+        const actualSalesCustomLabels = actualForecastPayload.labels || actualSalesLabels;
 
         function movingAverage(values, windowSize) {
             return values.map((_, index) => {
@@ -494,26 +498,28 @@
 
         const actualForecastTraces = [
             {
-                x: actualForecastPayload.labels,
+                x: actualSalesLabels,
+                customdata: actualSalesCustomLabels,
                 y: actualForecastPayload.actual,
                 name: 'Actual Revenue',
                 type: 'scatter',
-                mode: actualForecastPayload.labels.length > 140 ? 'lines' : 'lines+markers',
+                mode: actualSalesLabels.length > 140 ? 'lines' : 'lines+markers',
                 line: { color: '#344054', width: 3, shape: 'spline' },
                 marker: { color: '#344054', size: 5 },
                 connectgaps: false,
-                hovertemplate: 'PHP %{y:,.2f}<extra></extra>'
+                hovertemplate: '%{customdata}<br>PHP %{y:,.2f}<extra></extra>'
             },
             {
-                x: actualForecastPayload.labels,
+                x: actualSalesLabels,
+                customdata: actualSalesCustomLabels,
                 y: actualForecastPayload.forecast,
                 name: 'Forecast Revenue',
                 type: 'scatter',
-                mode: actualForecastPayload.labels.length > 140 ? 'lines' : 'lines+markers',
+                mode: actualSalesLabels.length > 140 ? 'lines' : 'lines+markers',
                 line: { color: '#05853e', width: 3, dash: 'dash', shape: 'spline' },
                 marker: { color: '#05853e', size: 5 },
                 connectgaps: false,
-                hovertemplate: 'PHP %{y:,.2f}<extra></extra>'
+                hovertemplate: '%{customdata}<br>PHP %{y:,.2f}<extra></extra>'
             }
         ];
         Plotly.newPlot(
@@ -531,15 +537,16 @@
             const item = datasetFor(seriesSelect.value || preferred);
             const isBar = typeSelect.value === 'bar';
             const trace = {
-                x: payload.labels,
+                x: forecastLabels,
+                customdata: forecastCustomLabels,
                 y: item.values,
                 name: item.label,
                 type: isBar ? 'bar' : 'scatter',
                 marker: { color: '#05853e' },
-                hovertemplate: 'PHP %{y:,.2f}<extra></extra>'
+                hovertemplate: '%{customdata}<br>PHP %{y:,.2f}<extra></extra>'
             };
             if (!isBar) {
-                trace.mode = payload.labels.length > 140 ? 'lines' : 'lines+markers';
+                trace.mode = forecastLabels.length > 140 ? 'lines' : 'lines+markers';
                 trace.line = { color: '#05853e', width: 3, shape: 'spline' };
                 trace.fill = 'tozeroy';
                 trace.fillcolor = 'rgba(5, 133, 62, 0.12)';
