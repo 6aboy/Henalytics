@@ -108,6 +108,9 @@ class Command(BaseCommand):
         base_path = Path(settings.BASE_DIR) / file_path
         if base_path.exists():
             return base_path
+        dataset_path = Path(settings.BASE_DIR).parent / 'datasets' / file_path
+        if dataset_path.exists():
+            return dataset_path
         return path
 
     def _get_dataset_flock(self, house_no, flock_start_date):

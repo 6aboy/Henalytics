@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load humanize %}
+{% load humanize static %}
 
 {% block title %}Database Forecasting - Henalytics{% endblock %}
 {% block page_title %}Forecasting{% endblock %}
@@ -214,7 +214,7 @@
 </section>
 {% endif %}
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{% static 'vendor/plotly/plotly-2.35.2.min.js' %}"></script>
 <script>
     (function () {
         const payload = {{ forecast_payload_json|safe }};

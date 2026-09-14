@@ -294,7 +294,7 @@
     </div>
 </section>
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{% static 'vendor/plotly/plotly-2.35.2.min.js' %}"></script>
 <script id="dashboard-charts-payload" type="application/json">{{ dashboard_charts_payload_json|safe }}</script>
 <script>
     (function () {

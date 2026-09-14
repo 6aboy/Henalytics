@@ -86,6 +86,11 @@
                             <small class="form-help">Log date - flock start</small>
                         </div>
                         <div class="form-group compact-metric-field">
+                            <label>Live Hens</label>
+                            <input type="text" id="liveHensPreview" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.hen_count }}{% else %}0{% endif %}" readonly>
+                            <small class="form-help">Initial hens - previous and current depletion</small>
+                        </div>
+                        <div class="form-group compact-metric-field">
                             <label for="id_pct_hen_day">% Hen Day</label>
                             <input type="text" id="id_pct_hen_day" class="form-control readonly-metric" value="{% if form.instance.pk %}{{ form.instance.pct_hen_day }}{% else %}0.00{% endif %}" readonly>
                             <small class="form-help">Eggs / live hens x 100</small>
@@ -142,12 +147,25 @@
 </style>
 {{ flock_initial_counts|json_script:"flock-initial-counts" }}
 {{ flock_start_dates|json_script:"flock-start-dates" }}
+{{ flock_loss_history|json_script:"flock-loss-history" }}
+{{ current_log_id|json_script:"current-log-id" }}
+{{ feed_bag_kg|json_script:"feed-bag-kg" }}
+{{ avg_egg_kg|json_script:"avg-egg-kg" }}
 <script>
     (function () {
+        function jsonValue(elementId, fallback) {
+            var element = document.getElementById(elementId);
+            if (!element) {
+                return fallback;
+            }
+            return JSON.parse(element.textContent);
+        }
+
         var flockField = document.getElementById('{{ form.flock.id_for_label }}');
         var logDateField = document.getElementById('{{ form.log_date.id_for_label }}');
         var ageWeeksPreview = document.getElementById('ageWeeksPreview');
         var ageDaysPreview = document.getElementById('ageDaysPreview');
+        var liveHensPreview = document.getElementById('liveHensPreview');
         var eggsField = document.getElementById('{{ form.eggs_total.id_for_label }}');
         var deadCountField = document.getElementById('{{ form.dead_count.id_for_label }}');
         var culledCountField = document.getElementById('{{ form.culled_count.id_for_label }}');
@@ -159,8 +177,11 @@
         var flockInitialCounts = countsElement ? JSON.parse(countsElement.textContent) : {};
         var startsElement = document.getElementById('flock-start-dates');
         var flockStartDates = startsElement ? JSON.parse(startsElement.textContent) : {};
-        var feedBagKg = Number('{{ feed_bag_kg }}');
-        var avgEggKg = Number('{{ avg_egg_kg }}');
+        var lossHistoryElement = document.getElementById('flock-loss-history');
+        var flockLossHistory = lossHistoryElement ? JSON.parse(lossHistoryElement.textContent) : [];
+        var currentLogId = jsonValue('current-log-id', null);
+        var feedBagKg = Number(jsonValue('feed-bag-kg', 50));
+        var avgEggKg = Number(jsonValue('avg-egg-kg', 0.06));
 
         function percent(numerator, denominator) {
             numerator = Number(numerator);
@@ -199,11 +220,32 @@
             }
         }
 
+        function calculatedLiveHens() {
+            var flockId = flockField ? flockField.value : '';
+            var logValue = logDateField ? logDateField.value : '';
+            var initialHens = Number(flockInitialCounts[flockId] || 0);
+            var previousLosses = flockLossHistory
+                .filter(function (item) {
+                    return item.flock_id === flockId
+                        && item.date < logValue
+                        && item.id !== currentLogId;
+                })
+                .reduce(function (total, item) {
+                    return total + Number(item.dead_count || 0) + Number(item.culled_count || 0);
+                }, 0);
+            var currentLosses = Number(deadCountField ? deadCountField.value || 0 : 0)
+                + Number(culledCountField ? culledCountField.value || 0 : 0);
+            return Math.max(initialHens - previousLosses - currentLosses, 0);
+        }
+
         function updatePercentages() {
             var eggsTotal = eggsField ? eggsField.value : 0;
             var initialHens = flockField ? flockInitialCounts[flockField.value] : 0;
-            var liveHens = Math.max(Number(initialHens || 0) - Number(deadCountField ? deadCountField.value || 0 : 0) - Number(culledCountField ? culledCountField.value || 0 : 0), 0);
+            var liveHens = calculatedLiveHens();
 
+            if (liveHensPreview) {
+                liveHensPreview.value = liveHens.toLocaleString();
+            }
             if (henDayField) {
                 henDayField.value = percent(eggsTotal, liveHens);
             }

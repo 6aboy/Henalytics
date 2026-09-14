@@ -362,7 +362,7 @@
 <div class="alert alert-info">No egg forecasts available.</div>
 {% endif %}
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{% static 'vendor/plotly/plotly-2.35.2.min.js' %}"></script>
 <script>
     (function () {
         const actualForecastPayload = {{ actual_forecast_payload_json|safe }};

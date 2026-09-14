@@ -10,6 +10,18 @@ env/
 
 *.log
 
+# Local generated deployment files
+staticfiles/
+media/
+
+# Local datasets and document exports
+datasets/
+*.xls
+*.xlsx
+*.doc
+*.docx
+*.pdf
+
 ml/.venv/
 ml/__pycache__/
 ml/**/*.pyc

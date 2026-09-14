@@ -1344,7 +1344,7 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Expected Average')
         self.assertContains(response, 'data-swal-forecast-run')
         self.assertContains(response, 'do not close the system')
-        self.assertContains(response, 'cdn.plot.ly')
+        self.assertContains(response, 'vendor/plotly/plotly-2.35.2.min.js')
         self.assertContains(response, 'Plotly.newPlot')
         self.assertContains(response, 'scrollZoom: true')
         self.assertContains(response, "dragmode: 'pan'")

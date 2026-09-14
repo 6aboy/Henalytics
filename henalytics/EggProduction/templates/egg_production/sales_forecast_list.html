@@ -381,7 +381,7 @@
 <div class="alert alert-info">No sales forecasts available.</div>
 {% endif %}
 
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{% static 'vendor/plotly/plotly-2.35.2.min.js' %}"></script>
 <script>
     (function () {
         const payload = {{ chart_payload_json|safe }};

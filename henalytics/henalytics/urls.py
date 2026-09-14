@@ -16,7 +16,6 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from django.contrib import auth
 import importlib
 
 try:
@@ -31,7 +30,6 @@ urlpatterns = [
     path('', include('EggProduction.urls')),
     path('', include('django.contrib.auth.urls')),
     path('api-auth/', include('rest_framework.urls')),
-    path('imissyou/', include('imissyou.urls')),
 ]
 
 if docs_available:

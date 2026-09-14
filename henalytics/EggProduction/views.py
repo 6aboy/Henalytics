@@ -1234,6 +1234,7 @@ class ProductionLogFormMixin:
             }
             for log in ProductionLog.objects.only('id', 'flock_id', 'log_date', 'dead_count', 'culled_count')
         ]
+        context['current_log_id'] = self.object.pk if getattr(self, 'object', None) else None
         context['feed_bag_kg'] = getattr(settings, 'HENALYTICS_FEED_BAG_KG', 50)
         context['avg_egg_kg'] = getattr(settings, 'HENALYTICS_AVG_EGG_KG', 0.06)
         return context
