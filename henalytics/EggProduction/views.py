@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from django.db import models, transaction
-from django.db.models.functions import TruncMonth, TruncYear
+from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
 from django.utils import timezone
 from django.conf import settings
 from datetime import date, timedelta
@@ -537,15 +537,22 @@ class DirectDeleteOnlyMixin:
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
+    @staticmethod
+    def default_month_value():
+        latest_date = ProductionLog.objects.order_by('-log_date').values_list('log_date', flat=True).first()
+        return (latest_date or timezone.localdate()).strftime('%Y-%m')
+
     def get_period_bounds(self):
         today = timezone.localdate()
-        period = self.request.GET.get('period', 'last_30')
+        period = self.request.GET.get('period', 'specific_month')
         start = None
         end = today
-        selected_month = self.request.GET.get('month_value') or today.strftime('%Y-%m')
+        selected_month = self.request.GET.get('month_value') or self.default_month_value()
 
         if period == 'today':
             start = today
+        elif period == 'week':
+            start = today - timedelta(days=6)
         elif period == 'last_30':
             start = today - timedelta(days=30)
         elif period == 'month':
@@ -583,6 +590,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         labels = {
             'today': 'Today',
+            'week': 'This Week',
             'last_30': 'Last 30 Days',
             'month': 'This Month',
             'last_month': 'Last Month',
@@ -756,6 +764,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'default_granularity': 'daily',
             'granularities': {
                 'daily': cls._build_dashboard_chart_payload_for_group('day'),
+                'weekly': cls._build_dashboard_chart_payload_for_group('week'),
                 'monthly': cls._build_dashboard_chart_payload_for_group('month'),
                 'yearly': cls._build_dashboard_chart_payload_for_group('year'),
             },
@@ -764,8 +773,33 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     @classmethod
     def _build_dashboard_chart_payload_for_group(cls, granularity):
         logs = ProductionLog.objects.filter(flock__status='active')
-        if granularity == 'month':
-            rows = (
+        if granularity == 'week':
+            production_rows = (
+                logs.annotate(period_date=TruncWeek('log_date'))
+                .values('period_date')
+                .annotate(
+                    eggs=models.Sum('eggs_total'),
+                    hen_housed=models.Avg('pct_hen_housed'),
+                    hen_day=models.Avg('pct_hen_day'),
+                    feed=models.Sum('feed_bags'),
+                    losses=models.Sum(models.F('dead_count') + models.F('culled_count')),
+                )
+                .order_by('period_date')
+            )
+            sales_rows = (
+                SalesItem.objects
+                .annotate(period_date=TruncWeek('transaction__sale_date'))
+                .values('period_date')
+                .annotate(sales=models.Sum('amount'))
+                .order_by('period_date')
+            )
+            label_format = 'Week of %b %d, %Y'
+            date_format = None
+            tick_format = '%b %d'
+            hover_format = '%b %d, %Y'
+            label = 'Weekly'
+        elif granularity == 'month':
+            production_rows = (
                 logs.annotate(period_date=TruncMonth('log_date'))
                 .values('period_date')
                 .annotate(
@@ -777,13 +811,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 )
                 .order_by('period_date')
             )
+            sales_rows = (
+                SalesItem.objects
+                .annotate(period_date=TruncMonth('transaction__sale_date'))
+                .values('period_date')
+                .annotate(sales=models.Sum('amount'))
+                .order_by('period_date')
+            )
             label_format = '%b %Y'
             date_format = '%Y-%m-01'
             tick_format = '%b %Y'
             hover_format = '%b %Y'
             label = 'Monthly'
         elif granularity == 'year':
-            rows = (
+            production_rows = (
                 logs.annotate(period_date=TruncYear('log_date'))
                 .values('period_date')
                 .annotate(
@@ -795,13 +836,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 )
                 .order_by('period_date')
             )
+            sales_rows = (
+                SalesItem.objects
+                .annotate(period_date=TruncYear('transaction__sale_date'))
+                .values('period_date')
+                .annotate(sales=models.Sum('amount'))
+                .order_by('period_date')
+            )
             label_format = '%Y'
             date_format = '%Y-01-01'
             tick_format = '%Y'
             hover_format = '%Y'
             label = 'Yearly'
         else:
-            rows = (
+            production_rows = (
                 logs.values(period_date=models.F('log_date'))
                 .annotate(
                     eggs=models.Sum('eggs_total'),
@@ -812,18 +860,48 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 )
                 .order_by('period_date')
             )
+            sales_rows = (
+                SalesItem.objects
+                .values(period_date=models.F('transaction__sale_date'))
+                .annotate(sales=models.Sum('amount'))
+                .order_by('period_date')
+            )
             label_format = '%b %d, %Y'
             date_format = None
             tick_format = '%b %d'
             hover_format = '%b %d, %Y'
             label = 'Daily'
 
-        chart_rows = list(rows)
-        labels = [row['period_date'].strftime(label_format) for row in chart_rows]
-        iso_labels = []
-        for row in chart_rows:
-            period_date = row['period_date'].date() if hasattr(row['period_date'], 'date') else row['period_date']
-            iso_labels.append(period_date.strftime(date_format) if date_format else period_date.isoformat())
+        def normalize_period_date(value):
+            return value.date() if hasattr(value, 'date') else value
+
+        production_by_period = {
+            normalize_period_date(row['period_date']): row
+            for row in production_rows
+            if row['period_date']
+        }
+        sales_by_period = {
+            normalize_period_date(row['period_date']): row
+            for row in sales_rows
+            if row['period_date']
+        }
+        period_dates = sorted(set(production_by_period) | set(sales_by_period))
+        labels = [period_date.strftime(label_format) for period_date in period_dates]
+        iso_labels = [
+            period_date.strftime(date_format) if date_format else period_date.isoformat()
+            for period_date in period_dates
+        ]
+
+        def production_values(field):
+            return [
+                float((production_by_period.get(period_date) or {}).get(field) or 0)
+                for period_date in period_dates
+            ]
+
+        sales_values = [
+            float((sales_by_period.get(period_date) or {}).get('sales') or 0)
+            for period_date in period_dates
+        ]
 
         return {
             'label': label,
@@ -837,15 +915,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'description': f'{label} total eggs recorded in the database.',
                     'unit': 'eggs',
                     'color': '#3360cf',
-                    'values': [float(row['eggs'] or 0) for row in chart_rows],
+                    'values': production_values('eggs'),
                 },
                 'hen_housed': {
                     'title': f'{label} Hen Housed Performance',
                     'description': f'{label} average hen-housed percentage compared with the 60% warning threshold.',
                     'unit': '%',
                     'color': '#12a150',
-                    'values': [float(row['hen_housed'] or 0) for row in chart_rows],
-                    'threshold': [60 for _row in chart_rows],
+                    'values': production_values('hen_housed'),
+                    'threshold': [60 for _period in period_dates],
                     'threshold_label': '60% threshold',
                 },
                 'hen_day': {
@@ -853,8 +931,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'description': f'{label} average hen-day percentage compared with the 60% warning threshold.',
                     'unit': '%',
                     'color': '#7c3aed',
-                    'values': [float(row['hen_day'] or 0) for row in chart_rows],
-                    'threshold': [60 for _row in chart_rows],
+                    'values': production_values('hen_day'),
+                    'threshold': [60 for _period in period_dates],
                     'threshold_label': '60% threshold',
                 },
                 'feed': {
@@ -862,14 +940,21 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'description': f'{label} feed bags recorded in the database.',
                     'unit': 'bags',
                     'color': '#e88411',
-                    'values': [float(row['feed'] or 0) for row in chart_rows],
+                    'values': production_values('feed'),
                 },
                 'losses': {
                     'title': f'{label} Mortality and Cull Trend',
                     'description': f'{label} dead and culled hens from production records.',
                     'unit': 'hens',
                     'color': '#d92d20',
-                    'values': [float(row['losses'] or 0) for row in chart_rows],
+                    'values': production_values('losses'),
+                },
+                'sales': {
+                    'title': f'{label} Sales Trend',
+                    'description': f'{label} sales revenue from the sales table.',
+                    'unit': 'peso',
+                    'color': '#ca8a04',
+                    'values': sales_values,
                 },
             },
         }
@@ -943,6 +1028,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
             period_revenue = period_sales_items.aggregate(total=models.Sum('amount'))['total'] or 0
+            period_lay_rate = period_logs.aggregate(avg=models.Avg('pct_hen_day'))['avg'] or 0
             previous_start, previous_end = self.previous_period_bounds(date_from, date_to)
             previous_logs = self.filter_by_date(ProductionLog.objects.all(), 'log_date', previous_start, previous_end)
             previous_sales_items = self.filter_by_date(
@@ -1007,6 +1093,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'period_feed_total': period_feed_total,
                 'period_losses': period_losses,
                 'period_revenue': float(period_revenue),
+                'period_lay_rate': round(period_lay_rate, 1) if period_lay_rate else 0,
                 'period_egg_change_label': self.format_change(period_egg_change),
                 'period_egg_change_tone': self.change_tone(period_egg_change),
                 'period_revenue_change_label': self.format_change(period_revenue_change),
@@ -1027,7 +1114,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'recent_losses_30d': recent_losses_30d,
                 'recent_losses_60d': recent_losses_60d,
                 'dashboard_charts_payload_json': json.dumps(dashboard_chart_payload),
-                'monthly_dashboard_payload_json': json.dumps(monthly_payload),
                 'monthly_dashboard_notes': self.build_monthly_notes(monthly_payload),
                 'monthly_dashboard_summary': monthly_summary,
                 'hen_housed_payload_json': json.dumps(dashboard_chart_payload['granularities']['daily']['charts']['hen_housed']),
@@ -1046,6 +1132,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'period_feed_total': 0,
                 'period_losses': 0,
                 'period_revenue': 0,
+                'period_lay_rate': 0,
                 'today_sales': 0,
                 'total_revenue': 0,
                 'total_hens': 0,
@@ -1058,7 +1145,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'recent_losses_30d': 0,
                 'recent_losses_60d': 0,
                 'dashboard_charts_payload_json': json.dumps({'labels': [], 'iso_labels': [], 'charts': {}}),
-                'monthly_dashboard_payload_json': json.dumps({'labels': [], 'iso_labels': [], 'charts': {}}),
                 'monthly_dashboard_notes': ['Monthly analytics could not be loaded.'],
                 'monthly_dashboard_summary': {
                     'month_label': 'No monthly records',
@@ -2034,11 +2120,9 @@ class SalesForecastListView(AdminAccessMixin, ListView):
 
         range_key = request.POST.get('range', 'month')
         periods = HarvestForecastListView._get_periods(request, range_key)
-        include_sizes = request.POST.get('scope', 'both') == 'both'
         result = ForecastingService.generate_sales_forecasts(
             periods=periods,
             user=request.user,
-            include_sizes=include_sizes,
         )
 
         if result['success']:
@@ -2052,7 +2136,6 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         redirect_url = reverse_lazy('eggproduction:sales-forecast-list')
         query = QueryDict(mutable=True)
         query['range'] = range_key
-        query['scope'] = request.POST.get('scope', 'both')
         if range_key == 'custom':
             if request.POST.get('date_from'):
                 query['date_from'] = request.POST.get('date_from')
@@ -2061,7 +2144,7 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         return redirect(f'{redirect_url}?{query.urlencode()}')
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related('model_version')
+        qs = super().get_queryset().select_related('model_version').filter(grade='overall')
         range_key = HarvestForecastListView._get_selected_range_key(self.request, qs)
         periods = HarvestForecastListView._get_display_periods(self.request, range_key=range_key, forecasts=qs)
         first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
@@ -2072,9 +2155,7 @@ class SalesForecastListView(AdminAccessMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
-        chart_payload = build_forecast_chart_payload(forecasts, 'predicted_amount')
         selected_range = HarvestForecastListView._get_selected_range_key(self.request, forecasts)
-        selected_scope = self.request.GET.get('scope', 'both')
         selected_periods = HarvestForecastListView._get_display_periods(self.request, range_key=selected_range, forecasts=forecasts)
         selected_range_label = HarvestForecastListView._range_label(selected_range, selected_periods)
         forecast_start_row = forecasts.order_by('forecast_date').first()
@@ -2110,7 +2191,6 @@ class SalesForecastListView(AdminAccessMixin, ListView):
             'range_options': HarvestForecastListView._range_options(),
             'selected_range': selected_range,
             'selected_range_label': selected_range_label,
-            'selected_scope': selected_scope,
             'selected_periods': selected_periods,
             'history_days': HarvestForecastListView._history_days_for_horizon(selected_periods),
             'forecast_total': forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0,
@@ -2123,7 +2203,6 @@ class SalesForecastListView(AdminAccessMixin, ListView):
             'forecast_end': run_summary['last_row'],
             'forecast_peak': forecasts.order_by('-predicted_amount').first(),
             'run_summary': run_summary,
-            'chart_payload_json': json.dumps(chart_payload),
             'actual_forecast_payload_json': json.dumps(actual_forecast_payload),
             'sales_insights': sales_insights,
             'latest_model': latest_model,

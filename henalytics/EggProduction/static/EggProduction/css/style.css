@@ -104,6 +104,10 @@ a {
     z-index: 4;
 }
 
+.mobile-sidebar-backdrop {
+    display: none;
+}
+
 .brand-lockup {
     display: flex;
     justify-content: flex-start;
@@ -251,9 +255,11 @@ a {
 }
 
 .sidebar-account {
+    position: relative;
     margin-top: auto;
     padding: 12px;
     border-top: 1px solid #e6e8ee;
+    background: #fff;
     box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
 }
 
@@ -261,6 +267,7 @@ a {
     position: relative;
     isolation: isolate;
     overflow: hidden;
+    z-index: 1;
     width: 100%;
     min-height: 58px;
     display: grid;
@@ -463,6 +470,35 @@ a {
     box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
 }
 
+.topbar-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.mobile-menu-button {
+    display: none;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    gap: 4px;
+    padding: 9px;
+    border: 1px solid #d8e3ff;
+    border-radius: 9px;
+    color: var(--hen-blue);
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.10);
+}
+
+.mobile-menu-button span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    border-radius: 99px;
+    background: currentColor;
+}
+
 .app-topbar h1 {
     margin: 0;
     padding: 18px 0 12px;
@@ -533,6 +569,90 @@ a {
 .dashboard-filter,
 .production-filter {
     flex-wrap: wrap;
+}
+
+.dashboard-filter-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.dashboard-filter-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dashboard-filter-label {
+    color: #344054;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.dashboard-period-toggle {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid #d8e3ff;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(31, 55, 99, 0.10);
+}
+
+.dashboard-period-toggle button {
+    min-width: 96px;
+    min-height: 46px;
+    padding: 10px 18px;
+    border: 0;
+    border-right: 1px solid #d8e3ff;
+    color: #344054;
+    background: transparent;
+    font-size: 0.98rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.dashboard-period-toggle button:last-child {
+    border-right: 0;
+}
+
+.dashboard-period-toggle button.active,
+.dashboard-period-toggle button:hover {
+    color: #fff;
+    background: var(--hen-blue);
+}
+
+.dashboard-month-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-month-picker label {
+    color: #344054;
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.dashboard-month-picker input {
+    min-width: 170px;
+}
+
+.dashboard-month-picker.active input {
+    border-color: var(--hen-blue);
+    box-shadow: 0 0 0 0.18rem rgba(51, 96, 207, 0.14);
+}
+
+.dashboard-active-period {
+    padding: 8px 11px;
+    border: 1px solid #d8e3ff;
+    border-radius: 6px;
+    color: #3153a8;
+    background: #eef3ff;
+    font-size: 0.82rem;
+    font-weight: 800;
 }
 
 .date-input-action {
@@ -1297,6 +1417,34 @@ input[readonly].readonly-metric {
     .section-heading > span {
         white-space: normal;
     }
+
+    .dashboard-filter-card {
+        justify-content: flex-start;
+    }
+
+    .dashboard-filter-main,
+    .dashboard-month-picker {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dashboard-period-toggle {
+        width: 100%;
+    }
+
+    .dashboard-period-toggle button {
+        min-width: 0;
+        flex: 1 1 0;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    .dashboard-month-picker input,
+    .dashboard-filter-card .btn,
+    .dashboard-active-period {
+        width: 100%;
+    }
 }
 
 .pagination {
@@ -2054,6 +2202,10 @@ input[readonly].readonly-metric {
     background: #e88411;
 }
 
+.notebook-bookmark.yellow {
+    background: #ca8a04;
+}
+
 .notebook-bookmark.red {
     background: #d92d20;
 }
@@ -2546,40 +2698,93 @@ select {
     }
 
     .app-sidebar {
-        position: relative;
-        height: auto;
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(82vw, 312px);
+        height: 100dvh;
+        overflow-y: auto;
+        transform: translateX(-105%);
+        transition: transform 0.24s ease;
+        z-index: 1050;
+        box-shadow: 14px 0 28px rgba(15, 23, 42, 0.24);
+    }
+
+    .sidebar-open .app-sidebar {
+        transform: translateX(0);
+    }
+
+    .sidebar-open {
+        overflow: hidden;
+    }
+
+    .mobile-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        display: block;
+        background: rgba(15, 23, 42, 0.46);
+        backdrop-filter: blur(1px);
+        z-index: 1040;
+    }
+
+    .mobile-sidebar-backdrop[hidden] {
+        display: none;
+    }
+
+    .brand-lockup {
+        min-height: auto;
+        padding: 16px 16px 8px;
     }
 
     .side-nav {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 12px;
+        display: block;
+        padding: 8px 12px 16px;
     }
 
     .nav-section-label {
-        grid-column: 1 / -1;
-        margin: 8px 4px 0;
+        margin: 16px 8px 8px;
     }
 
     .side-link {
-        margin: 0;
+        margin-bottom: 7px;
         font-size: 0.92rem;
-        min-height: 42px;
+        min-height: 48px;
+    }
+
+    .sidebar-account {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
     }
 
     .app-topbar {
-        align-items: flex-start;
-        flex-direction: column;
-        padding: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        align-items: center;
+        flex-direction: row;
+        padding: 12px 14px;
+        gap: 12px;
     }
 
     .app-topbar h1 {
-        font-size: 30px;
+        overflow: hidden;
+        padding: 8px 0 7px;
+        font-size: 28px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .app-topbar time {
+        font-size: 0.85rem;
+    }
+
+    .mobile-menu-button {
+        display: grid;
+        flex: 0 0 auto;
     }
 
     .app-content {
-        padding: 24px 12px;
+        padding: 22px 12px 28px;
     }
 
     .dashboard-grid,

@@ -123,10 +123,8 @@ class ForecastingService:
         )
 
     @classmethod
-    def generate_sales_forecasts(cls, periods=30, user=None, include_sizes=True):
+    def generate_sales_forecasts(cls, periods=30, user=None, include_sizes=False):
         series_map = {'overall': cls._sales_amount_series()}
-        if include_sizes:
-            series_map.update(cls._sales_amount_series_by_grade())
         forecast_start_date = cls._latest_sales_date()
         if forecast_start_date:
             forecast_start_date += timedelta(days=1)
@@ -162,10 +160,8 @@ class ForecastingService:
         return cls._evaluate_series_map(series_map, allow_seasonal=cls.EGG_USE_SEASONALITY, use_exog=True)
 
     @classmethod
-    def evaluate_sales_forecasts(cls, include_sizes=True):
+    def evaluate_sales_forecasts(cls, include_sizes=False):
         series_map = {'overall': cls._sales_amount_series()}
-        if include_sizes:
-            series_map.update(cls._sales_amount_series_by_grade())
         return cls._evaluate_series_map(
             series_map,
             allow_seasonal=cls.SALES_USE_SEASONALITY,

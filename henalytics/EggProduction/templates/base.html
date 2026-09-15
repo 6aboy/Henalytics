@@ -16,7 +16,8 @@
 <body class="{% if request.user.is_authenticated %}app-body{% else %}auth-body{% endif %}">
     {% if request.user.is_authenticated %}
     <div class="app-shell">
-        <aside class="app-sidebar">
+        <div class="mobile-sidebar-backdrop" data-sidebar-close hidden></div>
+        <aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
             <a href="{% url 'eggproduction:dashboard' %}" class="brand-lockup">
                 <span class="brand-card">
                     <img src="{% static 'EggProduction/img/logo-blue-ver.png' %}" alt="Henalytics">
@@ -95,7 +96,15 @@
 
         <section class="app-panel">
             <header class="app-topbar">
-                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="topbar-title-group">
+                    <button type="button" class="mobile-menu-button" data-sidebar-toggle
+                        aria-controls="appSidebar" aria-expanded="false" aria-label="Open navigation menu">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
                 <time>{% now "F j, Y" %}</time>
             </header>
             <main class="app-content">
@@ -147,6 +156,50 @@
                 window.location.reload();
             }
         });
+
+        (function () {
+            var body = document.body;
+            var sidebar = document.getElementById('appSidebar');
+            var toggle = document.querySelector('[data-sidebar-toggle]');
+            var backdrop = document.querySelector('[data-sidebar-close]');
+
+            if (!sidebar || !toggle || !backdrop) {
+                return;
+            }
+
+            var setSidebarState = function (isOpen) {
+                body.classList.toggle('sidebar-open', isOpen);
+                toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                toggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+                backdrop.hidden = !isOpen;
+            };
+
+            toggle.addEventListener('click', function () {
+                setSidebarState(!body.classList.contains('sidebar-open'));
+            });
+
+            backdrop.addEventListener('click', function () {
+                setSidebarState(false);
+            });
+
+            sidebar.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    setSidebarState(false);
+                });
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    setSidebarState(false);
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (window.innerWidth > 760) {
+                    setSidebarState(false);
+                }
+            });
+        })();
 
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.message-stack .alert.swal').forEach(function (alert) {

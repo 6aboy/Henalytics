@@ -14,7 +14,7 @@
     <div class="section-heading">
         <div>
             <h2>Forecast Setup</h2>
-            <p>Choose the revenue horizon and whether the model should show overall or size-level sales output.</p>
+            <p>Choose the revenue horizon for the overall sales forecast.</p>
         </div>
         <span>Sales revenue</span>
     </div>
@@ -28,13 +28,6 @@
                 {% for value,label in range_options %}
                 <option value="{{ value }}" {% if selected_range == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label for="scope">Scope</label>
-            <select name="scope" id="scope" class="form-select">
-                <option value="both" {% if selected_scope == 'both' %}selected{% endif %}>Overall and per size</option>
-                <option value="overall" {% if selected_scope == 'overall' %}selected{% endif %}>Overall only</option>
             </select>
         </div>
         <div>
@@ -249,48 +242,6 @@
 </section>
 {% endif %}
 
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Supporting Chart</h2>
-            <p>Use the category chart to inspect overall or size-level sales forecast output.</p>
-        </div>
-        <span>Details</span>
-    </div>
-<div class="action-panel forecast-chart-card">
-    <div class="detail-header">
-        <div>
-            <h2 class="detail-title">Forecast by Sales Category</h2>
-            <div class="detail-subtitle">
-                {% if forecast_start and forecast_end %}
-                {{ selected_range_label }}: {{ forecast_start.forecast_date|date:"M d, Y" }} to {{ forecast_end.forecast_date|date:"M d, Y" }}
-                {% else %}
-                Generate a forecast to show future rows by date
-                {% endif %}
-            </div>
-        </div>
-        <div class="chart-controls">
-            <div>
-                <label for="salesChartSeries">Series</label>
-                <select id="salesChartSeries" class="form-select form-select-sm"></select>
-            </div>
-            <div>
-                <label for="salesChartType">View</label>
-                <select id="salesChartType" class="form-select form-select-sm">
-                    <option value="line">Line</option>
-                    <option value="bar">Bar</option>
-                </select>
-            </div>
-            <label class="chart-check">
-                <input type="checkbox" id="salesChartSmooth">
-                7-day trend
-            </label>
-        </div>
-    </div>
-    <div id="salesForecastChart" class="plotly-forecast-chart plotly-supporting-chart" aria-label="Sales category forecast chart"></div>
-</div>
-</section>
-
 {% if user.userprofile.role == 'admin' or user.username == 'gabrielnicholas' %}
 <details class="action-panel forecast-maintenance-panel">
     <summary>Forecast Maintenance</summary>
@@ -387,25 +338,9 @@
 <script src="{% static 'vendor/plotly/plotly-2.35.2.min.js' %}"></script>
 <script>
     (function () {
-        const payload = {{ chart_payload_json|safe }};
         const actualForecastPayload = {{ actual_forecast_payload_json|safe }};
-        const seriesSelect = document.getElementById('salesChartSeries');
-        const typeSelect = document.getElementById('salesChartType');
-        const smoothToggle = document.getElementById('salesChartSmooth');
-        const seriesKeys = Object.keys(payload.series || {});
-        const preferred = seriesKeys.includes('overall') ? 'overall' : seriesKeys[0];
-        const forecastLabels = payload.iso_labels || payload.labels || [];
-        const forecastCustomLabels = payload.labels || forecastLabels;
         const actualSalesLabels = actualForecastPayload.iso_labels || actualForecastPayload.labels || [];
         const actualSalesCustomLabels = actualForecastPayload.labels || actualSalesLabels;
-
-        function movingAverage(values, windowSize) {
-            return values.map((_, index) => {
-                const start = Math.max(0, index - windowSize + 1);
-                const sample = values.slice(start, index + 1);
-                return sample.reduce((sum, value) => sum + value, 0) / sample.length;
-            });
-        }
 
         function chartYBounds(arrays, floor = 0) {
             const values = arrays
@@ -421,26 +356,6 @@
             return [Math.max(floor, Math.floor(min - padding)), Math.ceil(max + padding)];
         }
 
-        function fillSeriesOptions() {
-            seriesKeys.forEach((key) => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = payload.series[key].label;
-                option.selected = key === preferred;
-                seriesSelect.appendChild(option);
-            });
-        }
-
-        function datasetFor(key) {
-            const item = payload.series[key] || { label: 'Forecast', values: [] };
-            const values = smoothToggle.checked ? movingAverage(item.values, 7) : item.values;
-            return {
-                label: item.label,
-                values: values,
-            };
-        }
-
-        fillSeriesOptions();
         function forecastLayout(yTitle, yRange, tickPrefix = '') {
             return {
                 autosize: true,
@@ -531,42 +446,6 @@
             forecastLayout('Revenue', chartYBounds([actualForecastPayload.actual, actualForecastPayload.forecast]), 'PHP '),
             plotConfig
         );
-
-        let chart = null;
-        function refreshChart() {
-            if (!seriesKeys.length) {
-                return;
-            }
-            const item = datasetFor(seriesSelect.value || preferred);
-            const isBar = typeSelect.value === 'bar';
-            const trace = {
-                x: forecastLabels,
-                customdata: forecastCustomLabels,
-                y: item.values,
-                name: item.label,
-                type: isBar ? 'bar' : 'scatter',
-                marker: { color: '#05853e' },
-                hovertemplate: '%{customdata}<br>PHP %{y:,.2f}<extra></extra>'
-            };
-            if (!isBar) {
-                trace.mode = forecastLabels.length > 140 ? 'lines' : 'lines+markers';
-                trace.line = { color: '#05853e', width: 3, shape: 'spline' };
-                trace.fill = 'tozeroy';
-                trace.fillcolor = 'rgba(5, 133, 62, 0.12)';
-            }
-            Plotly.react(
-                document.getElementById('salesForecastChart'),
-                [trace],
-                forecastLayout('Revenue', chartYBounds([item.values]), 'PHP '),
-                plotConfig
-            );
-            chart = true;
-        }
-
-        refreshChart();
-        seriesSelect.addEventListener('change', refreshChart);
-        typeSelect.addEventListener('change', refreshChart);
-        smoothToggle.addEventListener('change', refreshChart);
     })();
 </script>
 {% endblock %}

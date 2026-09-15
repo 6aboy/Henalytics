@@ -270,7 +270,7 @@ class ForecastModelTest(TestCase):
         self.assertIn('+ features', egg_model.arima_order)
         self.assertNotIn('x(', egg_model.arima_order)
         self.assertTrue(SalesForecast.objects.filter(grade='overall', predicted_amount__gt=0).exists())
-        self.assertTrue(SalesForecast.objects.filter(grade='large', predicted_amount__gt=0).exists())
+        self.assertFalse(SalesForecast.objects.exclude(grade='overall').exists())
         sales_model = ModelVersion.objects.filter(sales_forecasts__isnull=False).first()
         self.assertIsNotNone(sales_model)
         self.assertEqual(sales_model.feature_set, 'none')
@@ -866,15 +866,20 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['period_egg_total'], 1234)
         self.assertContains(response, 'Total Eggs')
-        self.assertContains(response, 'Production Notebook')
-        self.assertContains(response, 'Monthly Analytics')
+        self.assertContains(response, 'Overview Cards')
+        self.assertContains(response, 'Main Trends')
+        self.assertContains(response, 'Choose Month')
+        self.assertNotContains(response, 'data-dashboard-period="specific_month"')
+        self.assertNotContains(response, 'Monthly Analytics')
+        self.assertNotContains(response, 'Efficiency Indicators')
+        self.assertNotContains(response, 'Flock Loss Tracker')
         self.assertContains(response, 'dashboardNotebookChart')
         self.assertContains(response, 'notebook-bookmark')
         self.assertNotContains(response, 'monthlyNotebookChart')
         self.assertIn('dashboard_charts_payload_json', response.context)
-        self.assertIn('monthly_dashboard_payload_json', response.context)
+        self.assertNotIn('monthly_dashboard_payload_json', response.context)
 
-    def test_dashboard_chart_supports_daily_monthly_and_yearly_line_views(self):
+    def test_dashboard_chart_supports_day_week_month_and_year_line_views(self):
         older_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=500))
         rows = [
             (self.flock, timezone.localdate().replace(month=1, day=5), 1000),
@@ -894,22 +899,45 @@ class TemplateRenderTest(TestCase):
                 pct_hen_housed=Decimal('65.00'),
                 entered_by=self.user,
             )
+        for sale_date, amount in [
+            (timezone.localdate().replace(month=1, day=5), Decimal('5000.00')),
+            (timezone.localdate().replace(month=2, day=5), Decimal('7000.00')),
+        ]:
+            transaction = SalesTransaction.objects.create(
+                flock=self.flock,
+                sale_date=sale_date,
+                recorded_by=self.user,
+            )
+            SalesItem.objects.create(
+                transaction=transaction,
+                grade='large',
+                quantity_pieces=100,
+                amount=amount,
+            )
 
         response = self.client.get(reverse('eggproduction:dashboard'), {'period': 'all'})
         payload = json.loads(response.context['dashboard_charts_payload_json'])
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-granularity="daily"')
+        self.assertContains(response, 'data-granularity="weekly"')
         self.assertContains(response, 'data-granularity="monthly"')
         self.assertContains(response, 'data-granularity="yearly"')
+        self.assertContains(response, 'data-chart-key="sales"')
         self.assertContains(response, "type: 'scatter'")
         self.assertIn('daily', payload['granularities'])
+        self.assertIn('weekly', payload['granularities'])
         self.assertIn('monthly', payload['granularities'])
         self.assertIn('yearly', payload['granularities'])
+        self.assertIn('sales', payload['granularities']['daily']['charts'])
         self.assertEqual(len(payload['granularities']['daily']['labels']), 3)
+        self.assertGreaterEqual(len(payload['granularities']['weekly']['labels']), 2)
         self.assertEqual(len(payload['granularities']['monthly']['labels']), 2)
         self.assertEqual(len(payload['granularities']['yearly']['labels']), 1)
+        self.assertEqual(payload['granularities']['daily']['charts']['sales']['values'], [5000.0, 0.0, 7000.0])
+        self.assertEqual(payload['granularities']['monthly']['charts']['sales']['values'], [5000.0, 7000.0])
         self.assertEqual(payload['granularities']['daily']['charts']['hen_day']['threshold'], [60, 60, 60])
+        self.assertEqual(payload['granularities']['weekly']['charts']['hen_day']['threshold'], [60 for _ in payload['granularities']['weekly']['labels']])
         self.assertEqual(payload['granularities']['monthly']['charts']['hen_day']['threshold'], [60, 60])
         self.assertEqual(payload['granularities']['yearly']['charts']['hen_day']['threshold'], [60])
         self.assertEqual(payload['granularities']['daily']['charts']['hen_day']['threshold_label'], '60% threshold')
@@ -978,9 +1006,9 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['dashboard_period'], 'last_30')
-        self.assertEqual(response.context['dashboard_period_label'], 'Last 30 Days')
-        self.assertEqual(response.context['period_egg_total'], 2000)
+        self.assertEqual(response.context['dashboard_period'], 'specific_month')
+        self.assertEqual(response.context['dashboard_period_label'], today.strftime('%B %Y'))
+        self.assertEqual(response.context['period_egg_total'], 1000)
         self.assertEqual(response.context['recent_losses_7d'], 1)
         self.assertEqual(response.context['recent_losses_30d'], 3)
         self.assertEqual(response.context['recent_losses_60d'], 6)
@@ -1105,7 +1133,6 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Overview')
         self.assertNotContains(response, 'HEN Analytics')
         self.assertNotContains(response, 'Forecasting')
         self.assertNotContains(response, reverse('eggproduction:harvest-forecast-list'))
@@ -1118,8 +1145,8 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Overview')
         self.assertNotContains(response, 'HEN Analytics')
+        self.assertNotContains(response, reverse('eggproduction:experimental-forecasting'))
         self.assertContains(response, 'Forecasting')
         self.assertContains(response, reverse('eggproduction:harvest-forecast-list'))
 
@@ -1131,6 +1158,17 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'account-logout-button')
         self.assertContains(response, 'sign-out.svg')
         self.assertContains(response, 'data-swal-logout')
+
+    def test_authenticated_layout_includes_mobile_sidebar_drawer_controls(self):
+        response = self.client.get(reverse('eggproduction:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="appSidebar"')
+        self.assertContains(response, 'mobile-menu-button')
+        self.assertContains(response, 'data-sidebar-toggle')
+        self.assertContains(response, 'data-sidebar-close')
+        self.assertContains(response, 'sidebar-open')
+        self.assertContains(response, 'aria-controls="appSidebar"')
         self.assertNotContains(response, 'account-dropdown')
         self.assertNotContains(response, 'data-bs-toggle="dropdown"')
         self.assertContains(response, 'event.persisted')
@@ -1322,6 +1360,35 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.context['selected_periods'], 21)
         self.assertContains(response, '<option value="three_weeks" selected>3 Weeks</option>', html=True)
 
+    def test_sales_forecast_page_uses_overall_rows_only(self):
+        admin = User.objects.create_user(username='salesoveralladmin', password='pass12345')
+        UserProfile.objects.create(user=admin, role='admin')
+        self.client.force_login(admin)
+        model_version = ModelVersion.objects.create(model_type='arima', triggered_by=admin)
+        forecast_date = timezone.localdate() + timedelta(days=1)
+        SalesForecast.objects.create(
+            model_version=model_version,
+            forecast_date=forecast_date,
+            grade='overall',
+            predicted_trays=0,
+            predicted_amount=Decimal('2500.00'),
+        )
+        SalesForecast.objects.create(
+            model_version=model_version,
+            forecast_date=forecast_date,
+            grade='large',
+            predicted_trays=0,
+            predicted_amount=Decimal('900.00'),
+        )
+
+        response = self.client.get(reverse('eggproduction:sales-forecast-list'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['forecasts'].values_list('grade', flat=True)), ['overall'])
+        self.assertEqual(response.context['forecast_total'], Decimal('2500.00'))
+        self.assertContains(response, 'Overall')
+        self.assertNotContains(response, 'Large')
+
     def test_forecast_success_message_renders_status_card(self):
         admin = User.objects.create_user(username='forecastcardadmin', password='pass12345')
         UserProfile.objects.create(user=admin, role='admin')
@@ -1352,7 +1419,7 @@ class TemplateRenderTest(TestCase):
         UserProfile.objects.create(user=admin, role='admin')
         self.client.force_login(admin)
 
-        response = self.client.get(reverse('eggproduction:sales-forecast-list'), {'range': 'month', 'scope': 'overall'})
+        response = self.client.get(reverse('eggproduction:sales-forecast-list'), {'range': 'month'})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Forecast Setup')
@@ -1366,6 +1433,10 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'do not close the system')
         self.assertContains(response, 'Forecast values are estimates')
         self.assertContains(response, 'not guaranteed results')
+        self.assertNotContains(response, 'Overall and per size')
+        self.assertNotContains(response, 'size-level sales forecast')
+        self.assertNotContains(response, 'Forecast by Sales Category')
+        self.assertNotContains(response, 'salesForecastChart')
 
     def test_admin_can_access_database_forecasting_page(self):
         admin = User.objects.create_superuser(

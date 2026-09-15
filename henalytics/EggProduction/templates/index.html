@@ -5,31 +5,30 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<form method="get" class="filter-row dashboard-filter" data-swal-filter data-swal-title="Filtering dashboard"
+<form method="get" class="dashboard-filter-card" data-swal-filter data-swal-title="Filtering dashboard"
     data-swal-text="Dashboard totals will update using your selected period.">
-    <label for="period">Summary:</label>
-    <select name="period" id="period" class="form-select">
-        <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
-        <option value="last_30" {% if dashboard_period == 'last_30' %}selected{% endif %}>Last 30 Days</option>
-        <option value="month" {% if dashboard_period == 'month' %}selected{% endif %}>This Month</option>
-        <option value="last_month" {% if dashboard_period == 'last_month' %}selected{% endif %}>Last Month</option>
-        <option value="specific_month" {% if dashboard_period == 'specific_month' %}selected{% endif %}>Specific Month</option>
-        <option value="six_months" {% if dashboard_period == 'six_months' %}selected{% endif %}>Last 6 Months</option>
-        <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
-        <option value="all" {% if dashboard_period == 'all' %}selected{% endif %}>All Records</option>
-        <option value="custom" {% if dashboard_period == 'custom' %}selected{% endif %}>Custom</option>
-    </select>
-    <input type="month" name="month_value" class="form-control month-control" value="{{ dashboard_month_value }}">
-    <input type="date" name="date_from" class="form-control" value="{{ dashboard_date_from|date:'Y-m-d' }}">
-    <input type="date" name="date_to" class="form-control" value="{{ dashboard_date_to|date:'Y-m-d' }}">
-    <button type="submit" class="btn btn-info">Filter</button>
+    <input type="hidden" name="period" id="dashboardPeriodInput" value="{{ dashboard_period }}">
+    <div class="dashboard-filter-main">
+        <span class="dashboard-filter-label">View</span>
+        <div class="dashboard-period-toggle" aria-label="Dashboard summary period">
+            <button type="button" class="{% if dashboard_period == 'today' %}active{% endif %}" data-dashboard-period="today">Day</button>
+            <button type="button" class="{% if dashboard_period == 'week' %}active{% endif %}" data-dashboard-period="week">Week</button>
+            <button type="button" class="{% if dashboard_period == 'year' %}active{% endif %}" data-dashboard-period="year">Year</button>
+        </div>
+    </div>
+    <div class="dashboard-month-picker {% if dashboard_period == 'specific_month' or dashboard_period == 'month' %}active{% endif %}">
+        <label for="dashboardMonthValue">Choose Month</label>
+        <input type="month" name="month_value" id="dashboardMonthValue" class="form-control" value="{{ dashboard_month_value }}">
+    </div>
+    <button type="submit" class="btn btn-info">Apply</button>
+    <span class="dashboard-active-period">Showing {{ dashboard_period_label }}</span>
 </form>
 
 <section class="dashboard-section">
     <div class="section-heading">
         <div>
-            <h2>Current Summary</h2>
-            <p>Selected-period totals for production, revenue, feed use, and flock losses.</p>
+            <h2>Overview Cards</h2>
+            <p>Main totals for the selected period.</p>
         </div>
         <span>{{ dashboard_period_label }}</span>
     </div>
@@ -61,16 +60,12 @@
         <article class="metric-card">
             <div class="metric-card-main">
                 <div>
-                    <div class="metric-label">Feed Consumed</div>
-                    <div class="metric-value">{{ period_feed_total|intcomma }} bags</div>
-                    <div class="metric-meta change-pill {{ period_feed_change_tone }}">{{ period_feed_change_label }}</div>
+                    <div class="metric-label">Avg Hen Day</div>
+                    <div class="metric-value">{{ period_lay_rate }}%</div>
+                    <div class="metric-meta">Selected period average</div>
                 </div>
-                <span class="metric-icon warning">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
-                        <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
-                        <path d="M8 12h8"></path>
-                    </svg>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
                 </span>
             </div>
         </article>
@@ -92,129 +87,8 @@
 <section class="dashboard-section">
     <div class="section-heading">
         <div>
-            <h2>Monthly Analytics</h2>
-            <p>Month-by-month view for reviewing production direction, revenue movement, feed use, and flock health.</p>
-        </div>
-        <span>{{ monthly_dashboard_summary.month_label }}</span>
-    </div>
-    <div class="dashboard-grid monthly-overview-grid">
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Latest Month Eggs</div>
-                    <div class="metric-value">{{ monthly_dashboard_summary.latest_eggs|floatformat:0|intcomma }}</div>
-                    <div class="metric-meta change-pill {{ monthly_dashboard_summary.egg_change_tone }}">{{ monthly_dashboard_summary.egg_change_label }}</div>
-                </div>
-                <span class="metric-icon">
-                    <img src="{% static 'EggProduction/img/egg-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Latest Month Revenue</div>
-                    <div class="metric-value">&#8369; {{ monthly_dashboard_summary.latest_revenue|floatformat:0|intcomma }}</div>
-                    <div class="metric-meta">Grouped from sales records</div>
-                </div>
-                <span class="metric-icon success">
-                    <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Latest Hen Housed</div>
-                    <div class="metric-value">{{ monthly_dashboard_summary.latest_housed }}%</div>
-                    <div class="metric-meta">60% is the review threshold</div>
-                </div>
-                <span class="metric-icon blue">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-    </div>
-    <div class="monthly-analysis-notes">
-        <strong>Monthly Reading</strong>
-        <ul>
-            {% for note in monthly_dashboard_notes %}
-            <li>{{ note }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-</section>
-
-<section class="dashboard-section">
-    <div class="section-heading">
-        <div>
-            <h2>Efficiency Indicators</h2>
-            <p>Recent operational signals for feed efficiency, laying performance, and egg quality.</p>
-        </div>
-        <span>Last 30 days</span>
-    </div>
-    <div class="dashboard-grid-secondary">
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Avg FCR</div>
-                    <div class="metric-value">{{ avg_fcr_30d }}</div>
-                    <div class="metric-meta">Feed kg / egg kg</div>
-                </div>
-                <span class="metric-icon blue">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Avg Lay Rate</div>
-                    <div class="metric-value">{{ avg_lay_rate_30d }}%</div>
-                    <div class="metric-meta">Hen-day production average</div>
-                </div>
-                <span class="metric-icon success">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Feed Consumed</div>
-                    <div class="metric-value">{{ feed_consumed_30d|intcomma }} bags</div>
-                    <div class="metric-meta">Rolling 30-day usage</div>
-                </div>
-                <span class="metric-icon warning">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
-                        <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
-                        <path d="M8 12h8"></path>
-                    </svg>
-                </span>
-            </div>
-        </article>
-        <article class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Cracked Egg Loss</div>
-                    <div class="metric-value">{{ cracked_egg_loss }}%</div>
-                    <div class="metric-meta">Quality loss rate</div>
-                </div>
-                <span class="metric-icon danger">
-                    <img src="{% static 'EggProduction/img/egg-crack-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </article>
-    </div>
-</section>
-
-<section class="dashboard-section">
-    <div class="section-heading">
-        <div>
-            <h2>Production Notebook</h2>
-            <p>Switch between database-only charts for egg production, laying performance, feed use, and flock losses.
-            </p>
+            <h2>Main Trends</h2>
+            <p>Switch the chart by time and metric.</p>
         </div>
         <span>Database records</span>
     </div>
@@ -227,9 +101,10 @@
                 </div>
                 <div class="notebook-heading-actions">
                     <div class="chart-granularity-controls" aria-label="Dashboard chart data grouping">
-                        <button type="button" class="chart-granularity-button active" data-granularity="daily">Daily</button>
-                        <button type="button" class="chart-granularity-button" data-granularity="monthly">Monthly</button>
-                        <button type="button" class="chart-granularity-button" data-granularity="yearly">Yearly</button>
+                        <button type="button" class="chart-granularity-button active" data-granularity="daily">Day</button>
+                        <button type="button" class="chart-granularity-button" data-granularity="weekly">Week</button>
+                        <button type="button" class="chart-granularity-button" data-granularity="monthly">Month</button>
+                        <button type="button" class="chart-granularity-button" data-granularity="yearly">Year</button>
                     </div>
                     <span class="notebook-chart-meta" id="dashboardNotebookMeta">Eggs</span>
                 </div>
@@ -253,6 +128,9 @@
             <button type="button" class="notebook-bookmark amber" data-chart-key="feed">
                 <span>Feed</span>
             </button>
+            <button type="button" class="notebook-bookmark yellow" data-chart-key="sales">
+                <span>Sales</span>
+            </button>
             <button type="button" class="notebook-bookmark red" data-chart-key="losses">
                 <span>Losses</span>
             </button>
@@ -260,37 +138,31 @@
     </article>
 </section>
 
-<section class="dashboard-section mortality-section">
-    <div class="section-heading">
-        <div>
-            <h2>Flock Loss Tracker</h2>
-            <p>Dead and culled hens are grouped by recent periods to help spot unusual flock health changes.</p>
-        </div>
-        <span>Mortality + culls</span>
-    </div>
-    <div class="mortality-cards">
-        <article class="mortality-card">
-            <div class="label">Last 7 Days</div>
-            <div class="value">{{ recent_losses_7d|intcomma }}</div>
-            <div class="meta">hen/s lost</div>
-        </article>
-        <article class="mortality-card">
-            <div class="label">Last 30 Days</div>
-            <div class="value">{{ recent_losses_30d|intcomma }}</div>
-            <div class="meta">hen/s lost</div>
-        </article>
-        <article class="mortality-card">
-            <div class="label">Last 60 Days</div>
-            <div class="value">{{ recent_losses_60d|intcomma }}</div>
-            <div class="meta">hen/s lost</div>
-        </article>
-    </div>
-</section>
-
 <script src="{% static 'vendor/plotly/plotly-2.35.2.min.js' %}"></script>
 <script id="dashboard-charts-payload" type="application/json">{{ dashboard_charts_payload_json|safe }}</script>
 <script>
     (function () {
+        const filterForm = document.querySelector('.dashboard-filter-card');
+        const periodInput = document.getElementById('dashboardPeriodInput');
+        const monthInput = document.getElementById('dashboardMonthValue');
+        const filterButtons = document.querySelectorAll('[data-dashboard-period]');
+
+        filterButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                filterButtons.forEach((item) => item.classList.remove('active'));
+                button.classList.add('active');
+                periodInput.value = button.dataset.dashboardPeriod;
+                filterForm.requestSubmit();
+            });
+        });
+
+        if (monthInput) {
+            monthInput.addEventListener('change', () => {
+                periodInput.value = 'specific_month';
+                filterForm.requestSubmit();
+            });
+        }
+
         const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
         const valueSuffix = (unit) => unit === '%' ? '%' : unit === 'peso' ? '' : ` ${unit}`;
         const valuePrefix = (unit) => unit === 'peso' ? 'PHP ' : '';

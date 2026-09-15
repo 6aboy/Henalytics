@@ -15,13 +15,11 @@ class Command(BaseCommand):
             help='Operational data to evaluate.',
         )
         parser.add_argument('--flock-id', type=int, help='Database ID of the flock to evaluate for egg forecasts.')
-        parser.add_argument('--overall-only', action='store_true', help='Deprecated: egg forecasts are always overall-only.')
+        parser.add_argument('--overall-only', action='store_true', help='Deprecated: forecasts are always overall-only.')
 
     def handle(self, *args, **options):
-        include_sizes = not options['overall_only']
-
         if options['data_type'] == 'sales':
-            results = ForecastingService.evaluate_sales_forecasts(include_sizes=include_sizes)
+            results = ForecastingService.evaluate_sales_forecasts()
             self._write_results('Sales Revenue Forecast Evaluation', results)
             return
 
