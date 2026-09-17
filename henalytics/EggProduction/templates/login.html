@@ -5,9 +5,22 @@
 <link rel="stylesheet" href="{% static 'EggProduction/css/login.css' %}">
 
 <div class="login-bg d-flex align-items-center justify-content-center">
-    <div class="card login-card shadow-sm">
-        <div class="card-body text-center">
-            <img src="{% static 'EggProduction/img/logo-blue-ver.png' %}" alt="Henalytics" class="mb-3 logo-img">
+    <div class="login-shell shadow-sm">
+        <section class="login-info-panel" aria-label="System access notice">
+            <div class="login-info-content">
+                <img src="{% static 'EggProduction/img/logo-blue-ver.png' %}" alt="Henalytics" class="login-info-logo">
+                <p class="login-eyebrow">Authorized Access Only</p>
+                <h1>CLSU Poultry Module 1</h1>
+                <p>
+                    This web app is created for CLSU Poultry Module 1 record management. It is not a public service.
+                </p>
+            </div>
+        </section>
+        <section class="login-card" aria-label="Login form">
+            <div class="login-form-heading text-center">
+                <h2>Log In</h2>
+                <p>Use your assigned account to continue.</p>
+            </div>
             <form method="post" action="{% url 'login' %}">
                 {% csrf_token %}
                 {% include 'egg_production/includes/form_errors.html' %}
@@ -35,7 +48,7 @@
                 </div>
                 <button class="btn btn-primary w-50">Login</button>
             </form>
-        </div>
+        </section>
     </div>
 </div>
 <script>

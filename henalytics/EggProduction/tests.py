@@ -1201,6 +1201,9 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('login'))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'CLSU Poultry Module 1')
+        self.assertContains(response, 'Authorized Access Only')
+        self.assertContains(response, 'It is not a public service.')
         self.assertContains(response, 'data-password-toggle')
         self.assertContains(response, 'aria-label="Show password"')
         self.assertNotContains(response, 'name="remember_me"')
