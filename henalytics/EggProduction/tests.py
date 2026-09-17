@@ -743,6 +743,8 @@ class TemplateRenderTest(TestCase):
         self.client.force_login(self.user)
 
     def test_flock_list_uses_correct_table_columns(self):
+        self.flock.date_started = timezone.localdate() - timedelta(days=70)
+        self.flock.save()
         ProductionLog.objects.create(
             flock=self.flock,
             log_date=self.flock.date_started + timedelta(days=30),
@@ -764,7 +766,7 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Flock Management')
         self.assertContains(response, '<th>Age</th>', html=True)
         self.assertContains(response, self.flock.breed_strain)
-        self.assertContains(response, '4w 30d')
+        self.assertContains(response, '10w 70d')
         self.assertContains(response, '3 | 2')
         self.assertContains(response, '12')
         self.assertContains(response, reverse('eggproduction:flock-create'))

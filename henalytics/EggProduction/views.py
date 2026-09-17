@@ -1182,11 +1182,7 @@ class FlockListView(LoginRequiredMixin, ListView):
                 culled=models.Sum('culled_count'),
                 feed=models.Sum('feed_bags'),
             )
-            age_days = (
-                latest_log.age_days
-                if latest_log
-                else max((today - flock.date_started).days, 0)
-            )
+            age_days = max((today - flock.date_started).days, 0)
             flock.table_age_weeks = age_days // 7
             flock.table_age_days = age_days
             flock.table_current_population = (
