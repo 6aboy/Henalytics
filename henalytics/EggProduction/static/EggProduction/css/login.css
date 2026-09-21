@@ -71,9 +71,6 @@
     max-height: 96px;
     object-fit: contain;
     margin-bottom: 28px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.94);
 }
 
 .login-eyebrow {

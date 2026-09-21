@@ -630,7 +630,14 @@ a {
     gap: 8px;
 }
 
-.dashboard-month-picker label {
+.dashboard-flock-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-month-picker label,
+.dashboard-flock-picker label {
     color: #344054;
     font-size: 0.86rem;
     font-weight: 800;
@@ -638,6 +645,10 @@ a {
 
 .dashboard-month-picker input {
     min-width: 170px;
+}
+
+.dashboard-flock-picker select {
+    min-width: 230px;
 }
 
 .dashboard-month-picker.active input {
@@ -1423,7 +1434,8 @@ input[readonly].readonly-metric {
     }
 
     .dashboard-filter-main,
-    .dashboard-month-picker {
+    .dashboard-month-picker,
+    .dashboard-flock-picker {
         width: 100%;
         align-items: stretch;
         flex-direction: column;
@@ -1441,6 +1453,7 @@ input[readonly].readonly-metric {
     }
 
     .dashboard-month-picker input,
+    .dashboard-flock-picker select,
     .dashboard-filter-card .btn,
     .dashboard-active-period {
         width: 100%;
@@ -1652,6 +1665,40 @@ input[readonly].readonly-metric {
     color: var(--hen-blue);
 }
 
+.forecast-technical-panel {
+    margin-bottom: 22px;
+    border-left: 4px solid var(--hen-blue);
+}
+
+.forecast-technical-panel summary {
+    cursor: pointer;
+    color: #344054;
+    font-size: 0.96rem;
+    font-weight: 800;
+}
+
+.forecast-technical-panel summary::marker {
+    color: var(--hen-blue);
+}
+
+.forecast-technical-section {
+    margin-top: 18px;
+}
+
+.forecast-technical-section + .forecast-technical-section {
+    padding-top: 18px;
+    border-top: 1px solid #e6e8ee;
+}
+
+.compact-heading {
+    margin-bottom: 12px;
+}
+
+.compact-conclusion {
+    margin-top: 14px;
+    margin-bottom: 0;
+}
+
 .forecast-maintenance-form {
     display: grid;
     grid-template-columns: minmax(200px, 1fr) auto;
@@ -1727,6 +1774,10 @@ input[readonly].readonly-metric {
 
 .forecast-insight-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.forecast-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .forecast-insight-grid .metric-card-main {
@@ -2232,12 +2283,22 @@ input[readonly].readonly-metric {
     border-color: #edf1f7;
 }
 
+.metric-card.compact {
+    min-height: 104px;
+    padding: 16px 18px;
+}
+
 .metric-card-main {
     min-height: 84px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 46px;
     gap: 14px;
     align-items: center;
+}
+
+.metric-card.compact .metric-card-main {
+    min-height: 70px;
+    grid-template-columns: minmax(0, 1fr) 42px;
 }
 
 .metric-label {
@@ -2257,6 +2318,10 @@ input[readonly].readonly-metric {
     white-space: nowrap;
     overflow-wrap: normal;
     word-break: keep-all;
+}
+
+.metric-card.compact .metric-value {
+    font-size: 1.65rem;
 }
 
 .trend-up {
@@ -2382,6 +2447,18 @@ input[readonly].readonly-metric {
     color: #fff;
     background: var(--hen-blue);
     box-shadow: 0 8px 18px rgba(51, 96, 207, 0.24);
+}
+
+.metric-card.compact .metric-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+}
+
+.metric-card.compact .metric-icon img,
+.metric-card.compact .metric-icon svg {
+    width: 23px;
+    height: 23px;
 }
 
 .chart-card {

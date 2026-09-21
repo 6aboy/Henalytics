@@ -20,8 +20,20 @@
         <label for="dashboardMonthValue">Choose Month</label>
         <input type="month" name="month_value" id="dashboardMonthValue" class="form-control" value="{{ dashboard_month_value }}">
     </div>
+    <div class="dashboard-flock-picker">
+        <label for="dashboardFlockValue">Flock</label>
+        <select name="flock_id" id="dashboardFlockValue" class="form-control">
+            {% for flock in dashboard_flocks %}
+                <option value="{{ flock.id }}" {% if flock.id|stringformat:"s" == selected_dashboard_flock_id %}selected{% endif %}>
+                    House {{ flock.house_no }} - {{ flock.breed_strain }}
+                </option>
+            {% empty %}
+                <option value="">No active flocks</option>
+            {% endfor %}
+        </select>
+    </div>
     <button type="submit" class="btn btn-info">Apply</button>
-    <span class="dashboard-active-period">Showing {{ dashboard_period_label }}</span>
+    <span class="dashboard-active-period">Showing {{ dashboard_period_label }}{% if selected_dashboard_flock %} · House {{ selected_dashboard_flock.house_no }}{% endif %}</span>
 </form>
 
 <section class="dashboard-section">
@@ -78,6 +90,73 @@
                 </div>
                 <span class="metric-icon danger">
                     <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+    </div>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <div>
+            <h2>Efficiency Indicators</h2>
+            <p>Operational averages for the selected period.</p>
+        </div>
+        <span>{{ dashboard_period_label }}</span>
+    </div>
+    <div class="dashboard-grid dashboard-grid-secondary">
+        <article class="metric-card compact">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Avg FCR</div>
+                    <div class="metric-value">{{ period_avg_fcr }}</div>
+                    <div class="metric-meta">Feed kg / egg kg</div>
+                </div>
+                <span class="metric-icon blue">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card compact">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Avg Lay Rate</div>
+                    <div class="metric-value">{{ period_avg_lay_rate }}%</div>
+                    <div class="metric-meta">Hen-day production average</div>
+                </div>
+                <span class="metric-icon success">
+                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                </span>
+            </div>
+        </article>
+        <article class="metric-card compact">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Feed Consumed</div>
+                    <div class="metric-value">{{ period_feed_consumed|floatformat:0|intcomma }} bags</div>
+                    <div class="metric-meta">Selected period total</div>
+                </div>
+                <span class="metric-icon warning">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 8h16l-1.7 12H5.7L4 8Z"></path>
+                        <path d="M7 8V5.8C7 4.8 7.8 4 8.8 4h6.4c1 0 1.8.8 1.8 1.8V8"></path>
+                        <path d="M9 12h6"></path>
+                    </svg>
+                </span>
+            </div>
+        </article>
+        <article class="metric-card compact">
+            <div class="metric-card-main">
+                <div>
+                    <div class="metric-label">Cracked Egg Loss</div>
+                    <div class="metric-value">{{ period_cracked_egg_loss }}%</div>
+                    <div class="metric-meta">Broken eggs from grading</div>
+                </div>
+                <span class="metric-icon danger">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3c4 4.4 6 7.5 6 10.4a6 6 0 0 1-12 0C6 10.5 8 7.4 12 3Z"></path>
+                        <path d="M12 9l-2 4h3l-1 3 3-5h-3l1-2Z"></path>
+                    </svg>
                 </span>
             </div>
         </article>
@@ -145,6 +224,7 @@
         const filterForm = document.querySelector('.dashboard-filter-card');
         const periodInput = document.getElementById('dashboardPeriodInput');
         const monthInput = document.getElementById('dashboardMonthValue');
+        const flockInput = document.getElementById('dashboardFlockValue');
         const filterButtons = document.querySelectorAll('[data-dashboard-period]');
 
         filterButtons.forEach((button) => {
@@ -159,6 +239,12 @@
         if (monthInput) {
             monthInput.addEventListener('change', () => {
                 periodInput.value = 'specific_month';
+                filterForm.requestSubmit();
+            });
+        }
+
+        if (flockInput) {
+            flockInput.addEventListener('change', () => {
                 filterForm.requestSubmit();
             });
         }

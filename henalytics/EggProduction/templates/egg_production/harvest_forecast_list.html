@@ -88,12 +88,12 @@
 <section class="analytics-section">
     <div class="section-heading">
         <div>
-            <h2>Interpretation Cards</h2>
-            <p>Quick reading of what the model output implies for total egg production and flock condition.</p>
+            <h2>Forecast Summary</h2>
+            <p>Key numbers from the latest generated egg forecast.</p>
         </div>
-        <span>Analysis</span>
+        <span>{{ selected_range_label }}</span>
     </div>
-    <div class="analytics-insight-grid forecast-insight-grid">
+    <div class="analytics-insight-grid forecast-insight-grid forecast-summary-grid">
         <div class="analytics-insight-card neutral">
             <div class="metric-card-main">
                 <div>
@@ -106,150 +106,156 @@
                 </span>
             </div>
         </div>
-        {% for card in egg_insights.cards %}
-        <div class="analytics-insight-card {{ card.tone }}">
+        <div class="analytics-insight-card neutral">
             <div class="metric-card-main">
                 <div>
-                    <div class="metric-label">{{ card.label }}</div>
-                    <div class="metric-value">{{ card.value }}</div>
-                    <div class="metric-meta">{{ card.meta }}</div>
+                    <div class="metric-label">Average / Day</div>
+                    <div class="metric-value">{{ forecast_daily_average|floatformat:0|intcomma }}</div>
+                    <div class="metric-meta">{{ forecast_daily_points|default:0|intcomma }} forecast day{{ forecast_daily_points|pluralize }}</div>
                 </div>
-                <span class="metric-icon {% if card.tone == 'good' %}success{% elif card.tone == 'warning' %}warning{% elif card.tone == 'danger' %}danger{% else %}blue{% endif %}">
-                    {% if card.tone == 'danger' %}
-                    <img src="{% static 'EggProduction/img/skull-duotone.svg' %}" alt="" aria-hidden="true">
-                    {% elif card.tone == 'warning' %}
-                    <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
-                    {% else %}
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                    {% endif %}
-                </span>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="action-panel analytics-conclusion">
-        <div>
-                <h2 class="detail-title">Machine Learning Interpretation</h2>
-                <div class="detail-subtitle">
-                Uses historical production records, hen performance indicators, and saved overall forecast rows.
-            </div>
-        </div>
-        <ul class="analytics-notes">
-            {% for note in egg_insights.notes %}
-            <li>{{ note }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-</section>
-
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Model Validation</h2>
-            <p>Backtesting compares the selected forecasting model against unseen historical records and a simple baseline.</p>
-        </div>
-        <span>Trust check</span>
-    </div>
-    <div class="forecast-cards">
-        <div class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Model Used</div>
-                    <div class="metric-value">
-                        {% if latest_model %}
-                            {{ latest_model.display_model_name }}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </div>
-                    <div class="metric-meta">{% if latest_model %}{{ latest_model.display_model_detail }}{% else %}Generate a forecast first{% endif %}</div>
-                </div>
-                <span class="metric-icon blue">
+                <span class="metric-icon success">
                     <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
                 </span>
             </div>
         </div>
-        <div class="metric-card">
+        <div class="analytics-insight-card warning">
             <div class="metric-card-main">
                 <div>
-                    <div class="metric-label">Forecast Error Rate</div>
+                    <div class="metric-label">Error Rate</div>
                     <div class="metric-value">{% if latest_model and latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
-                    <div class="metric-meta">
-                        {% if latest_model and latest_model.mae %}Typical miss: about {{ latest_model.mae }} eggs/day{% else %}Backtest needs enough history{% endif %}
-                    </div>
+                    <div class="metric-meta">{% if latest_model and latest_model.mae %}Typical miss: {{ latest_model.mae }} eggs/day{% else %}Needs enough history{% endif %}</div>
                 </div>
                 <span class="metric-icon warning">
                     <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
                 </span>
             </div>
         </div>
-        <div class="metric-card">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">Baseline Check</div>
-                    <div class="metric-value">
-                        {% if latest_model and latest_model.baseline_rmse and latest_model.rmse %}
-                            {% if latest_model.rmse < latest_model.baseline_rmse %}Better{% else %}Watch{% endif %}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </div>
-                    <div class="metric-meta">
-                        {% if latest_model and latest_model.baseline_rmse %}Compared with a simple weekly repeat forecast{% else %}Needs enough history{% endif %}
-                    </div>
-                </div>
-                <span class="metric-icon {% if latest_model and latest_model.baseline_rmse and latest_model.rmse and latest_model.rmse < latest_model.baseline_rmse %}success{% else %}danger{% endif %}">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
-            </div>
-        </div>
     </div>
 </section>
 
-{% if model_comparison %}
-<section class="analytics-section">
-    <div class="section-heading">
-        <div>
-            <h2>Model Comparison</h2>
-            <p>Rolling backtesting compares candidate models and selects the production forecast by lowest MAE, then MAPE.</p>
+<details class="action-panel forecast-technical-panel">
+    <summary>Technical details</summary>
+    <section class="forecast-technical-section">
+        <div class="section-heading compact-heading">
+            <div>
+                <h2>Model Check</h2>
+                <p>Validation and notes for defense or review.</p>
+            </div>
+            <span>Hidden by default</span>
         </div>
-        <span>{{ model_comparison.selection_metric|default:"rolling MAE then MAPE" }}</span>
-    </div>
-    <div class="forecast-cards">
-        {% for card in model_comparison.cards %}
-        <div class="metric-card {% if card.winner %}analytics-insight-card good{% endif %}">
-            <div class="metric-card-main">
-                <div>
-                    <div class="metric-label">{{ card.label }}{% if card.winner %} Selected{% endif %}</div>
-                    <div class="metric-value">{% if card.mae %}{{ card.mae }}{% else %}N/A{% endif %}</div>
-                    <div class="metric-meta">
-                        MAE{% if card.mape %} | MAPE {{ card.mape }}%{% endif %}
+        <div class="forecast-cards">
+            <div class="metric-card">
+                <div class="metric-card-main">
+                    <div>
+                        <div class="metric-label">Model Used</div>
+                        <div class="metric-value">
+                            {% if latest_model %}
+                                {{ latest_model.display_model_name }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="metric-meta">{% if latest_model %}{{ latest_model.display_model_detail }}{% else %}Generate a forecast first{% endif %}</div>
                     </div>
+                    <span class="metric-icon blue">
+                        <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                    </span>
                 </div>
-                <span class="metric-icon {% if card.winner %}success{% else %}blue{% endif %}">
-                    <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
-                </span>
             </div>
-            <p class="metric-meta">{{ card.description }}</p>
-        </div>
-        {% endfor %}
-    </div>
-    <div class="action-panel analytics-conclusion">
-        <div>
-            <h2 class="detail-title">Forecast Assumptions</h2>
-            <div class="detail-subtitle">
-                Future exogenous values must be known or assumed; these are the assumptions used by the selected model.
+            <div class="metric-card">
+                <div class="metric-card-main">
+                    <div>
+                        <div class="metric-label">Forecast Error Rate</div>
+                        <div class="metric-value">{% if latest_model and latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
+                        <div class="metric-meta">
+                            {% if latest_model and latest_model.mae %}Typical miss: about {{ latest_model.mae }} eggs/day{% else %}Backtest needs enough history{% endif %}
+                        </div>
+                    </div>
+                    <span class="metric-icon warning">
+                        <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
+                    </span>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card-main">
+                    <div>
+                        <div class="metric-label">Baseline Check</div>
+                        <div class="metric-value">
+                            {% if latest_model and latest_model.baseline_rmse and latest_model.rmse %}
+                                {% if latest_model.rmse < latest_model.baseline_rmse %}Better{% else %}Watch{% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <div class="metric-meta">
+                            {% if latest_model and latest_model.baseline_rmse %}Compared with a simple weekly repeat forecast{% else %}Needs enough history{% endif %}
+                        </div>
+                    </div>
+                    <span class="metric-icon {% if latest_model and latest_model.baseline_rmse and latest_model.rmse and latest_model.rmse < latest_model.baseline_rmse %}success{% else %}danger{% endif %}">
+                        <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                    </span>
+                </div>
             </div>
         </div>
-        <ul class="analytics-notes">
-            {% for assumption in model_comparison.assumptions %}
-            <li>{{ assumption }}</li>
+        <div class="action-panel analytics-conclusion compact-conclusion">
+            <div>
+                <h2 class="detail-title">Forecast Notes</h2>
+                <div class="detail-subtitle">
+                    Uses historical production records, hen performance indicators, and saved overall forecast rows.
+                </div>
+            </div>
+            <ul class="analytics-notes">
+                {% for note in egg_insights.notes %}
+                <li>{{ note }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+
+    {% if model_comparison %}
+    <section class="forecast-technical-section">
+        <div class="section-heading compact-heading">
+            <div>
+                <h2>Model Comparison</h2>
+                <p>Candidate models ranked by rolling backtesting.</p>
+            </div>
+            <span>{{ model_comparison.selection_metric|default:"rolling MAE then MAPE" }}</span>
+        </div>
+        <div class="forecast-cards">
+            {% for card in model_comparison.cards %}
+            <div class="metric-card {% if card.winner %}analytics-insight-card good{% endif %}">
+                <div class="metric-card-main">
+                    <div>
+                        <div class="metric-label">{{ card.label }}{% if card.winner %} Selected{% endif %}</div>
+                        <div class="metric-value">{% if card.mae %}{{ card.mae }}{% else %}N/A{% endif %}</div>
+                        <div class="metric-meta">
+                            MAE{% if card.mape %} | MAPE {{ card.mape }}%{% endif %}
+                        </div>
+                    </div>
+                    <span class="metric-icon {% if card.winner %}success{% else %}blue{% endif %}">
+                        <img src="{% static 'EggProduction/img/chart-line-up-duotone.svg' %}" alt="" aria-hidden="true">
+                    </span>
+                </div>
+                <p class="metric-meta">{{ card.description }}</p>
+            </div>
             {% endfor %}
-        </ul>
-    </div>
-</section>
-{% endif %}
+        </div>
+        <div class="action-panel analytics-conclusion compact-conclusion">
+            <div>
+                <h2 class="detail-title">Forecast Assumptions</h2>
+                <div class="detail-subtitle">
+                    Future exogenous values must be known or assumed; these are the assumptions used by the selected model.
+                </div>
+            </div>
+            <ul class="analytics-notes">
+                {% for assumption in model_comparison.assumptions %}
+                <li>{{ assumption }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+    {% endif %}
+</details>
 
 {% if user.userprofile.role == 'admin' or user.username == 'gabrielnicholas' %}
 <details class="action-panel forecast-maintenance-panel">

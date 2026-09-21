@@ -538,16 +538,32 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
     @staticmethod
-    def default_month_value():
-        latest_date = ProductionLog.objects.order_by('-log_date').values_list('log_date', flat=True).first()
+    def default_month_value(flock_id=None):
+        logs = ProductionLog.objects.all()
+        if flock_id:
+            logs = logs.filter(flock_id=flock_id)
+        latest_date = logs.order_by('-log_date').values_list('log_date', flat=True).first()
         return (latest_date or timezone.localdate()).strftime('%Y-%m')
 
-    def get_period_bounds(self):
+    @staticmethod
+    def dashboard_flocks():
+        return Flock.objects.filter(status='active').order_by('house_no', '-date_started', 'id')
+
+    def get_selected_flock(self):
+        flocks = self.dashboard_flocks()
+        requested_flock_id = self.request.GET.get('flock_id')
+        if requested_flock_id:
+            selected = flocks.filter(pk=requested_flock_id).first()
+            if selected:
+                return selected
+        return flocks.first()
+
+    def get_period_bounds(self, flock_id=None):
         today = timezone.localdate()
         period = self.request.GET.get('period', 'specific_month')
         start = None
         end = today
-        selected_month = self.request.GET.get('month_value') or self.default_month_value()
+        selected_month = self.request.GET.get('month_value') or self.default_month_value(flock_id)
 
         if period == 'today':
             start = today
@@ -644,10 +660,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return 'good' if improved else 'danger'
 
     @classmethod
-    def build_monthly_payload(cls):
+    def build_monthly_payload(cls, flock_id=None):
+        production_logs = ProductionLog.objects.filter(flock__status='active')
+        sales_items = SalesItem.objects.all()
+        grading_logs = GradingLog.objects.all()
+        if flock_id:
+            production_logs = production_logs.filter(flock_id=flock_id)
+            sales_items = sales_items.filter(transaction__flock_id=flock_id)
+            grading_logs = grading_logs.filter(flock_id=flock_id)
+
         production_rows = list(
-            ProductionLog.objects
-            .filter(flock__status='active')
+            production_logs
             .annotate(month=TruncMonth('log_date'))
             .values('month')
             .annotate(
@@ -663,7 +686,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         revenue_by_month = {
             row['month']: float(row['revenue'] or 0)
             for row in (
-                SalesItem.objects
+                sales_items
                 .annotate(month=TruncMonth('transaction__sale_date'))
                 .values('month')
                 .annotate(revenue=models.Sum('amount'))
@@ -676,7 +699,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'total': float(row['total'] or 0),
             }
             for row in (
-                GradingLog.objects
+                grading_logs
                 .annotate(month=TruncMonth('log_date'))
                 .values('month')
                 .annotate(broken=models.Sum('eggs_broken'), total=models.Sum('eggs_total'))
@@ -759,20 +782,24 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         }
 
     @classmethod
-    def build_dashboard_chart_payload(cls):
+    def build_dashboard_chart_payload(cls, flock_id=None):
         return {
             'default_granularity': 'daily',
             'granularities': {
-                'daily': cls._build_dashboard_chart_payload_for_group('day'),
-                'weekly': cls._build_dashboard_chart_payload_for_group('week'),
-                'monthly': cls._build_dashboard_chart_payload_for_group('month'),
-                'yearly': cls._build_dashboard_chart_payload_for_group('year'),
+                'daily': cls._build_dashboard_chart_payload_for_group('day', flock_id),
+                'weekly': cls._build_dashboard_chart_payload_for_group('week', flock_id),
+                'monthly': cls._build_dashboard_chart_payload_for_group('month', flock_id),
+                'yearly': cls._build_dashboard_chart_payload_for_group('year', flock_id),
             },
         }
 
     @classmethod
-    def _build_dashboard_chart_payload_for_group(cls, granularity):
+    def _build_dashboard_chart_payload_for_group(cls, granularity, flock_id=None):
         logs = ProductionLog.objects.filter(flock__status='active')
+        sales_items = SalesItem.objects.all()
+        if flock_id:
+            logs = logs.filter(flock_id=flock_id)
+            sales_items = sales_items.filter(transaction__flock_id=flock_id)
         if granularity == 'week':
             production_rows = (
                 logs.annotate(period_date=TruncWeek('log_date'))
@@ -787,7 +814,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .order_by('period_date')
             )
             sales_rows = (
-                SalesItem.objects
+                sales_items
                 .annotate(period_date=TruncWeek('transaction__sale_date'))
                 .values('period_date')
                 .annotate(sales=models.Sum('amount'))
@@ -812,7 +839,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .order_by('period_date')
             )
             sales_rows = (
-                SalesItem.objects
+                sales_items
                 .annotate(period_date=TruncMonth('transaction__sale_date'))
                 .values('period_date')
                 .annotate(sales=models.Sum('amount'))
@@ -837,7 +864,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .order_by('period_date')
             )
             sales_rows = (
-                SalesItem.objects
+                sales_items
                 .annotate(period_date=TruncYear('transaction__sale_date'))
                 .values('period_date')
                 .annotate(sales=models.Sum('amount'))
@@ -861,7 +888,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 .order_by('period_date')
             )
             sales_rows = (
-                SalesItem.objects
+                sales_items
                 .values(period_date=models.F('transaction__sale_date'))
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
@@ -1010,12 +1037,29 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             last_7_days = today - timedelta(days=7)
             last_30_days = today - timedelta(days=30)
             last_60_days = today - timedelta(days=60)
-            period, date_from, date_to, period_label = self.get_period_bounds()
-            period_logs = self.filter_by_date(ProductionLog.objects.all(), 'log_date', date_from, date_to)
-            period_sales_items = self.filter_by_date(SalesItem.objects.all(), 'transaction__sale_date', date_from, date_to)
+            selected_flock = self.get_selected_flock()
+            selected_flock_id = selected_flock.id if selected_flock else None
+            production_logs = (
+                ProductionLog.objects.filter(flock=selected_flock)
+                if selected_flock
+                else ProductionLog.objects.none()
+            )
+            sales_items = (
+                SalesItem.objects.filter(transaction__flock=selected_flock)
+                if selected_flock
+                else SalesItem.objects.none()
+            )
+            grading_log_records = (
+                GradingLog.objects.filter(flock=selected_flock)
+                if selected_flock
+                else GradingLog.objects.none()
+            )
+            period, date_from, date_to, period_label = self.get_period_bounds(selected_flock_id)
+            period_logs = self.filter_by_date(production_logs, 'log_date', date_from, date_to)
+            period_sales_items = self.filter_by_date(sales_items, 'transaction__sale_date', date_from, date_to)
 
             active_flocks = Flock.objects.filter(status='active').count()
-            today_production = ProductionLog.objects.filter(log_date=today).aggregate(
+            today_production = production_logs.filter(log_date=today).aggregate(
                 total=models.Sum('eggs_total')
             )['total'] or 0
             period_egg_total = period_logs.aggregate(
@@ -1030,9 +1074,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             period_revenue = period_sales_items.aggregate(total=models.Sum('amount'))['total'] or 0
             period_lay_rate = period_logs.aggregate(avg=models.Avg('pct_hen_day'))['avg'] or 0
             previous_start, previous_end = self.previous_period_bounds(date_from, date_to)
-            previous_logs = self.filter_by_date(ProductionLog.objects.all(), 'log_date', previous_start, previous_end)
+            previous_logs = self.filter_by_date(production_logs, 'log_date', previous_start, previous_end)
             previous_sales_items = self.filter_by_date(
-                SalesItem.objects.all(),
+                sales_items,
                 'transaction__sale_date',
                 previous_start,
                 previous_end,
@@ -1047,38 +1091,36 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             period_revenue_change = self.percent_change(period_revenue, previous_revenue)
             period_feed_change = self.percent_change(period_feed_total, previous_feed_total)
             period_loss_change = self.percent_change(period_losses, previous_losses)
-            total_hens = Flock.objects.filter(status='active').aggregate(
-                total=models.Sum('initial_hen_count')
-            )['total'] or 0
-            weekly_revenue = SalesItem.objects.filter(
+            total_hens = selected_flock.initial_hen_count if selected_flock else 0
+            weekly_revenue = sales_items.filter(
                 transaction__sale_date__gte=last_7_days
             ).aggregate(total=models.Sum('amount'))['total'] or 0
-            avg_fcr_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+            period_avg_fcr = period_logs.aggregate(
                 avg=models.Avg('fcr')
             )['avg'] or 0
-            avg_lay_rate_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+            period_avg_lay_rate = period_logs.aggregate(
                 avg=models.Avg('pct_hen_day')
             )['avg'] or 0
-            feed_consumed_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+            period_feed_consumed = period_logs.aggregate(
                 total=models.Sum('feed_bags')
             )['total'] or 0
-            grading_logs = GradingLog.objects.filter(log_date__gte=last_30_days)
+            grading_logs = self.filter_by_date(grading_log_records, 'log_date', date_from, date_to)
             broken_eggs = grading_logs.aggregate(total=models.Sum('eggs_broken'))['total'] or 0
             graded_total = grading_logs.aggregate(total=models.Sum('eggs_total'))['total'] or 0
             cracked_egg_loss = float(broken_eggs) / graded_total * 100 if graded_total else 0
-            recent_losses_7d = ProductionLog.objects.filter(log_date__gte=last_7_days).aggregate(
+            recent_losses_7d = production_logs.filter(log_date__gte=last_7_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            recent_losses_30d = ProductionLog.objects.filter(log_date__gte=last_30_days).aggregate(
+            recent_losses_30d = production_logs.filter(log_date__gte=last_30_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            recent_losses_60d = ProductionLog.objects.filter(log_date__gte=last_60_days).aggregate(
+            recent_losses_60d = production_logs.filter(log_date__gte=last_60_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            dashboard_chart_payload = self.build_dashboard_chart_payload()
-            monthly_payload = self.build_monthly_payload()
+            dashboard_chart_payload = self.build_dashboard_chart_payload(selected_flock_id)
+            monthly_payload = self.build_monthly_payload(selected_flock_id)
             monthly_summary = self.build_monthly_summary(monthly_payload)
-            month_value = self.request.GET.get('month_value') or today.strftime('%Y-%m')
+            month_value = self.request.GET.get('month_value') or self.default_month_value(selected_flock_id)
 
             context.update({
                 'today': today,
@@ -1087,6 +1129,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'dashboard_date_to': date_to,
                 'dashboard_month_value': month_value,
                 'dashboard_period_label': period_label,
+                'dashboard_flocks': self.dashboard_flocks(),
+                'selected_dashboard_flock': selected_flock,
+                'selected_dashboard_flock_id': str(selected_flock_id) if selected_flock_id else '',
                 'active_flocks': active_flocks,
                 'today_production': today_production,
                 'period_egg_total': period_egg_total,
@@ -1102,14 +1147,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'period_feed_change_tone': self.change_tone(period_feed_change, inverse=True),
                 'period_loss_change_label': self.format_change(period_loss_change),
                 'period_loss_change_tone': self.change_tone(period_loss_change, inverse=True),
-                'today_sales': SalesTransaction.objects.filter(sale_date=today).count(),
+                'today_sales': SalesTransaction.objects.filter(flock=selected_flock, sale_date=today).count() if selected_flock else 0,
                 'total_revenue': float(weekly_revenue),
                 'total_hens': total_hens,
                 'weekly_revenue': float(weekly_revenue),
-                'avg_fcr_30d': round(avg_fcr_30d, 2) if avg_fcr_30d else 0,
-                'avg_lay_rate_30d': round(avg_lay_rate_30d, 1) if avg_lay_rate_30d else 0,
-                'feed_consumed_30d': feed_consumed_30d,
-                'cracked_egg_loss': round(cracked_egg_loss, 1),
+                'period_avg_fcr': round(period_avg_fcr, 2) if period_avg_fcr else 0,
+                'period_avg_lay_rate': round(period_avg_lay_rate, 1) if period_avg_lay_rate else 0,
+                'period_feed_consumed': period_feed_consumed,
+                'period_cracked_egg_loss': round(cracked_egg_loss, 1),
                 'recent_losses_7d': recent_losses_7d,
                 'recent_losses_30d': recent_losses_30d,
                 'recent_losses_60d': recent_losses_60d,
@@ -1126,6 +1171,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'dashboard_date_from': None,
                 'dashboard_date_to': None,
                 'dashboard_period_label': 'Last 30 Days',
+                'dashboard_flocks': self.dashboard_flocks(),
+                'selected_dashboard_flock': None,
+                'selected_dashboard_flock_id': '',
                 'active_flocks': 0,
                 'today_production': 0,
                 'period_egg_total': 0,
@@ -1137,10 +1185,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'total_revenue': 0,
                 'total_hens': 0,
                 'weekly_revenue': 0,
-                'avg_fcr_30d': 0,
-                'avg_lay_rate_30d': 0,
-                'feed_consumed_30d': 0,
-                'cracked_egg_loss': 0,
+                'period_avg_fcr': 0,
+                'period_avg_lay_rate': 0,
+                'period_feed_consumed': 0,
+                'period_cracked_egg_loss': 0,
                 'recent_losses_7d': 0,
                 'recent_losses_30d': 0,
                 'recent_losses_60d': 0,
@@ -1437,9 +1485,36 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
     def get_queryset(self):
         qs = super().get_queryset().select_related('flock', 'recorded_by')
         flock_id = self.request.GET.get('flock_id')
+        period = self.request.GET.get('period', 'all')
+        today = timezone.localdate()
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
+        if period == 'today':
+            qs = qs.filter(sale_date=today)
+        elif period == 'month':
+            qs = qs.filter(sale_date__gte=today.replace(day=1))
+        elif period == 'six_months':
+            qs = qs.filter(sale_date__gte=today - timedelta(days=183))
+        elif period == 'year':
+            qs = qs.filter(sale_date__gte=today.replace(month=1, day=1))
+        elif period == 'custom':
+            if date_from:
+                qs = qs.filter(sale_date__gte=date_from)
+            if date_to:
+                qs = qs.filter(sale_date__lte=date_to)
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['flocks'] = Flock.objects.order_by('house_no', '-date_started')
+        context['selected_flock_id'] = self.request.GET.get('flock_id', '')
+        context['selected_period'] = self.request.GET.get('period', 'all')
+        context['selected_date_from'] = self.request.GET.get('date_from', '')
+        context['selected_date_to'] = self.request.GET.get('date_to', '')
+        return context
 
 
 class SalesTransactionCreateView(StaffInputAccessMixin, CreateView):
@@ -1705,6 +1780,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         actual_forecast_payload = build_actual_vs_forecast_payload(actual_rows, forecast_rows)
         egg_insights = build_egg_insights(production_logs, forecasts)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_qty')
+        forecast_total = overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0
+        forecast_daily_average = forecast_total / run_summary['daily_points'] if run_summary['daily_points'] else 0
         latest_model = (
             ModelVersion.objects
             .filter(harvest_forecasts__in=forecasts)
@@ -1721,7 +1798,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             'selected_periods': selected_periods,
             'history_days': self._history_days_for_horizon(selected_periods),
             'range_options': self._range_options(),
-            'forecast_total': overall_forecasts.aggregate(total=models.Sum('predicted_qty'))['total'] or 0,
+            'forecast_total': forecast_total,
+            'forecast_daily_average': forecast_daily_average,
             'forecast_rows': run_summary['rows'],
             'forecast_daily_points': run_summary['daily_points'],
             'forecast_table_limit': FORECAST_TABLE_LIMIT,
@@ -2175,6 +2253,8 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         actual_forecast_payload = build_sales_actual_vs_forecast_payload(actual_sales_rows, forecast_rows)
         sales_insights = build_sales_insights(actual_sales_rows, forecasts)
         run_summary = build_forecast_run_summary(forecasts, 'predicted_amount')
+        forecast_total = forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0
+        forecast_daily_average = forecast_total / run_summary['daily_points'] if run_summary['daily_points'] else 0
         latest_model = (
             ModelVersion.objects
             .filter(sales_forecasts__in=forecasts)
@@ -2189,7 +2269,8 @@ class SalesForecastListView(AdminAccessMixin, ListView):
             'selected_range_label': selected_range_label,
             'selected_periods': selected_periods,
             'history_days': HarvestForecastListView._history_days_for_horizon(selected_periods),
-            'forecast_total': forecasts.aggregate(total=models.Sum('predicted_amount'))['total'] or 0,
+            'forecast_total': forecast_total,
+            'forecast_daily_average': forecast_daily_average,
             'forecast_rows': run_summary['rows'],
             'forecast_daily_points': run_summary['daily_points'],
             'forecast_categories': run_summary['categories'],
