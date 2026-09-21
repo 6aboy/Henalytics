@@ -39,7 +39,10 @@
                             class="form-control" required>
                         <button type="button" class="password-toggle" aria-label="Show password"
                             aria-pressed="false" data-password-toggle data-password-target="#id_password">
-                            <span class="password-eye" aria-hidden="true"></span>
+                            <img src="{% static 'vendor/bootstrap-icons/eye.svg' %}" alt=""
+                                class="password-toggle-icon password-toggle-icon-show" aria-hidden="true">
+                            <img src="{% static 'vendor/bootstrap-icons/eye-slash.svg' %}" alt=""
+                                class="password-toggle-icon password-toggle-icon-hide" aria-hidden="true">
                         </button>
                     </div>
                     {% for err in form.password.errors %}
