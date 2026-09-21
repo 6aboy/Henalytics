@@ -871,15 +871,65 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'Overview Cards')
         self.assertContains(response, 'Main Trends')
         self.assertContains(response, 'Choose Month')
+        self.assertContains(response, 'Flock')
         self.assertNotContains(response, 'data-dashboard-period="specific_month"')
         self.assertNotContains(response, 'Monthly Analytics')
-        self.assertNotContains(response, 'Efficiency Indicators')
+        self.assertContains(response, 'Efficiency Indicators')
+        self.assertContains(response, 'Avg FCR')
+        self.assertContains(response, 'Feed Consumed')
         self.assertNotContains(response, 'Flock Loss Tracker')
         self.assertContains(response, 'dashboardNotebookChart')
         self.assertContains(response, 'notebook-bookmark')
         self.assertNotContains(response, 'monthlyNotebookChart')
         self.assertIn('dashboard_charts_payload_json', response.context)
         self.assertNotIn('monthly_dashboard_payload_json', response.context)
+
+    def test_dashboard_defaults_to_one_flock_and_filters_by_selected_flock(self):
+        selected_month_date = timezone.localdate().replace(day=10)
+        second_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=90))
+        ProductionLog.objects.create(
+            flock=self.flock,
+            log_date=selected_month_date,
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=500,
+            pct_hen_day=Decimal('0.00'),
+            pct_hen_housed=Decimal('0.00'),
+            entered_by=self.user,
+        )
+        ProductionLog.objects.create(
+            flock=second_flock,
+            log_date=selected_month_date,
+            age_weeks=30,
+            age_days=210,
+            hen_count=1780,
+            feed_bags=12,
+            eggs_total=900,
+            pct_hen_day=Decimal('0.00'),
+            pct_hen_housed=Decimal('0.00'),
+            entered_by=self.user,
+        )
+
+        default_response = self.client.get(reverse('eggproduction:dashboard'), {
+            'period': 'specific_month',
+            'month_value': selected_month_date.strftime('%Y-%m'),
+        })
+        selected_response = self.client.get(reverse('eggproduction:dashboard'), {
+            'period': 'specific_month',
+            'month_value': selected_month_date.strftime('%Y-%m'),
+            'flock_id': second_flock.pk,
+        })
+        selected_payload = json.loads(selected_response.context['dashboard_charts_payload_json'])
+
+        self.assertEqual(default_response.status_code, 200)
+        self.assertEqual(default_response.context['selected_dashboard_flock'], self.flock)
+        self.assertEqual(default_response.context['period_egg_total'], 500)
+        self.assertEqual(selected_response.status_code, 200)
+        self.assertEqual(selected_response.context['selected_dashboard_flock'], second_flock)
+        self.assertEqual(selected_response.context['period_egg_total'], 900)
+        self.assertEqual(selected_payload['granularities']['daily']['charts']['eggs']['values'], [900.0])
 
     def test_dashboard_chart_supports_day_week_month_and_year_line_views(self):
         older_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=500))
@@ -965,11 +1015,25 @@ class TemplateRenderTest(TestCase):
             age_weeks=30,
             age_days=210,
             hen_count=1780,
-            feed_bags=12,
+            feed_bags=18,
             eggs_total=2222,
             pct_hen_day=Decimal('100.00'),
             pct_hen_housed=Decimal('100.00'),
             entered_by=self.user,
+        )
+        GradingLog.objects.create(
+            flock=self.flock,
+            log_date=previous_month_date,
+            age_weeks=30,
+            eggs_total=1111,
+            eggs_broken=99,
+        )
+        GradingLog.objects.create(
+            flock=self.flock,
+            log_date=selected_month_date,
+            age_weeks=30,
+            eggs_total=2222,
+            eggs_broken=22,
         )
 
         response = self.client.get(reverse('eggproduction:dashboard'), {
@@ -981,6 +1045,9 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.context['dashboard_period'], 'specific_month')
         self.assertEqual(response.context['dashboard_period_label'], selected_month_date.strftime('%B %Y'))
         self.assertEqual(response.context['period_egg_total'], 2222)
+        self.assertEqual(response.context['period_feed_consumed'], 18)
+        self.assertEqual(response.context['period_avg_lay_rate'], Decimal('123.4'))
+        self.assertEqual(response.context['period_cracked_egg_loss'], 1)
 
     def test_dashboard_defaults_to_recent_data_and_separate_loss_totals(self):
         today = timezone.localdate()
@@ -1010,7 +1077,7 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['dashboard_period'], 'specific_month')
         self.assertEqual(response.context['dashboard_period_label'], today.strftime('%B %Y'))
-        self.assertEqual(response.context['period_egg_total'], 1000)
+        self.assertEqual(response.context['period_egg_total'], 2000)
         self.assertEqual(response.context['recent_losses_7d'], 1)
         self.assertEqual(response.context['recent_losses_30d'], 3)
         self.assertEqual(response.context['recent_losses_60d'], 6)
@@ -1238,6 +1305,10 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'do not close the system')
         self.assertContains(response, 'Forecast values are estimates')
         self.assertContains(response, 'not guaranteed results')
+        self.assertContains(response, 'Forecast Summary')
+        self.assertContains(response, 'Technical details')
+        self.assertNotContains(response, 'Interpretation Cards')
+        self.assertNotContains(response, '<h2>Model Validation</h2>', html=True)
 
     def test_forecast_chart_uses_latest_actual_date_for_all_active_flocks(self):
         admin = User.objects.create_user(username='forecastfreshadmin', password='pass12345')
@@ -1341,6 +1412,7 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.context['selected_range'], 'month')
         self.assertEqual(response.context['selected_periods'], 30)
         self.assertEqual(response.context['forecast_daily_points'], 30)
+        self.assertEqual(response.context['forecast_daily_average'], 1200)
 
     def test_sales_forecast_dropdown_defaults_to_latest_saved_horizon(self):
         admin = User.objects.create_user(username='salesrangeadmin', password='pass12345')
@@ -1438,6 +1510,10 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'do not close the system')
         self.assertContains(response, 'Forecast values are estimates')
         self.assertContains(response, 'not guaranteed results')
+        self.assertContains(response, 'Forecast Summary')
+        self.assertContains(response, 'Technical details')
+        self.assertNotContains(response, 'Interpretation Cards')
+        self.assertNotContains(response, '<h2>Model Validation</h2>', html=True)
         self.assertNotContains(response, 'Overall and per size')
         self.assertNotContains(response, 'size-level sales forecast')
         self.assertNotContains(response, 'Forecast by Sales Category')
@@ -1675,6 +1751,50 @@ class TemplateRenderTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '₱ 400.00')
+
+    def test_sales_transaction_list_filters_by_flock_and_custom_date(self):
+        other_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=60))
+        selected_date = timezone.localdate()
+        outside_date = selected_date - timedelta(days=40)
+        selected_transaction = SalesTransaction.objects.create(
+            flock=other_flock,
+            sale_date=selected_date,
+            recorded_by=self.user,
+            or_number='SEL-001',
+        )
+        SalesItem.objects.create(
+            transaction=selected_transaction,
+            grade='large',
+            quantity_pieces=100,
+            amount=Decimal('700.00'),
+        )
+        outside_transaction = SalesTransaction.objects.create(
+            flock=self.flock,
+            sale_date=outside_date,
+            recorded_by=self.user,
+            or_number='OUT-001',
+        )
+        SalesItem.objects.create(
+            transaction=outside_transaction,
+            grade='medium',
+            quantity_pieces=80,
+            amount=Decimal('480.00'),
+        )
+
+        response = self.client.get(reverse('eggproduction:sales-transaction-list'), {
+            'flock_id': other_flock.pk,
+            'period': 'custom',
+            'date_from': selected_date.isoformat(),
+            'date_to': selected_date.isoformat(),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Filter by Flock:')
+        self.assertContains(response, 'Start:')
+        self.assertContains(response, 'To:')
+        self.assertContains(response, 'SEL-001')
+        self.assertNotContains(response, 'OUT-001')
+        self.assertEqual(list(response.context['sales_transactions']), [selected_transaction])
 
     def test_sales_transaction_create_saves_item_rows(self):
         response = self.client.post(reverse('eggproduction:sales-transaction-create'), {

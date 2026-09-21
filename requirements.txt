@@ -12,6 +12,7 @@ djangorestframework==3.17.1
 django-cors-headers==4.9.0
 django-filter==25.2
 django-extensions==4.1
+whitenoise==6.9.0
 
 # API documentation support used by henalytics/urls.py when available
 coreapi==2.3.3
