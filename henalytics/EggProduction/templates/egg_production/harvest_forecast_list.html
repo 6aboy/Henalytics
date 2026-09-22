@@ -25,11 +25,12 @@
         <div>
             <label for="flock_id">Flock</label>
             <select name="flock_id" id="flock_id" class="form-select">
-                <option value="">All active flocks</option>
                 {% for flock in flocks %}
                 <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
                     House {{ flock.house_no }} - {{ flock.breed_strain }}
                 </option>
+                {% empty %}
+                <option value="">No active flocks</option>
                 {% endfor %}
             </select>
         </div>
@@ -42,11 +43,11 @@
             </select>
         </div>
         <div>
-            <label for="date_from">Custom Start (MM/DD/YYYY)</label>
+            <label for="date_from">Custom Start (YYYY-MM-DD)</label>
             <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
         </div>
         <div>
-            <label for="date_to">Custom End (MM/DD/YYYY)</label>
+            <label for="date_to">Custom End (YYYY-MM-DD)</label>
             <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
         </div>
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
@@ -271,11 +272,12 @@
         <div>
             <label for="clear_flock_id">Flock</label>
             <select name="flock_id" id="clear_flock_id" class="form-select">
-                <option value="">All flocks</option>
                 {% for flock in flocks %}
                 <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
                     House {{ flock.house_no }} - {{ flock.breed_strain }}
                 </option>
+                {% empty %}
+                <option value="">No active flocks</option>
                 {% endfor %}
             </select>
         </div>

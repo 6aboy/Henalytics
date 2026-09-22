@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Delete Confirmation - Henalytics{% endblock %}
+{% block title %}Archive Confirmation - Henalytics{% endblock %}
 
 {% block content %}
 <div class="container mt-4 action-page">
@@ -9,22 +9,23 @@
         <div class="col-md-6">
             <div class="card border-danger action-panel">
                 <div class="card-header bg-danger text-white">
-                    Delete Confirmation
+                    Archive Confirmation
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">Are you sure?</h5>
                     <p class="card-text">
-                        You are about to delete: <strong>{{ object }}</strong>
+                        You are about to archive: <strong>{{ object }}</strong>
                     </p>
-                    <p class="text-danger">
-                        <strong>Warning:</strong> This action cannot be undone.
+                    <p class="text-muted">
+                        This keeps all production, grading, and sales records, but removes the flock from active selectors.
                     </p>
 
                     <form method="post" class="d-inline" data-swal-delete
-                        data-swal-title="Delete flock?"
-                        data-swal-text="This will delete the selected flock record and cannot be undone.">
+                        data-swal-title="Archive flock?"
+                        data-swal-text="This hides the flock from active selectors while keeping its records."
+                        data-swal-confirm-text="Archive">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                        <button type="submit" class="btn btn-danger">Archive</button>
                     </form>
                     <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
                 </div>

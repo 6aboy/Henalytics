@@ -1310,7 +1310,7 @@ class TemplateRenderTest(TestCase):
         self.assertNotContains(response, 'Interpretation Cards')
         self.assertNotContains(response, '<h2>Model Validation</h2>', html=True)
 
-    def test_forecast_chart_uses_latest_actual_date_for_all_active_flocks(self):
+    def test_forecast_chart_uses_latest_actual_date_for_selected_flock(self):
         admin = User.objects.create_user(username='forecastfreshadmin', password='pass12345')
         UserProfile.objects.create(user=admin, role='admin')
         self.client.force_login(admin)
@@ -1360,7 +1360,10 @@ class TemplateRenderTest(TestCase):
             predicted_qty=1290,
         )
 
-        response = self.client.get(reverse('eggproduction:harvest-forecast-list'), {'range': 'month'})
+        response = self.client.get(
+            reverse('eggproduction:harvest-forecast-list'),
+            {'range': 'month', 'flock_id': newer_flock.id},
+        )
 
         self.assertEqual(response.status_code, 200)
         payload = response.context['actual_forecast_payload_json']
@@ -1533,7 +1536,8 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Overall Egg Forecasting')
         self.assertContains(response, 'notebook-style SARIMAX forecasts')
-        self.assertContains(response, 'All active flocks')
+        self.assertNotContains(response, 'All active flocks')
+        self.assertContains(response, 'House 1 - Lohmann Brown')
         self.assertContains(response, 'Generate Forecast')
         self.assertContains(response, 'value="overall"')
         self.assertNotContains(response, 'Overall and per size')

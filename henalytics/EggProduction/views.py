@@ -1289,6 +1289,13 @@ class FlockDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
     template_name = 'egg_production/flock_confirm_delete.html'
     success_url = reverse_lazy('eggproduction:flock-list')
 
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.status = 'inactive'
+        self.object.save(update_fields=['status', 'updated_at'])
+        messages.success(request, f'Archived House {self.object.house_no}. Existing production, grading, and sales records were kept.')
+        return redirect(self.get_success_url())
+
 
 # ======================== Production Log Views ========================
 
@@ -1685,24 +1692,26 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             messages.error(request, 'Only admin accounts can run forecasts.')
             return redirect('eggproduction:harvest-forecast-list')
 
-        flock_id = request.POST.get('flock_id')
+        flock_id = self._selected_flock_id(request)
         range_key = request.POST.get('range', 'month')
         periods = self._get_periods(request, range_key)
+        custom_start, _custom_end = self._custom_dates(request, method='POST')
 
-        flocks = Flock.objects.filter(status='active')
-        if flock_id:
-            flocks = flocks.filter(id=flock_id)
+        flock = Flock.objects.filter(status='active', id=flock_id).first()
+        if not flock:
+            messages.error(request, 'Select an active flock before generating a forecast.')
+            return redirect('eggproduction:harvest-forecast-list')
 
         total_created = 0
         errors = []
-        for flock in flocks:
-            result = ForecastingService.generate_egg_forecasts(
-                flock=flock,
-                periods=periods,
-                user=request.user,
-            )
-            total_created += result['created_count']
-            errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
+        result = ForecastingService.generate_egg_forecasts(
+            flock=flock,
+            periods=periods,
+            user=request.user,
+            forecast_start_date=custom_start if range_key == 'custom' else None,
+        )
+        total_created += result['created_count']
+        errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
 
         if total_created:
             messages.success(
@@ -1714,8 +1723,7 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             messages.warning(request, '; '.join(errors[:3]))
         redirect_url = reverse_lazy('eggproduction:harvest-forecast-list')
         query = QueryDict(mutable=True)
-        if flock_id:
-            query['flock_id'] = flock_id
+        query['flock_id'] = flock_id
         query['range'] = range_key
         if range_key == 'custom':
             if request.POST.get('date_from'):
@@ -1728,7 +1736,7 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
     
     def get_queryset(self):
         qs = super().get_queryset().select_related('flock', 'model_version')
-        flock_id = self.request.GET.get('flock_id')
+        flock_id = self._selected_flock_id(self.request)
         if flock_id:
             qs = qs.filter(flock_id=flock_id)
         latest_actual_date = self._latest_actual_date_for_request()
@@ -1736,8 +1744,9 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             qs = qs.filter(forecast_date__gte=latest_actual_date + timedelta(days=1))
         range_key = self._get_selected_range_key(self.request, qs)
         periods = self._get_display_periods(self.request, range_key=range_key, forecasts=qs)
-        first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
+        first_date = self._display_start_date(self.request, range_key, qs)
         if first_date:
+            qs = qs.filter(forecast_date__gte=first_date)
             qs = qs.filter(forecast_date__lte=first_date + timedelta(days=periods - 1))
         return qs
 
@@ -1745,7 +1754,7 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         context = super().get_context_data(**kwargs)
         forecasts = self.get_queryset()
         overall_forecasts = forecasts.filter(grade='overall')
-        flock_id = self.request.GET.get('flock_id', '')
+        flock_id = self._selected_flock_id(self.request)
         selected_range = self._get_selected_range_key(self.request, forecasts)
         selected_periods = self._get_display_periods(self.request, range_key=selected_range, forecasts=forecasts)
         selected_range_label = self._range_label(selected_range, selected_periods)
@@ -1817,12 +1826,29 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
 
     def _latest_actual_date_for_request(self):
         production_logs = ProductionLog.objects.all()
-        flock_id = self.request.GET.get('flock_id')
+        flock_id = self._selected_flock_id(self.request)
         if flock_id:
             production_logs = production_logs.filter(flock_id=flock_id)
         else:
             production_logs = production_logs.filter(flock__status='active')
         return production_logs.order_by('-log_date').values_list('log_date', flat=True).first()
+
+    @staticmethod
+    def _default_flock_id():
+        return (
+            Flock.objects.filter(status='active')
+            .order_by('house_no', '-date_started', 'id')
+            .values_list('id', flat=True)
+            .first()
+        )
+
+    @classmethod
+    def _selected_flock_id(cls, request):
+        requested_flock_id = request.GET.get('flock_id') or request.POST.get('flock_id')
+        if requested_flock_id and Flock.objects.filter(status='active', id=requested_flock_id).exists():
+            return str(requested_flock_id)
+        default_flock_id = cls._default_flock_id()
+        return str(default_flock_id) if default_flock_id else ''
 
     @staticmethod
     def _range_options():
@@ -1835,13 +1861,21 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         ]
 
     @staticmethod
-    def _get_periods(request, range_key):
+    def _custom_dates(request, method='GET'):
+        source = request.POST if method == 'POST' else request.GET
+        try:
+            custom_start = date.fromisoformat(source.get('date_from'))
+            custom_end = date.fromisoformat(source.get('date_to'))
+        except (TypeError, ValueError):
+            return None, None
+        return custom_start, custom_end
+
+    @classmethod
+    def _get_periods(cls, request, range_key):
         custom_start = custom_end = None
         if range_key == 'custom':
-            try:
-                custom_start = date.fromisoformat(request.POST.get('date_from'))
-                custom_end = date.fromisoformat(request.POST.get('date_to'))
-            except (TypeError, ValueError):
+            custom_start, custom_end = cls._custom_dates(request, method='POST')
+            if not custom_start or not custom_end:
                 return 30
         return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
 
@@ -1860,6 +1894,13 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
                 return saved_periods
             return ForecastingService.periods_for_range('month')
         return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
+
+    @classmethod
+    def _display_start_date(cls, request, range_key, forecasts):
+        custom_start, _custom_end = cls._custom_dates(request, method='GET')
+        if range_key == 'custom' and custom_start:
+            return custom_start
+        return forecasts.order_by('forecast_date').values_list('forecast_date', flat=True).first()
 
     @classmethod
     def _get_selected_range_key(cls, request, forecasts=None):
@@ -1936,6 +1977,8 @@ class ForecastMaintenanceClearView(LoginRequiredMixin, UserPassesTestMixin, View
         mode = request.POST.get('mode', 'clear_all')
         flock_id = request.POST.get('flock_id')
         redirect_to = request.POST.get('next') or reverse_lazy('eggproduction:harvest-forecast-list')
+        if forecast_type in {'egg', 'all'} and not flock_id:
+            flock_id = HarvestForecastListView._selected_flock_id(request)
 
         if mode == 'keep_latest':
             deleted_count = self._keep_latest_only(forecast_type, flock_id)
@@ -2064,25 +2107,25 @@ class ExperimentalForecastingView(AdminAccessMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         range_key = request.POST.get('range', 'month')
-        flock_id = request.POST.get('flock_id', '')
+        flock_id = HarvestForecastListView._selected_flock_id(request)
         scope = 'overall'
         periods = ForecastingService.periods_for_range(range_key)
         errors = []
         created_count = 0
 
-        flocks = Flock.objects.filter(status='active').order_by('house_no')
-        if flock_id:
-            flocks = flocks.filter(pk=flock_id)
+        flock = Flock.objects.filter(status='active', pk=flock_id).first()
+        if not flock:
+            messages.error(request, 'Select an active flock before generating a forecast.')
+            return redirect('eggproduction:experimental-forecasting')
 
-        for flock in flocks:
-            result = ForecastingService.generate_egg_forecasts(
-                flock=flock,
-                periods=periods,
-                user=request.user,
-                include_sizes=False,
-            )
-            created_count += result['created_count']
-            errors.extend([f'House {flock.house_no}: {error}' for error in result['errors']])
+        result = ForecastingService.generate_egg_forecasts(
+            flock=flock,
+            periods=periods,
+            user=request.user,
+            include_sizes=False,
+        )
+        created_count += result['created_count']
+        errors.extend([f'House {flock.house_no}: {error}' for error in result['errors']])
 
         if created_count:
             messages.success(
@@ -2096,14 +2139,13 @@ class ExperimentalForecastingView(AdminAccessMixin, TemplateView):
         query = QueryDict(mutable=True)
         query['range'] = range_key
         query['scope'] = scope
-        if flock_id:
-            query['flock_id'] = flock_id
+        query['flock_id'] = flock_id
         return redirect(f'{reverse_lazy("eggproduction:experimental-forecasting")}?{query.urlencode()}')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         range_key = self.request.GET.get('range', 'month')
-        flock_id = self.request.GET.get('flock_id', '')
+        flock_id = HarvestForecastListView._selected_flock_id(self.request)
         scope = 'overall'
         range_label, horizon = EXPERIMENTAL_FORECAST_RANGES.get(range_key, EXPERIMENTAL_FORECAST_RANGES['month'])
         forecasts = HarvestForecast.objects.select_related('flock', 'model_version')
@@ -2194,9 +2236,11 @@ class SalesForecastListView(AdminAccessMixin, ListView):
 
         range_key = request.POST.get('range', 'month')
         periods = HarvestForecastListView._get_periods(request, range_key)
+        custom_start, _custom_end = HarvestForecastListView._custom_dates(request, method='POST')
         result = ForecastingService.generate_sales_forecasts(
             periods=periods,
             user=request.user,
+            forecast_start_date=custom_start if range_key == 'custom' else None,
         )
 
         if result['success']:
@@ -2221,8 +2265,9 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         qs = super().get_queryset().select_related('model_version').filter(grade='overall')
         range_key = HarvestForecastListView._get_selected_range_key(self.request, qs)
         periods = HarvestForecastListView._get_display_periods(self.request, range_key=range_key, forecasts=qs)
-        first_date = qs.order_by('forecast_date').values_list('forecast_date', flat=True).first()
+        first_date = HarvestForecastListView._display_start_date(self.request, range_key, qs)
         if first_date:
+            qs = qs.filter(forecast_date__gte=first_date)
             qs = qs.filter(forecast_date__lte=first_date + timedelta(days=periods - 1))
         return qs
 

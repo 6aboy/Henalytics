@@ -107,11 +107,12 @@ class ForecastingService:
         return cls.HORIZONS.get(range_key, 30)
 
     @classmethod
-    def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=False):
+    def generate_egg_forecasts(cls, flock, periods=30, user=None, include_sizes=False, forecast_start_date=None):
         series_map = cls._egg_series_map(flock)
-        forecast_start_date = cls._latest_production_date(flock)
-        if forecast_start_date:
-            forecast_start_date += timedelta(days=1)
+        if forecast_start_date is None:
+            forecast_start_date = cls._latest_production_date(flock)
+            if forecast_start_date:
+                forecast_start_date += timedelta(days=1)
 
         return cls._generate_series_forecasts(
             series_map=series_map,
@@ -123,11 +124,12 @@ class ForecastingService:
         )
 
     @classmethod
-    def generate_sales_forecasts(cls, periods=30, user=None, include_sizes=False):
+    def generate_sales_forecasts(cls, periods=30, user=None, include_sizes=False, forecast_start_date=None):
         series_map = {'overall': cls._sales_amount_series()}
-        forecast_start_date = cls._latest_sales_date()
-        if forecast_start_date:
-            forecast_start_date += timedelta(days=1)
+        if forecast_start_date is None:
+            forecast_start_date = cls._latest_sales_date()
+            if forecast_start_date:
+                forecast_start_date += timedelta(days=1)
 
         return cls._generate_series_forecasts(
             series_map=series_map,

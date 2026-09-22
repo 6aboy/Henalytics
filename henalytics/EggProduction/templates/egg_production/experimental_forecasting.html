@@ -22,11 +22,12 @@
         <div>
             <label for="flock_id">Flock</label>
             <select name="flock_id" id="flock_id" class="form-select">
-                <option value="">All active flocks</option>
                 {% for flock in flocks %}
                 <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
                     House {{ flock.house_no }} - {{ flock.breed_strain }}
                 </option>
+                {% empty %}
+                <option value="">No active flocks</option>
                 {% endfor %}
             </select>
         </div>
