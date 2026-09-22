@@ -28,3 +28,6 @@ ml/**/*.pyc
 ml/notebooks/.ipynb_checkpoints/
 ml/models/*.tmp
 ml/models/*.log
+
+# Local SQLite database
+henalytics/db.sqlite3
