@@ -25,6 +25,7 @@ from .models import (
     UserProfile,
 )
 from .forecasting_service import ForecastingService
+from .forms import ProductionLogForm, SalesTransactionForm
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
 from .views import DashboardView, build_actual_vs_forecast_payload
 
@@ -745,6 +746,11 @@ class TemplateRenderTest(TestCase):
     def test_flock_list_uses_correct_table_columns(self):
         self.flock.date_started = timezone.localdate() - timedelta(days=70)
         self.flock.save()
+        inactive_flock = create_flock(
+            house_no=2,
+            date_started=timezone.localdate() - timedelta(days=20),
+            status='inactive',
+        )
         ProductionLog.objects.create(
             flock=self.flock,
             log_date=self.flock.date_started + timedelta(days=30),
@@ -765,13 +771,68 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Flock Management')
         self.assertContains(response, '<th>Age</th>', html=True)
+        self.assertContains(response, '<th>Status</th>', html=True)
         self.assertContains(response, self.flock.breed_strain)
         self.assertContains(response, '10w 70d')
         self.assertContains(response, '3 | 2')
         self.assertContains(response, '12')
+        self.assertContains(response, 'Active')
+        self.assertContains(response, inactive_flock.get_status_display())
+        self.assertContains(response, 'Archive')
+        self.assertContains(response, 'Unarchive')
         self.assertContains(response, reverse('eggproduction:flock-create'))
         self.assertContains(response, reverse('eggproduction:flock-edit', kwargs={'pk': self.flock.pk}))
         self.assertContains(response, reverse('eggproduction:flock-delete', kwargs={'pk': self.flock.pk}))
+
+    def test_archived_flocks_are_hidden_from_create_forms_but_kept_on_edit_forms(self):
+        inactive_flock = create_flock(
+            house_no=2,
+            date_started=timezone.localdate() - timedelta(days=90),
+            status='inactive',
+        )
+        production_log = ProductionLog.objects.create(
+            flock=inactive_flock,
+            log_date=timezone.localdate(),
+            age_weeks=0,
+            age_days=0,
+            hen_count=1700,
+            feed_bags=12,
+            eggs_total=1000,
+            pct_hen_day=Decimal('58.82'),
+            pct_hen_housed=Decimal('55.56'),
+            entered_by=self.user,
+        )
+        sales_transaction = SalesTransaction.objects.create(
+            flock=inactive_flock,
+            sale_date=timezone.localdate(),
+            recorded_by=self.user,
+        )
+        grading_log = GradingLog.objects.create(
+            flock=inactive_flock,
+            log_date=timezone.localdate(),
+            age_weeks=0,
+            eggs_total=1000,
+            eggs_aa=100,
+            eggs_a=200,
+            eggs_b=300,
+            eggs_small=200,
+            eggs_broken=100,
+            eggs_decode=100,
+        )
+
+        production_create_form = ProductionLogForm()
+        sales_create_form = SalesTransactionForm()
+
+        self.assertNotIn(inactive_flock, production_create_form.fields['flock'].queryset)
+        self.assertNotIn(inactive_flock, sales_create_form.fields['flock'].queryset)
+        self.assertIn(inactive_flock, ProductionLogForm(instance=production_log).fields['flock'].queryset)
+        self.assertIn(inactive_flock, SalesTransactionForm(instance=sales_transaction).fields['flock'].queryset)
+
+        grading_create_response = self.client.get(reverse('eggproduction:grading-log-create'))
+        grading_edit_response = self.client.get(reverse('eggproduction:grading-log-edit', kwargs={'pk': grading_log.pk}))
+
+        self.assertNotIn(inactive_flock, grading_create_response.context['form'].fields['flock'].queryset)
+        self.assertIn(inactive_flock, grading_edit_response.context['form'].fields['flock'].queryset)
 
     def test_production_log_list_renders_with_filter(self):
         other_flock = create_flock(house_no=2, date_started=timezone.now().date() - timedelta(days=1))

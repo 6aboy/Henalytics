@@ -14,18 +14,36 @@
                 <div class="card-body">
                     <h5 class="card-title">Are you sure?</h5>
                     <p class="card-text">
+                        {% if object.status == 'active' %}
                         You are about to archive: <strong>{{ object }}</strong>
+                        {% else %}
+                        You are about to unarchive: <strong>{{ object }}</strong>
+                        {% endif %}
                     </p>
                     <p class="text-muted">
+                        {% if object.status == 'active' %}
                         This keeps all production, grading, and sales records, but removes the flock from active selectors.
+                        {% else %}
+                        This returns the flock to active selectors for records, dashboard, and forecasting.
+                        {% endif %}
                     </p>
 
                     <form method="post" class="d-inline" data-swal-delete
+                        {% if object.status == 'active' %}
                         data-swal-title="Archive flock?"
                         data-swal-text="This hides the flock from active selectors while keeping its records."
                         data-swal-confirm-text="Archive">
+                        {% else %}
+                        data-swal-title="Unarchive flock?"
+                        data-swal-text="This returns the flock to active selectors."
+                        data-swal-confirm-text="Unarchive">
+                        {% endif %}
                         {% csrf_token %}
+                        {% if object.status == 'active' %}
                         <button type="submit" class="btn btn-danger">Archive</button>
+                        {% else %}
+                        <button type="submit" class="btn btn-success">Unarchive</button>
+                        {% endif %}
                     </form>
                     <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
                 </div>

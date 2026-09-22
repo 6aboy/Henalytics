@@ -14,10 +14,17 @@
         <div class="detail-actions">
             {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
             <a href="{% url 'eggproduction:flock-edit' flock.pk %}" class="btn btn-warning">Edit</a>
+            {% if flock.status == 'active' %}
             <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-danger" data-swal-delete-link
                 data-swal-title="Archive flock?"
                 data-swal-text="This hides the flock from active dashboard and forecast selectors, but keeps all existing records."
                 data-swal-confirm-text="Archive">Archive</a>
+            {% else %}
+            <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-success" data-swal-delete-link
+                data-swal-title="Unarchive flock?"
+                data-swal-text="This returns the flock to active selectors for records, dashboard, and forecasting."
+                data-swal-confirm-text="Unarchive">Unarchive</a>
+            {% endif %}
             {% endif %}
             <a href="{% url 'eggproduction:flock-list' %}" class="btn btn-secondary">Back</a>
         </div>

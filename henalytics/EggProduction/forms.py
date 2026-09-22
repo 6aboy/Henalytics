@@ -1,8 +1,17 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django.db.models import Q
 from django.utils import timezone
 
-from .models import ProductionLog, SalesItem, SalesTransaction
+from .models import Flock, ProductionLog, SalesItem, SalesTransaction
+
+
+def active_flocks_for_instance(instance=None):
+    queryset = Flock.objects.filter(status='active')
+    flock_id = getattr(instance, 'flock_id', None)
+    if flock_id:
+        queryset = Flock.objects.filter(Q(status='active') | Q(pk=flock_id))
+    return queryset.order_by('house_no', '-date_started', 'id')
 
 
 class ProductionLogForm(forms.ModelForm):
@@ -22,6 +31,7 @@ class ProductionLogForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         today = timezone.localdate()
         self.fields['flock'].empty_label = 'Choose a Flock'
+        self.fields['flock'].queryset = active_flocks_for_instance(self.instance)
         self.fields['remarks'].label = 'Notes'
         self.fields['remarks'].widget.attrs.update({
             'class': 'form-control compact-note-input',
@@ -88,6 +98,7 @@ class SalesTransactionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['flock'].queryset = active_flocks_for_instance(self.instance)
         self.fields['notes'].widget.attrs.update({
             'class': 'form-control compact-note-input',
             'rows': 2,

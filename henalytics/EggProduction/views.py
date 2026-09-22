@@ -27,7 +27,13 @@ from .serializers import (
     SalesTransactionSerializer, SalesItemSerializer, ModelVersionSerializer,
     HarvestForecastSerializer, SalesForecastSerializer
 )
-from .forms import ProductionLogForm, SalesItemForm, SalesItemFormSet, SalesTransactionForm
+from .forms import (
+    ProductionLogForm,
+    SalesItemForm,
+    SalesItemFormSet,
+    SalesTransactionForm,
+    active_flocks_for_instance,
+)
 from .forecasting_service import ForecastingService
 
 logger = logging.getLogger(__name__)
@@ -1291,9 +1297,11 @@ class FlockDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, DeleteView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        self.object.status = 'inactive'
+        is_archiving = self.object.status == 'active'
+        self.object.status = 'inactive' if is_archiving else 'active'
         self.object.save(update_fields=['status', 'updated_at'])
-        messages.success(request, f'Archived House {self.object.house_no}. Existing production, grading, and sales records were kept.')
+        action = 'Archived' if is_archiving else 'Unarchived'
+        messages.success(request, f'{action} House {self.object.house_no}. Existing production, grading, and sales records were kept.')
         return redirect(self.get_success_url())
 
 
@@ -1435,6 +1443,14 @@ class ProductionLogDeleteView(DirectDeleteOnlyMixin, StaffInputAccessMixin, Dele
 
 # ======================== Grading Log Views ========================
 
+class ActiveFlockFormMixin:
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if 'flock' in form.fields:
+            form.fields['flock'].queryset = active_flocks_for_instance(getattr(self, 'object', None))
+        return form
+
+
 class GradingLogListView(StaffAccessMixin, ListView):
     model = GradingLog
     template_name = 'egg_production/grading_log_list.html'
@@ -1450,7 +1466,7 @@ class GradingLogListView(StaffAccessMixin, ListView):
         return qs
 
 
-class GradingLogCreateView(StaffInputAccessMixin, CreateView):
+class GradingLogCreateView(StaffInputAccessMixin, ActiveFlockFormMixin, CreateView):
     model = GradingLog
     template_name = 'egg_production/grading_log_form.html'
     fields = ['flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a',
@@ -1467,7 +1483,7 @@ class GradingLogDetailView(StaffAccessMixin, DetailView):
         return super().get_queryset().select_related('flock')
 
 
-class GradingLogUpdateView(StaffInputAccessMixin, UpdateView):
+class GradingLogUpdateView(StaffInputAccessMixin, ActiveFlockFormMixin, UpdateView):
     model = GradingLog
     template_name = 'egg_production/grading_log_form.html'
     fields = ['flock', 'log_date', 'age_weeks', 'eggs_total', 'eggs_aa', 'eggs_a',

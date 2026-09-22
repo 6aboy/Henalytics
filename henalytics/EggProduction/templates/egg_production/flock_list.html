@@ -20,6 +20,7 @@
                 <th>Flock</th>
                 <th>Age</th>
                 <th>Start Date</th>
+                <th>Status</th>
                 <th>Population</th>
                 <th>Depletion<br><span class="fs-5">Cull | Dead</span></th>
                 <th>Feed Bags</th>
@@ -36,6 +37,13 @@
                 <td>{{ flock.table_age_weeks|intcomma }}w {{ flock.table_age_days|intcomma }}d</td>
                 <td>{{ flock.date_started|date:"M d, Y" }}</td>
                 <td>
+                    {% if flock.status == 'active' %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ flock.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
                     <strong>{{ flock.table_current_population|intcomma }}</strong>
                     <small class="table-subtext">from {{ flock.initial_hen_count|intcomma }}</small>
                 </td>
@@ -45,10 +53,17 @@
                     <a href="{% url 'eggproduction:flock-detail' flock.pk %}" class="btn btn-sm btn-info">View</a>
                     {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
                     <a href="{% url 'eggproduction:flock-edit' flock.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    {% if flock.status == 'active' %}
                     <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-sm btn-danger" data-swal-delete-link
                         data-swal-title="Archive flock?"
                         data-swal-text="This hides the flock from active dashboard and forecast selectors, but keeps all existing records."
                         data-swal-confirm-text="Archive">Archive</a>
+                    {% else %}
+                    <a href="{% url 'eggproduction:flock-delete' flock.pk %}" class="btn btn-sm btn-success" data-swal-delete-link
+                        data-swal-title="Unarchive flock?"
+                        data-swal-text="This returns the flock to active selectors for records, dashboard, and forecasting."
+                        data-swal-confirm-text="Unarchive">Unarchive</a>
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>
