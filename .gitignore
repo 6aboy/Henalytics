@@ -30,4 +30,4 @@ ml/models/*.tmp
 ml/models/*.log
 
 # Local SQLite database
-henalytics/db.sqlite3
+# henalytics/db.sqlite3
