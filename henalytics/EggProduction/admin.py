@@ -45,6 +45,7 @@ class ProductionLogAdmin(admin.ModelAdmin):
     list_filter = ('flock', 'log_date')
     search_fields = ('flock__house_no',)
     date_hierarchy = 'log_date'
+    ordering = ('-log_date', '-pk')
     readonly_fields = ('entered_by', 'created_at', 'updated_at')
     fieldsets = (
         ('Flock Information', {

@@ -43,7 +43,9 @@
         data-export-title="Egg Production"
         data-export-enabled="{% if user.is_superuser or user.userprofile.role == 'admin' %}true{% else %}false{% endif %}"
         data-total-column="1"
-        data-total-label="Filtered Egg Total">
+        data-total-label="Filtered Egg Total"
+        data-default-order-column="0"
+        data-default-order-direction="desc">
         <thead class="table-dark">
             <tr>
                 <th>Date</th>
@@ -59,7 +61,7 @@
         <tbody>
             {% for log in production_logs %}
             <tr>
-                <td>{{ log.log_date|date:"M d, Y" }}</td>
+                <td data-order="{{ log.log_date|date:'Y-m-d' }}">{{ log.log_date|date:"M d, Y" }}</td>
                 <td><strong>{{ log.eggs_total|intcomma }}</strong></td>
                 <td>House {{ log.flock.house_no }} | Week {{ log.age_weeks }}</td>
                 <td>
