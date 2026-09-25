@@ -27,7 +27,7 @@
                 <div class="mb-3 text-start form-group">
                     <label class="form-label">Username</label>
                     <input name="username" value="{{ form.username.value|default_if_none:'' }}"
-                        class="form-control" required autofocus>
+                        class="form-control" required>
                     {% for err in form.username.errors %}
                     <small class="form-error">{{ err }}</small>
                     {% endfor %}

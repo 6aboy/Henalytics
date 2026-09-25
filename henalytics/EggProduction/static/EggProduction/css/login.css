@@ -1,5 +1,6 @@
 .auth-body {
     min-height: 100vh;
+    min-height: 100svh;
     background:
         radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.82) 0 1px, transparent 1.6px),
         radial-gradient(circle at 70% 42%, rgba(91, 104, 124, 0.10) 0 1px, transparent 1.7px),
@@ -11,6 +12,7 @@
 
 .login-bg {
     min-height: 100vh;
+    min-height: 100svh;
     padding: 20px 18px;
 }
 
@@ -18,6 +20,7 @@
     display: grid;
     grid-template-columns: minmax(280px, 0.92fr) minmax(320px, 1fr);
     width: min(960px, 94vw);
+    height: min(620px, calc(100vh - 40px));
     height: min(620px, calc(100dvh - 40px));
     min-height: 0;
     border-radius: 12px;
@@ -231,15 +234,19 @@
     text-align: left;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 760px) {
     .login-bg {
         align-items: flex-start !important;
-        padding: 18px 12px;
+        min-height: 100svh;
+        padding: 14px 12px;
     }
 
     .login-shell {
         grid-template-columns: 1fr;
+        width: min(100%, 460px);
+        height: auto;
         min-height: auto;
+        overflow: visible;
     }
 
     .login-info-panel {
@@ -255,7 +262,21 @@
         font-size: 1.8rem;
     }
 
-    .login-card {
+    .login-shell .login-card {
         padding: 28px 22px 26px;
+    }
+}
+
+@media (max-width: 380px) {
+    .login-bg {
+        padding: 10px 8px;
+    }
+
+    .login-info-panel {
+        padding: 24px 18px;
+    }
+
+    .login-shell .login-card {
+        padding: 24px 18px;
     }
 }
