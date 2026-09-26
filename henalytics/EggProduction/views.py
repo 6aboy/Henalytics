@@ -1569,7 +1569,7 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
     ordering = ['-sale_date']
     
     def get_queryset(self):
-        qs = super().get_queryset().select_related('flock', 'recorded_by')
+        qs = super().get_queryset().select_related('flock', 'recorded_by').prefetch_related('items')
         flock_id = self.request.GET.get('flock_id')
         period = self.request.GET.get('period', 'all')
         today = timezone.localdate()
@@ -1823,9 +1823,8 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             return redirect('eggproduction:harvest-forecast-list')
 
         flock_id = self._selected_flock_id(request)
-        range_key = request.POST.get('range', 'month')
+        range_key = self._normalize_range_key(request.POST.get('range', 'month'))
         periods = self._get_periods(request, range_key)
-        custom_start, _custom_end = self._custom_dates(request, method='POST')
 
         flock = Flock.objects.filter(status='active', id=flock_id).first()
         if not flock:
@@ -1838,7 +1837,7 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             flock=flock,
             periods=periods,
             user=request.user,
-            forecast_start_date=custom_start if range_key == 'custom' else None,
+            forecast_start_date=None,
         )
         total_created += result['created_count']
         errors.extend([f'House {flock.house_no} {error}' for error in result['errors']])
@@ -1855,11 +1854,6 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
         query = QueryDict(mutable=True)
         query['flock_id'] = flock_id
         query['range'] = range_key
-        if range_key == 'custom':
-            if request.POST.get('date_from'):
-                query['date_from'] = request.POST.get('date_from')
-            if request.POST.get('date_to'):
-                query['date_to'] = request.POST.get('date_to')
         if query:
             redirect_url = f'{redirect_url}?{query.urlencode()}'
         return redirect(redirect_url)
@@ -1987,59 +1981,34 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             ('three_weeks', '3 Weeks'),
             ('month', '1 Month'),
             ('three_months', '3 Months'),
-            ('custom', 'Custom'),
         ]
 
     @staticmethod
-    def _custom_dates(request, method='GET'):
-        source = request.POST if method == 'POST' else request.GET
-        try:
-            custom_start = date.fromisoformat(source.get('date_from'))
-            custom_end = date.fromisoformat(source.get('date_to'))
-        except (TypeError, ValueError):
-            return None, None
-        return custom_start, custom_end
+    def _normalize_range_key(range_key):
+        allowed_ranges = {'week', 'three_weeks', 'month', 'three_months'}
+        return range_key if range_key in allowed_ranges else 'month'
 
     @classmethod
     def _get_periods(cls, request, range_key):
-        custom_start = custom_end = None
-        if range_key == 'custom':
-            custom_start, custom_end = cls._custom_dates(request, method='POST')
-            if not custom_start or not custom_end:
-                return 30
-        return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
+        return ForecastingService.periods_for_range(cls._normalize_range_key(range_key))
 
     @classmethod
     def _get_display_periods(cls, request, range_key=None, forecasts=None):
-        range_key = range_key or cls._get_selected_range_key(request, forecasts)
-        if range_key != 'custom':
-            return ForecastingService.periods_for_range(range_key)
-
-        try:
-            custom_start = date.fromisoformat(request.GET.get('date_from'))
-            custom_end = date.fromisoformat(request.GET.get('date_to'))
-        except (TypeError, ValueError):
-            saved_periods = cls._latest_saved_periods(forecasts)
-            if saved_periods:
-                return saved_periods
-            return ForecastingService.periods_for_range('month')
-        return ForecastingService.periods_for_range(range_key, custom_start, custom_end)
+        range_key = cls._normalize_range_key(range_key or cls._get_selected_range_key(request, forecasts))
+        return ForecastingService.periods_for_range(range_key)
 
     @classmethod
     def _display_start_date(cls, request, range_key, forecasts):
-        custom_start, _custom_end = cls._custom_dates(request, method='GET')
-        if range_key == 'custom' and custom_start:
-            return custom_start
         return forecasts.order_by('forecast_date').values_list('forecast_date', flat=True).first()
 
     @classmethod
     def _get_selected_range_key(cls, request, forecasts=None):
         requested_range = request.GET.get('range')
         if requested_range:
-            return requested_range
+            return cls._normalize_range_key(requested_range)
 
         saved_periods = cls._latest_saved_periods(forecasts)
-        return cls._range_key_for_periods(saved_periods) or 'month'
+        return cls._normalize_range_key(cls._range_key_for_periods(saved_periods) or 'month')
 
     @staticmethod
     def _latest_saved_periods(forecasts):
@@ -2068,7 +2037,7 @@ class HarvestForecastListView(AdminAccessMixin, ListView):
             21: 'three_weeks',
             30: 'month',
             90: 'three_months',
-        }.get(periods, 'custom' if periods else None)
+        }.get(periods, None)
 
     @staticmethod
     def _history_days_for_horizon(periods):
@@ -2364,13 +2333,12 @@ class SalesForecastListView(AdminAccessMixin, ListView):
             messages.error(request, 'Only admin accounts can run forecasts.')
             return redirect('eggproduction:sales-forecast-list')
 
-        range_key = request.POST.get('range', 'month')
+        range_key = HarvestForecastListView._normalize_range_key(request.POST.get('range', 'month'))
         periods = HarvestForecastListView._get_periods(request, range_key)
-        custom_start, _custom_end = HarvestForecastListView._custom_dates(request, method='POST')
         result = ForecastingService.generate_sales_forecasts(
             periods=periods,
             user=request.user,
-            forecast_start_date=custom_start if range_key == 'custom' else None,
+            forecast_start_date=None,
         )
 
         if result['success']:
@@ -2384,11 +2352,6 @@ class SalesForecastListView(AdminAccessMixin, ListView):
         redirect_url = reverse_lazy('eggproduction:sales-forecast-list')
         query = QueryDict(mutable=True)
         query['range'] = range_key
-        if range_key == 'custom':
-            if request.POST.get('date_from'):
-                query['date_from'] = request.POST.get('date_from')
-            if request.POST.get('date_to'):
-                query['date_to'] = request.POST.get('date_to')
         return redirect(f'{redirect_url}?{query.urlencode()}')
 
     def get_queryset(self):

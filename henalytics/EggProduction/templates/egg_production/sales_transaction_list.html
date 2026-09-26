@@ -5,11 +5,13 @@
 {% block page_title %}Manage Sales{% endblock %}
 
 {% block content %}
+<div class="records-toolbar">
 <div class="page-actions record-actions">
     {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
     <a href="{% url 'eggproduction:sales-import' %}" class="btn btn-secondary">Import</a>
     <a href="{% url 'eggproduction:sales-transaction-create' %}" class="btn btn-primary">Create</a>
     {% endif %}
+</div>
 </div>
 
 <form method="get" class="filter-row production-filter record-filter" data-swal-filter
@@ -65,6 +67,10 @@
                 <th>Amount</th>
                 <th>Size</th>
                 <th>Flock</th>
+                <th data-default-visible="false">House No.</th>
+                <th data-default-visible="false">Unit Prices</th>
+                <th data-default-visible="false">Recorded By</th>
+                <th data-default-visible="false">Notes</th>
                 <th class="no-export">Actions</th>
             </tr>
         </thead>
@@ -85,6 +91,22 @@
                     {% endfor %}
                 </td>
                 <td>House {{ transaction.flock.house_no }}</td>
+                <td>{{ transaction.flock.house_no }}</td>
+                <td>
+                    {% for item in transaction.items.all %}
+                    {{ item.get_grade_display }}: {{ item.unit_price|floatformat:2 }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                    N/A
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if transaction.recorded_by %}
+                    {{ transaction.recorded_by.get_full_name|default:transaction.recorded_by.username }}
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+                <td>{{ transaction.notes|default:"" }}</td>
                 <td class="no-export">
                     <a href="{% url 'eggproduction:sales-transaction-detail' transaction.pk %}" class="btn btn-sm btn-info">View</a>
                     {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}

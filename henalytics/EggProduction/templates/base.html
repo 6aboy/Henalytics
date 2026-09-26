@@ -434,25 +434,48 @@
                 var exportButtonText = function (icon, label) {
                     return exportIcons[icon] + '<span>' + label + '</span>';
                 };
+                var hiddenColumns = [];
+                $table.find('thead th').each(function (index) {
+                    var defaultVisible = $(this).data('default-visible');
+                    if (defaultVisible === false || defaultVisible === 'false') {
+                        hiddenColumns.push(index);
+                    }
+                });
+                var hasColumnTools = hiddenColumns.length > 0;
+                var visibleColumns = ':visible:not(.no-export)';
+                var reportColumns = ':not(.no-export)';
                 var buttons = exportEnabled ? [
-                    { extend: 'copyHtml5', text: exportButtonText('copy', 'Copy'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } },
-                    { extend: 'csvHtml5', text: exportButtonText('csv', 'CSV'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } },
-                    { extend: 'excelHtml5', text: exportButtonText('excel', 'Excel'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } },
-                    { extend: 'pdfHtml5', text: exportButtonText('pdf', 'PDF'), title: exportTitle, orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':not(.no-export)' } },
-                    { extend: 'print', text: exportButtonText('print', 'Print'), title: exportTitle, exportOptions: { columns: ':not(.no-export)' } }
+                    { extend: 'copyHtml5', text: exportButtonText('copy', 'Copy'), title: exportTitle, exportOptions: { columns: visibleColumns } },
+                    { extend: 'csvHtml5', text: exportButtonText('csv', 'CSV'), title: exportTitle, exportOptions: { columns: visibleColumns } },
+                    { extend: 'excelHtml5', text: exportButtonText('excel', 'Excel'), title: exportTitle, exportOptions: { columns: visibleColumns } },
+                    { extend: 'pdfHtml5', text: exportButtonText('pdf', 'PDF'), title: exportTitle, orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: visibleColumns } },
+                    { extend: 'print', text: exportButtonText('print', 'Print'), title: exportTitle, exportOptions: { columns: visibleColumns } }
                 ] : [];
+                if (exportEnabled && hasColumnTools) {
+                    buttons.splice(3, 0, {
+                        extend: 'excelHtml5',
+                        className: 'buttons-full-report',
+                        text: exportButtonText('excel', 'Full Excel'),
+                        title: exportTitle + ' Full Report',
+                        exportOptions: { columns: reportColumns }
+                    });
+                }
+                var columnDefs = [
+                    { targets: 'no-export', orderable: false, searchable: false }
+                ];
+                if (hasColumnTools) {
+                    columnDefs.push({ targets: hiddenColumns, visible: false });
+                }
 
-                $table.DataTable({
-                    dom: exportEnabled
+                var dataTable = $table.DataTable({
+                    dom: exportEnabled || hasColumnTools
                         ? "<'dt-action-row'B><'dt-control-row'lf>rt<'dt-footer-row'ip>"
                         : "<'dt-control-row'lf>rt<'dt-footer-row'ip>",
                     buttons: buttons,
                     pageLength: 10,
                     lengthMenu: [10, 25, 50, 100],
                     order: defaultOrder,
-                    columnDefs: [
-                        { targets: 'no-export', orderable: false, searchable: false }
-                    ],
+                    columnDefs: columnDefs,
                     footerCallback: function () {
                         if (totalColumn === undefined) {
                             return;
@@ -480,6 +503,54 @@
                         infoEmpty: 'Showing 0 to 0 of 0 entries'
                     }
                 });
+
+                if (hasColumnTools) {
+                    var $wrapper = $(dataTable.table().container());
+                    var $actionRow = $wrapper.find('.dt-action-row');
+                    var menuId = 'column-menu-' + Math.random().toString(36).slice(2);
+                    var $columnTools = $('<div class="dt-column-tools"></div>');
+                    var $toggle = $('<button type="button" class="dt-column-button" aria-expanded="false" aria-controls="' + menuId + '">Columns</button>');
+                    var $menu = $('<div class="dt-column-menu" id="' + menuId + '" hidden></div>');
+
+                    $table.find('thead th').each(function (index) {
+                        var $header = $(this);
+                        if ($header.hasClass('no-export')) {
+                            return;
+                        }
+                        var label = $.trim($header.text().replace(/\s+/g, ' '));
+                        var checkboxId = menuId + '-column-' + index;
+                        var $option = $(
+                            '<label class="dt-column-option" for="' + checkboxId + '">' +
+                            '<input type="checkbox" id="' + checkboxId + '">' +
+                            '<span></span>' +
+                            '</label>'
+                        );
+                        $option.find('span').text(label);
+                        $option.find('input')
+                            .prop('checked', dataTable.column(index).visible())
+                            .on('change', function () {
+                                dataTable.column(index).visible(this.checked);
+                                dataTable.columns.adjust();
+                            });
+                        $menu.append($option);
+                    });
+
+                    $toggle.on('click', function () {
+                        var isOpen = !$menu.prop('hidden');
+                        $menu.prop('hidden', isOpen);
+                        $toggle.attr('aria-expanded', String(!isOpen));
+                    });
+
+                    $(document).on('click', function (event) {
+                        if (!$columnTools[0].contains(event.target)) {
+                            $menu.prop('hidden', true);
+                            $toggle.attr('aria-expanded', 'false');
+                        }
+                    });
+
+                    $columnTools.append($toggle, $menu);
+                    $actionRow.prepend($columnTools);
+                }
             });
         });
     </script>

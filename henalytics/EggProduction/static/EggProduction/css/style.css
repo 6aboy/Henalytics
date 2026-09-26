@@ -546,6 +546,16 @@ a {
     gap: 8px;
 }
 
+.records-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.records-toolbar .page-actions {
+    margin-bottom: 0;
+}
+
 .filter-row {
     display: flex;
     justify-content: flex-end;
@@ -1332,6 +1342,61 @@ input[readonly].readonly-metric {
     padding-top: 0;
 }
 
+.dt-column-tools {
+    position: relative;
+}
+
+.dt-column-button {
+    align-items: center;
+    background: #eef4ff;
+    border: 1px solid #cddcff;
+    border-radius: 6px;
+    color: var(--hen-blue);
+    display: inline-flex;
+    font-size: 0.9rem;
+    font-weight: 800;
+    justify-content: center;
+    min-height: 38px;
+    min-width: 92px;
+    padding: 8px 14px;
+}
+
+.dt-column-menu {
+    background: #fff;
+    border: 1px solid #dbe5ff;
+    border-radius: 8px;
+    box-shadow: 0 14px 30px rgba(17, 24, 39, 0.16);
+    display: grid;
+    gap: 6px;
+    max-height: 320px;
+    min-width: 220px;
+    overflow: auto;
+    padding: 10px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 20;
+}
+
+.dt-column-menu[hidden] {
+    display: none;
+}
+
+.dt-column-option {
+    align-items: center;
+    color: var(--hen-text);
+    display: flex;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.dt-column-option input {
+    flex: 0 0 auto;
+}
+
 .dt-control-row {
     justify-content: space-between;
     flex-wrap: wrap;
@@ -1490,8 +1555,33 @@ input[readonly].readonly-metric {
 }
 
 @media (max-width: 576px) {
+    .records-toolbar {
+        justify-content: stretch;
+    }
+
+    .records-toolbar .page-actions,
+    .record-actions .btn {
+        width: 100%;
+    }
+
     .dt-buttons {
         justify-content: flex-start;
+    }
+
+    .dt-action-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dt-column-button,
+    .dt-column-tools,
+    .dt-column-menu {
+        width: 100%;
+    }
+
+    .dt-column-menu {
+        position: static;
+        margin-top: 8px;
     }
 
     .dt-buttons .dt-button {

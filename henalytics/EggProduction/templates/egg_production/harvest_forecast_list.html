@@ -42,14 +42,6 @@
                 {% endfor %}
             </select>
         </div>
-        <div>
-            <label for="date_from">Custom Start (YYYY-MM-DD)</label>
-            <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
-        </div>
-        <div>
-            <label for="date_to">Custom End (YYYY-MM-DD)</label>
-            <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
-        </div>
         <button type="submit" class="btn btn-primary">Generate Forecast</button>
     </form>
 
