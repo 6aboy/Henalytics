@@ -31,6 +31,7 @@ urlpatterns = [
     # Production Log Management
     path('production-logs/', views.ProductionLogListView.as_view(), name='production-log-list'),
     path('production-logs/create/', views.ProductionLogCreateView.as_view(), name='production-log-create'),
+    path('production-logs/import/', views.ProductionLogImportView.as_view(), name='production-log-import'),
     path('production-logs/<int:pk>/', views.ProductionLogDetailView.as_view(), name='production-log-detail'),
     path('production-logs/<int:pk>/edit/', views.ProductionLogUpdateView.as_view(), name='production-log-edit'),
     path('production-logs/<int:pk>/delete/', views.ProductionLogDeleteView.as_view(), name='production-log-delete'),

@@ -7,6 +7,7 @@
 {% block content %}
 <div class="page-actions">
     {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
+    <a href="{% url 'eggproduction:production-log-import' %}" class="btn btn-secondary">Import</a>
     <a href="{% url 'eggproduction:production-log-create' %}" class="btn btn-primary">Create</a>
     {% endif %}
 </div>

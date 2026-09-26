@@ -91,6 +91,54 @@ class ProductionLogForm(forms.ModelForm):
         return cleaned_data
 
 
+class ProductionLogImportForm(forms.Form):
+    DATE_MODE_CHOICES = (
+        ('clsu_markers', 'CLSU month markers'),
+        ('stored', 'Use file dates exactly'),
+    )
+    CONFLICT_STRATEGY_CHOICES = (
+        ('update', 'Add missing and update existing'),
+        ('skip', 'Add missing only'),
+        ('replace_range', 'Replace selected date range'),
+    )
+
+    flock = forms.ModelChoiceField(
+        queryset=Flock.objects.none(),
+        empty_label='Choose a Flock',
+    )
+    data_file = forms.FileField(
+        label='Excel or CSV file',
+        help_text='Accepted files: .xlsx, .xlsm, .csv',
+    )
+    date_mode = forms.ChoiceField(
+        choices=DATE_MODE_CHOICES,
+        initial='clsu_markers',
+        label='Date reading',
+        help_text='Use CLSU month markers when dates like 1/6/2026 mean June 1, 2026.',
+    )
+    conflict_strategy = forms.ChoiceField(
+        choices=CONFLICT_STRATEGY_CHOICES,
+        initial='update',
+        label='Existing records',
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['flock'].queryset = active_flocks_for_instance()
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+        self.fields['flock'].widget.attrs['class'] = 'form-select'
+        self.fields['date_mode'].widget.attrs['class'] = 'form-select'
+        self.fields['conflict_strategy'].widget.attrs['class'] = 'form-select'
+
+    def clean_data_file(self):
+        data_file = self.cleaned_data['data_file']
+        filename = data_file.name.lower()
+        if not filename.endswith(('.xlsx', '.xlsm', '.csv')):
+            raise forms.ValidationError('Upload an Excel or CSV file.')
+        return data_file
+
+
 class SalesTransactionForm(forms.ModelForm):
     class Meta:
         model = SalesTransaction

@@ -29,12 +29,18 @@ from .serializers import (
 )
 from .forms import (
     ProductionLogForm,
+    ProductionLogImportForm,
     SalesItemForm,
     SalesItemFormSet,
     SalesTransactionForm,
     active_flocks_for_instance,
 )
 from .forecasting_service import ForecastingService
+from .production_importer import (
+    PRODUCTION_IMPORT_SESSION_KEY,
+    build_preview,
+    import_preview,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1406,6 +1412,57 @@ class ProductionLogCreateView(StaffInputAccessMixin, ProductionLogFormMixin, Cre
             extra_tags='swal',
         )
         return response
+
+
+class ProductionLogImportView(StaffInputAccessMixin, View):
+    template_name = 'egg_production/production_log_import.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            'form': ProductionLogImportForm(),
+            'preview': request.session.get(PRODUCTION_IMPORT_SESSION_KEY),
+        })
+
+    def post(self, request):
+        action = request.POST.get('action')
+        if action == 'confirm':
+            preview = request.session.get(PRODUCTION_IMPORT_SESSION_KEY)
+            if not preview:
+                messages.error(request, 'Preview the file before importing.')
+                return redirect('eggproduction:production-log-import')
+            if preview['stats']['invalid_rows']:
+                messages.error(request, 'Fix the invalid rows before importing.')
+                return redirect('eggproduction:production-log-import')
+
+            result = import_preview(preview, request.user)
+            request.session.pop(PRODUCTION_IMPORT_SESSION_KEY, None)
+            messages.success(
+                request,
+                (
+                    f"Import finished: {result['created']} created, "
+                    f"{result['updated']} updated, {result['skipped']} skipped."
+                ),
+                extra_tags='swal',
+            )
+            return redirect('eggproduction:production-log-list')
+
+        form = ProductionLogImportForm(request.POST, request.FILES)
+        preview = None
+        if form.is_valid():
+            preview = build_preview(
+                form.cleaned_data['data_file'],
+                form.cleaned_data['flock'],
+                form.cleaned_data['date_mode'],
+                form.cleaned_data['conflict_strategy'],
+            )
+            request.session[PRODUCTION_IMPORT_SESSION_KEY] = preview
+            request.session.modified = True
+            messages.info(request, 'Preview ready. Review the rows before importing.')
+
+        return render(request, self.template_name, {
+            'form': form,
+            'preview': preview,
+        })
 
 
 class ProductionLogDetailView(StaffAccessMixin, DetailView):

@@ -1,15 +1,18 @@
 from decimal import Decimal
-from datetime import timedelta
+from datetime import datetime, timedelta
+from io import BytesIO
 import json
 
 import numpy as np
 import pandas as pd
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import Workbook
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -26,6 +29,7 @@ from .models import (
 )
 from .forecasting_service import ForecastingService
 from .forms import ProductionLogForm, SalesTransactionForm
+from .production_importer import parse_production_file
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
 from .views import DashboardView, build_actual_vs_forecast_payload
 
@@ -170,6 +174,45 @@ class ProductionAndGradingLogModelTest(TestCase):
 
         self.assertEqual(log.eggs_a, 800)
         self.assertEqual(log.eggs_broken, 20)
+
+
+class ProductionLogImportTest(TestCase):
+    def test_clsu_marker_dates_are_previewed_as_month_starts(self):
+        flock = create_flock(
+            date_started=datetime(2026, 5, 1).date(),
+            initial_hen_count=1985,
+        )
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.append([
+            'AGE Week',
+            'Date',
+            'Bird No.',
+            'Dead',
+            'Cull',
+            'Eggs Collected (pcs)',
+            '%HD',
+            '%HH',
+            'FEED (bags)',
+            'FCR/ KG EGGS',
+        ])
+        sheet.append([None, datetime(2026, 1, 6), 1170, 1, None, 908, None, None, 3, None])
+        sheet.append([None, 2, 1169, 1, None, 899, None, None, 2, None])
+
+        buffer = BytesIO()
+        workbook.save(buffer)
+        uploaded = SimpleUploadedFile(
+            'production.xlsx',
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+        rows = parse_production_file(uploaded, flock, 'clsu_markers')
+
+        self.assertEqual(rows[0]['log_date'], '2026-06-01')
+        self.assertEqual(rows[1]['log_date'], '2026-06-02')
+        self.assertEqual(rows[0]['eggs_total'], 908)
+        self.assertEqual(rows[0]['errors'], [])
 
 
 class SalesModelTest(TestCase):

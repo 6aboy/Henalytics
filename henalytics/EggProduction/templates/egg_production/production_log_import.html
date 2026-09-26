@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Import Egg Production - Henalytics{% endblock %}
+{% block page_title %}Import Egg Production{% endblock %}
+
+{% block content %}
+<div class="container mt-4 action-page">
+    <div class="row justify-content-center">
+        <div class="col-md-10 action-panel">
+            <h1>Import Production Data</h1>
+            <p class="form-intro">Upload an Excel or CSV file, choose the flock, then review the preview before saving records.</p>
+
+            <form method="post" enctype="multipart/form-data" class="form production-import-form">
+                {% csrf_token %}
+                {% include 'egg_production/includes/form_errors.html' %}
+
+                <section class="form-section">
+                    <h2>File Setup</h2>
+                    <div class="production-form-grid production-form-grid-main">
+                        <div class="form-group">
+                            <label for="{{ form.flock.id_for_label }}">Flock</label>
+                            {{ form.flock }}
+                            {% for error in form.flock.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.data_file.id_for_label }}">Excel or CSV File</label>
+                            {{ form.data_file }}
+                            {% for error in form.data_file.errors %}
+                            <small class="form-error">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.date_mode.id_for_label }}">Date Reading</label>
+                            {{ form.date_mode }}
+                            <small class="form-help">{{ form.date_mode.help_text }}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.conflict_strategy.id_for_label }}">Existing Records</label>
+                            {{ form.conflict_strategy }}
+                        </div>
+                    </div>
+                </section>
+
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                    <a href="{% url 'eggproduction:production-log-list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Preview File</button>
+                </div>
+            </form>
+
+            {% if preview %}
+            <section class="form-section import-preview-section">
+                <h2>Preview</h2>
+                <div class="import-preview-summary">
+                    <div>
+                        <strong>File</strong>
+                        <span>{{ preview.file_name }}</span>
+                    </div>
+                    <div>
+                        <strong>Flock</strong>
+                        <span>{{ preview.flock_label }}</span>
+                    </div>
+                    <div>
+                        <strong>Date Range</strong>
+                        <span>{{ preview.stats.date_from|default:"No valid dates" }} to {{ preview.stats.date_to|default:"No valid dates" }}</span>
+                    </div>
+                    <div>
+                        <strong>Rows</strong>
+                        <span>{{ preview.stats.valid_rows|intcomma }} valid / {{ preview.stats.invalid_rows|intcomma }} invalid</span>
+                    </div>
+                    <div>
+                        <strong>Existing</strong>
+                        <span>{{ preview.stats.existing_rows|intcomma }} matching dates</span>
+                    </div>
+                    <div>
+                        <strong>New</strong>
+                        <span>{{ preview.stats.new_rows|intcomma }} rows</span>
+                    </div>
+                    {% if preview.conflict_strategy == 'replace_range' %}
+                    <div>
+                        <strong>Replace Range</strong>
+                        <span>{{ preview.stats.replace_existing_count|intcomma }} current rows will be removed first</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if preview.stats.invalid_rows %}
+                <p class="import-warning">Some rows are invalid. Fix the file or date reading before importing.</p>
+                {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table table-striped prototype-table import-preview-table">
+                        <thead>
+                            <tr>
+                                <th>Row</th>
+                                <th>Date</th>
+                                <th>Eggs</th>
+                                <th>Bird No.</th>
+                                <th>Dead</th>
+                                <th>Cull</th>
+                                <th>Feed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview.rows|slice:":20" %}
+                            <tr>
+                                <td>{{ row.row_number }}</td>
+                                <td>{{ row.display_date|default:"-" }}</td>
+                                <td>{{ row.eggs_total|intcomma }}</td>
+                                <td>{{ row.bird_no|default:"-" }}</td>
+                                <td>{{ row.dead_count|intcomma }}</td>
+                                <td>{{ row.culled_count|intcomma }}</td>
+                                <td>{{ row.feed_bags|intcomma }}</td>
+                                <td>
+                                    {{ row.status }}
+                                    {% if row.errors %}
+                                    <span class="table-subline">{{ row.errors|join:", " }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if preview.rows|length > 20 %}
+                <p class="form-help">Showing the first 20 rows only. Total parsed rows: {{ preview.rows|length|intcomma }}.</p>
+                {% endif %}
+
+                <form method="post" class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="confirm">
+                    <button type="submit" class="btn btn-primary" {% if preview.stats.invalid_rows %}disabled{% endif %}>Confirm Import</button>
+                </form>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

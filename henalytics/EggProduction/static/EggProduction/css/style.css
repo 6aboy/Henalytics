@@ -1233,6 +1233,43 @@ input[readonly].readonly-metric {
     margin-left: 4px;
 }
 
+.import-preview-summary {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-bottom: 1rem;
+}
+
+.import-preview-summary > div {
+    background: #f7f9ff;
+    border: 1px solid #dbe5ff;
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.import-preview-summary strong,
+.import-preview-summary span {
+    display: block;
+}
+
+.import-preview-summary strong {
+    color: #0b1f52;
+    font-size: 0.85rem;
+}
+
+.import-warning {
+    background: #fff4e5;
+    border: 1px solid #ffd39a;
+    border-radius: 6px;
+    color: #7a3d00;
+    font-weight: 700;
+    padding: 0.75rem;
+}
+
+.import-preview-table td {
+    vertical-align: middle;
+}
+
 .dataTables_wrapper {
     padding: 0;
     font-family: inherit;
