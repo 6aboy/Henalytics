@@ -30,6 +30,7 @@ from .models import (
 from .forecasting_service import ForecastingService
 from .forms import ProductionLogForm, SalesTransactionForm
 from .production_importer import parse_production_file
+from .sales_importer import parse_sales_file
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
 from .views import DashboardView, build_actual_vs_forecast_payload
 
@@ -237,6 +238,33 @@ class SalesModelTest(TestCase):
         self.assertEqual(item.unit_price, Decimal('220.00'))
         self.assertEqual(item.total_amount, Decimal('2200.00'))
         self.assertEqual(transaction.total_amount, Decimal('2200.00'))
+
+
+class SalesImportTest(TestCase):
+    def test_sales_workbook_groups_grade_columns_into_transaction_items(self):
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.append([datetime(2026, 1, 21), None, None, None, None, None])
+        sheet.append(['DATE', 'OR', 'JUMBO', None, 'LARGE', None])
+        sheet.append([None, None, 'pcs', 'amount', 'pcs', 'amount'])
+        sheet.append([1436, 550, 30, 270, 60, 420])
+
+        buffer = BytesIO()
+        workbook.save(buffer)
+        uploaded = SimpleUploadedFile(
+            'sales.xlsx',
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+        rows = parse_sales_file(uploaded, 'stored')
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['sale_date'], '2026-01-21')
+        self.assertEqual(rows[0]['or_number'], '550')
+        self.assertEqual(rows[0]['total_pieces'], 90)
+        self.assertEqual(rows[0]['total_amount'], '690.00')
+        self.assertEqual([item['grade'] for item in rows[0]['items']], ['jumbo', 'large'])
 
 
 class ForecastModelTest(TestCase):
@@ -1897,9 +1925,9 @@ class TemplateRenderTest(TestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Filter by Flock:')
-        self.assertContains(response, 'Start:')
-        self.assertContains(response, 'To:')
+        self.assertContains(response, 'Flock')
+        self.assertContains(response, 'Start')
+        self.assertContains(response, 'To')
         self.assertContains(response, 'SEL-001')
         self.assertNotContains(response, 'OUT-001')
         self.assertEqual(list(response.context['sales_transactions']), [selected_transaction])

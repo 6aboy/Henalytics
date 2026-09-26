@@ -30,6 +30,7 @@ from .serializers import (
 from .forms import (
     ProductionLogForm,
     ProductionLogImportForm,
+    SalesImportForm,
     SalesItemForm,
     SalesItemFormSet,
     SalesTransactionForm,
@@ -40,6 +41,11 @@ from .production_importer import (
     PRODUCTION_IMPORT_SESSION_KEY,
     build_preview,
     import_preview,
+)
+from .sales_importer import (
+    SALES_IMPORT_SESSION_KEY,
+    build_sales_preview,
+    import_sales_preview,
 )
 
 logger = logging.getLogger(__name__)
@@ -1634,6 +1640,57 @@ class SalesTransactionCreateView(StaffInputAccessMixin, CreateView):
 
     def get_success_url(self):
         return reverse_lazy('eggproduction:sales-transaction-detail', kwargs={'pk': self.object.pk})
+
+
+class SalesImportView(StaffInputAccessMixin, View):
+    template_name = 'egg_production/sales_import.html'
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            'form': SalesImportForm(),
+            'preview': request.session.get(SALES_IMPORT_SESSION_KEY),
+        })
+
+    def post(self, request):
+        action = request.POST.get('action')
+        if action == 'confirm':
+            preview = request.session.get(SALES_IMPORT_SESSION_KEY)
+            if not preview:
+                messages.error(request, 'Preview the file before importing.')
+                return redirect('eggproduction:sales-import')
+            if preview['stats']['invalid_rows']:
+                messages.error(request, 'Fix the invalid rows before importing.')
+                return redirect('eggproduction:sales-import')
+
+            result = import_sales_preview(preview, request.user)
+            request.session.pop(SALES_IMPORT_SESSION_KEY, None)
+            messages.success(
+                request,
+                (
+                    f"Sales import finished: {result['created']} created, "
+                    f"{result['updated']} updated, {result['skipped']} skipped."
+                ),
+                extra_tags='swal',
+            )
+            return redirect('eggproduction:sales-transaction-list')
+
+        form = SalesImportForm(request.POST, request.FILES)
+        preview = None
+        if form.is_valid():
+            preview = build_sales_preview(
+                form.cleaned_data['data_file'],
+                form.cleaned_data['flock'],
+                form.cleaned_data['date_mode'],
+                form.cleaned_data['conflict_strategy'],
+            )
+            request.session[SALES_IMPORT_SESSION_KEY] = preview
+            request.session.modified = True
+            messages.info(request, 'Preview ready. Review the rows before importing.')
+
+        return render(request, self.template_name, {
+            'form': form,
+            'preview': preview,
+        })
 
 
 class SalesTransactionDetailView(StaffAccessMixin, DetailView):

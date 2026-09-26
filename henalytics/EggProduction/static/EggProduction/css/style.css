@@ -542,6 +542,10 @@ a {
     margin-bottom: 16px;
 }
 
+.record-actions {
+    gap: 8px;
+}
+
 .filter-row {
     display: flex;
     justify-content: flex-end;
@@ -569,6 +573,44 @@ a {
 .dashboard-filter,
 .production-filter {
     flex-wrap: wrap;
+}
+
+.record-filter {
+    background: #f8fbff;
+    border: 1px solid #dbe5ff;
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 0.9fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) auto;
+    justify-content: stretch;
+    margin-bottom: 20px;
+    padding: 14px;
+}
+
+.record-filter .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.record-filter label {
+    color: #344054;
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.record-filter select,
+.record-filter input[type="date"] {
+    min-width: 0;
+    width: 100%;
+}
+
+.record-filter .filter-actions {
+    align-items: flex-end;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
 }
 
 .dashboard-filter-card {
@@ -1494,6 +1536,26 @@ input[readonly].readonly-metric {
     .dashboard-filter-card .btn,
     .dashboard-active-period {
         width: 100%;
+    }
+
+    .record-actions {
+        justify-content: stretch;
+    }
+
+    .record-actions .btn {
+        flex: 1;
+    }
+
+    .record-filter {
+        grid-template-columns: 1fr;
+    }
+
+    .record-filter .filter-actions {
+        align-items: stretch;
+    }
+
+    .record-filter .filter-actions .btn {
+        flex: 1;
     }
 }
 

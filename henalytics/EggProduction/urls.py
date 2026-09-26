@@ -46,6 +46,7 @@ urlpatterns = [
     # Sales Transaction Management
     path('sales/', views.SalesTransactionListView.as_view(), name='sales-transaction-list'),
     path('sales/create/', views.SalesTransactionCreateView.as_view(), name='sales-transaction-create'),
+    path('sales/import/', views.SalesImportView.as_view(), name='sales-import'),
     path('sales/<int:pk>/', views.SalesTransactionDetailView.as_view(), name='sales-transaction-detail'),
     path('sales/<int:pk>/edit/', views.SalesTransactionUpdateView.as_view(), name='sales-transaction-edit'),
     path('sales/<int:pk>/delete/', views.SalesTransactionDeleteView.as_view(), name='sales-transaction-delete'),
