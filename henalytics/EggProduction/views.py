@@ -629,7 +629,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         labels = {
             'today': 'Today',
-            'week': 'This Week',
+            'week': 'Last 7 Days',
             'last_30': 'Last 30 Days',
             'month': 'This Month',
             'last_month': 'Last Month',

@@ -6,43 +6,59 @@
 
 {% block content %}
 <form method="get" class="dashboard-filter-card" data-swal-filter data-swal-title="Filtering dashboard"
-    data-swal-text="Dashboard totals will update using your selected period.">
-    <input type="hidden" name="period" id="dashboardPeriodInput" value="{{ dashboard_period }}">
-    <div class="dashboard-filter-main">
-        <span class="dashboard-filter-label">View</span>
-        <div class="dashboard-period-toggle" aria-label="Dashboard summary period">
-            <button type="button" class="{% if dashboard_period == 'today' %}active{% endif %}" data-dashboard-period="today">Day</button>
-            <button type="button" class="{% if dashboard_period == 'week' %}active{% endif %}" data-dashboard-period="week">Week</button>
-            <button type="button" class="{% if dashboard_period == 'year' %}active{% endif %}" data-dashboard-period="year">Year</button>
+    data-swal-text="Dashboard totals and charts will update using your selected scope and period.">
+    <div class="dashboard-filter-header">
+        <div>
+            <h2>Dashboard Filters</h2>
+            <p>Cards and charts use the same scope and date range.</p>
+        </div>
+        <span class="dashboard-active-period">Showing {{ dashboard_period_label }} &middot; {{ selected_dashboard_scope_label }}</span>
+    </div>
+    <div class="dashboard-filter-grid">
+        <div class="dashboard-filter-field dashboard-flock-picker">
+            <label for="dashboardFlockValue">Scope</label>
+            <select name="flock_id" id="dashboardFlockValue" class="form-control">
+                <option value="all" {% if selected_dashboard_flock_id == 'all' %}selected{% endif %}>All Active Flocks</option>
+                {% for flock in dashboard_flocks %}
+                    <option value="{{ flock.id }}" {% if flock.id|stringformat:"s" == selected_dashboard_flock_id %}selected{% endif %}>
+                        House {{ flock.house_no }} - {{ flock.breed_strain }}
+                    </option>
+                {% empty %}
+                    <option value="">No active flocks</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="dashboard-filter-field">
+            <label for="dashboardPeriodInput">Period</label>
+            <select name="period" id="dashboardPeriodInput" class="form-control">
+                <option value="specific_month" {% if dashboard_period == 'specific_month' %}selected{% endif %}>Selected Month</option>
+                <option value="today" {% if dashboard_period == 'today' %}selected{% endif %}>Today</option>
+                <option value="week" {% if dashboard_period == 'week' %}selected{% endif %}>Last 7 Days</option>
+                <option value="last_30" {% if dashboard_period == 'last_30' %}selected{% endif %}>Last 30 Days</option>
+                <option value="year" {% if dashboard_period == 'year' %}selected{% endif %}>This Year</option>
+                <option value="all" {% if dashboard_period == 'all' %}selected{% endif %}>All Records</option>
+                <option value="custom" {% if dashboard_period == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+        </div>
+        <div class="dashboard-filter-field dashboard-month-picker {% if dashboard_period == 'specific_month' %}active{% endif %}" data-period-control="specific_month">
+            <label for="dashboardMonthValue">Month</label>
+            <input type="month" name="month_value" id="dashboardMonthValue" class="form-control" value="{{ dashboard_month_value }}">
+        </div>
+        <div class="dashboard-range-fields {% if dashboard_period == 'custom' %}active{% endif %}" data-period-control="custom">
+            <div class="dashboard-filter-field dashboard-date-picker">
+                <label for="dashboardDateFrom">Start</label>
+                <input type="date" name="date_from" id="dashboardDateFrom" class="form-control" value="{{ dashboard_date_from_value }}">
+            </div>
+            <div class="dashboard-filter-field dashboard-date-picker">
+                <label for="dashboardDateTo">To</label>
+                <input type="date" name="date_to" id="dashboardDateTo" class="form-control" value="{{ dashboard_date_to_value }}">
+            </div>
+        </div>
+        <div class="dashboard-filter-actions">
+            <button type="submit" class="btn btn-info">Apply</button>
+            <a href="{% url 'eggproduction:dashboard' %}" class="btn btn-secondary">Reset</a>
         </div>
     </div>
-    <div class="dashboard-month-picker {% if dashboard_period == 'specific_month' or dashboard_period == 'month' %}active{% endif %}">
-        <label for="dashboardMonthValue">Choose Month</label>
-        <input type="month" name="month_value" id="dashboardMonthValue" class="form-control" value="{{ dashboard_month_value }}">
-    </div>
-    <div class="dashboard-flock-picker">
-        <label for="dashboardFlockValue">Flock</label>
-        <select name="flock_id" id="dashboardFlockValue" class="form-control">
-            <option value="all" {% if selected_dashboard_flock_id == 'all' %}selected{% endif %}>All Active Flocks</option>
-            {% for flock in dashboard_flocks %}
-                <option value="{{ flock.id }}" {% if flock.id|stringformat:"s" == selected_dashboard_flock_id %}selected{% endif %}>
-                    House {{ flock.house_no }} - {{ flock.breed_strain }}
-                </option>
-            {% empty %}
-                <option value="">No active flocks</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="dashboard-date-picker">
-        <label for="dashboardDateFrom">Start</label>
-        <input type="date" name="date_from" id="dashboardDateFrom" class="form-control" value="{{ dashboard_date_from_value }}">
-    </div>
-    <div class="dashboard-date-picker">
-        <label for="dashboardDateTo">To</label>
-        <input type="date" name="date_to" id="dashboardDateTo" class="form-control" value="{{ dashboard_date_to_value }}">
-    </div>
-    <button type="submit" class="btn btn-info">Apply</button>
-    <span class="dashboard-active-period">Showing {{ dashboard_period_label }} · {{ selected_dashboard_scope_label }}</span>
 </form>
 
 <section class="dashboard-section">
@@ -51,7 +67,7 @@
             <h2>Overview Cards</h2>
             <p>Main totals for the selected period.</p>
         </div>
-        <span>{{ dashboard_period_label }} · {{ selected_dashboard_scope_label }}</span>
+        <span>{{ dashboard_period_label }} &middot; {{ selected_dashboard_scope_label }}</span>
     </div>
     <div class="dashboard-grid">
         <article class="metric-card featured">
@@ -111,7 +127,7 @@
             <h2>Efficiency Indicators</h2>
             <p>Operational averages for the selected period.</p>
         </div>
-        <span>{{ dashboard_period_label }} · {{ selected_dashboard_scope_label }}</span>
+        <span>{{ dashboard_period_label }} &middot; {{ selected_dashboard_scope_label }}</span>
     </div>
     <div class="dashboard-grid dashboard-grid-secondary">
         <article class="metric-card compact">
@@ -188,13 +204,13 @@
                     <p id="dashboardNotebookDescription">Daily total eggs recorded in the database.</p>
                 </div>
                 <div class="notebook-heading-actions">
-                    <button type="button" class="btn btn-secondary btn-sm dashboard-chart-download" data-chart-download="dashboardNotebookChart">Download Chart</button>
                     <div class="chart-granularity-controls" aria-label="Dashboard chart data grouping">
                         <button type="button" class="chart-granularity-button active" data-granularity="daily">Day</button>
                         <button type="button" class="chart-granularity-button" data-granularity="weekly">Week</button>
                         <button type="button" class="chart-granularity-button" data-granularity="monthly">Month</button>
                         <button type="button" class="chart-granularity-button" data-granularity="yearly">Year</button>
                     </div>
+                    <button type="button" class="btn btn-secondary btn-sm dashboard-chart-download" data-chart-download="dashboardNotebookChart">Download Chart</button>
                     <span class="notebook-chart-meta" id="dashboardNotebookMeta">Eggs</span>
                 </div>
             </div>
@@ -234,40 +250,28 @@
         const filterForm = document.querySelector('.dashboard-filter-card');
         const periodInput = document.getElementById('dashboardPeriodInput');
         const monthInput = document.getElementById('dashboardMonthValue');
-        const flockInput = document.getElementById('dashboardFlockValue');
-        const dateFromInput = document.getElementById('dashboardDateFrom');
-        const dateToInput = document.getElementById('dashboardDateTo');
-        const filterButtons = document.querySelectorAll('[data-dashboard-period]');
+        const periodControls = document.querySelectorAll('[data-period-control]');
 
-        filterButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                filterButtons.forEach((item) => item.classList.remove('active'));
-                button.classList.add('active');
-                periodInput.value = button.dataset.dashboardPeriod;
-                filterForm.requestSubmit();
+        const updatePeriodControls = () => {
+            const selectedPeriod = periodInput?.value || 'specific_month';
+            periodControls.forEach((control) => {
+                control.classList.toggle('active', control.dataset.periodControl === selectedPeriod);
             });
-        });
+        };
+
+        if (periodInput) {
+            periodInput.addEventListener('change', updatePeriodControls);
+            updatePeriodControls();
+        }
 
         if (monthInput) {
             monthInput.addEventListener('change', () => {
-                periodInput.value = 'specific_month';
-                filterForm.requestSubmit();
+                if (periodInput) {
+                    periodInput.value = 'specific_month';
+                    updatePeriodControls();
+                }
             });
         }
-
-        if (flockInput) {
-            flockInput.addEventListener('change', () => {
-                filterForm.requestSubmit();
-            });
-        }
-
-        [dateFromInput, dateToInput].forEach((input) => {
-            if (!input) return;
-            input.addEventListener('change', () => {
-                periodInput.value = 'custom';
-                filterForm.requestSubmit();
-            });
-        });
 
         const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
         const valueSuffix = (unit) => unit === '%' ? '%' : unit === 'peso' ? '' : ` ${unit}`;

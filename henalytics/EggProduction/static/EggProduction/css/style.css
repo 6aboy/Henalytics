@@ -624,91 +624,85 @@ a {
 }
 
 .dashboard-filter-card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
+    display: grid;
+    gap: 16px;
     margin-bottom: 24px;
-}
-
-.dashboard-filter-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.dashboard-filter-label {
-    color: #344054;
-    font-size: 0.95rem;
-    font-weight: 800;
-}
-
-.dashboard-period-toggle {
-    display: inline-flex;
-    overflow: hidden;
+    padding: 18px;
     border: 1px solid #d8e3ff;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 8px 18px rgba(31, 55, 99, 0.10);
+    border-radius: 8px;
+    background: #f8fbff;
+    box-shadow: 0 8px 18px rgba(31, 55, 99, 0.08);
 }
 
-.dashboard-period-toggle button {
-    min-width: 96px;
-    min-height: 46px;
-    padding: 10px 18px;
-    border: 0;
-    border-right: 1px solid #d8e3ff;
+.dashboard-filter-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.dashboard-filter-header h2 {
+    margin: 0;
+    color: var(--hen-blue);
+    font-size: 1.05rem;
+    font-weight: 900;
+}
+
+.dashboard-filter-header p {
+    margin: 4px 0 0;
+    color: #667085;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.dashboard-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.4fr) minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(280px, 1.2fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.dashboard-filter-field {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.dashboard-filter-field label {
     color: #344054;
-    background: transparent;
-    font-size: 0.98rem;
-    font-weight: 800;
-    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 900;
 }
 
-.dashboard-period-toggle button:last-child {
-    border-right: 0;
-}
-
-.dashboard-period-toggle button.active,
-.dashboard-period-toggle button:hover {
-    color: #fff;
-    background: var(--hen-blue);
+.dashboard-filter-field select,
+.dashboard-filter-field input {
+    width: 100%;
 }
 
 .dashboard-month-picker,
-.dashboard-date-picker {
+.dashboard-range-fields {
+    display: none;
+}
+
+.dashboard-month-picker.active,
+.dashboard-range-fields.active {
+    display: grid;
+}
+
+.dashboard-range-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dashboard-filter-actions {
     display: flex;
-    align-items: center;
     gap: 8px;
+    justify-content: flex-end;
 }
 
-.dashboard-flock-picker {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.dashboard-month-picker label,
-.dashboard-date-picker label,
-.dashboard-flock-picker label {
-    color: #344054;
-    font-size: 0.86rem;
-    font-weight: 800;
-}
-
-.dashboard-date-picker input,
-.dashboard-month-picker input {
-    min-width: 170px;
-}
-
-.dashboard-flock-picker select {
-    min-width: 230px;
-}
-
-.dashboard-month-picker.active input {
-    border-color: var(--hen-blue);
-    box-shadow: 0 0 0 0.18rem rgba(51, 96, 207, 0.14);
+.dashboard-filter-actions .btn {
+    min-height: 46px;
+    min-width: 86px;
 }
 
 .dashboard-active-period {
@@ -1593,35 +1587,22 @@ input[readonly].readonly-metric {
         white-space: normal;
     }
 
-    .dashboard-filter-card {
-        justify-content: flex-start;
-    }
-
-    .dashboard-filter-main,
-    .dashboard-month-picker,
-    .dashboard-date-picker,
-    .dashboard-flock-picker {
-        width: 100%;
-        align-items: stretch;
+    .dashboard-filter-header {
         flex-direction: column;
     }
 
-    .dashboard-period-toggle {
-        width: 100%;
+    .dashboard-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .dashboard-period-toggle button {
-        min-width: 0;
-        flex: 1 1 0;
-        padding-right: 8px;
-        padding-left: 8px;
+    .dashboard-flock-picker,
+    .dashboard-range-fields,
+    .dashboard-filter-actions {
+        grid-column: 1 / -1;
     }
 
-    .dashboard-month-picker input,
-    .dashboard-date-picker input,
-    .dashboard-flock-picker select,
-    .dashboard-filter-card .btn,
-    .dashboard-active-period {
+    .dashboard-active-period,
+    .dashboard-filter-actions .btn {
         width: 100%;
     }
 
@@ -3063,6 +3044,19 @@ select {
     .mortality-cards,
     .donut-wrap {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-filter-card {
+        padding: 14px;
+    }
+
+    .dashboard-filter-grid,
+    .dashboard-range-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-filter-actions {
+        flex-direction: column;
     }
 
     .detail-header {
