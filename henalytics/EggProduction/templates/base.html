@@ -509,12 +509,12 @@
                     var $actionRow = $wrapper.find('.dt-action-row');
                     var menuId = 'column-menu-' + Math.random().toString(36).slice(2);
                     var $columnTools = $('<div class="dt-column-tools"></div>');
-                    var $toggle = $('<button type="button" class="dt-column-button" aria-expanded="false" aria-controls="' + menuId + '">Columns</button>');
+                    var $toggle = $('<button type="button" class="dt-column-button" aria-expanded="false" aria-controls="' + menuId + '">Show/Hide Columns</button>');
                     var $menu = $('<div class="dt-column-menu" id="' + menuId + '" hidden></div>');
 
                     $table.find('thead th').each(function (index) {
                         var $header = $(this);
-                        if ($header.hasClass('no-export')) {
+                        if ($header.hasClass('no-export') || hiddenColumns.indexOf(index) === -1) {
                             return;
                         }
                         var label = $.trim($header.text().replace(/\s+/g, ' '));
