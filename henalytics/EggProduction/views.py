@@ -567,9 +567,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def dashboard_flocks():
         return Flock.objects.filter(status='active').order_by('house_no', '-date_started', 'id')
 
+    def is_all_active_scope(self):
+        return self.request.GET.get('flock_id') == 'all'
+
     def get_selected_flock(self):
         flocks = self.dashboard_flocks()
         requested_flock_id = self.request.GET.get('flock_id')
+        if requested_flock_id == 'all':
+            return None
         if requested_flock_id:
             selected = flocks.filter(pk=requested_flock_id).first()
             if selected:
@@ -800,28 +805,47 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         }
 
     @classmethod
-    def build_dashboard_chart_payload(cls, flock_id=None):
+    def build_dashboard_chart_payload(cls, flock_id=None, start=None, end=None, all_active=False):
         return {
             'default_granularity': 'daily',
+            'scope': 'all_active' if all_active else 'selected_flock',
             'granularities': {
-                'daily': cls._build_dashboard_chart_payload_for_group('day', flock_id),
-                'weekly': cls._build_dashboard_chart_payload_for_group('week', flock_id),
-                'monthly': cls._build_dashboard_chart_payload_for_group('month', flock_id),
-                'yearly': cls._build_dashboard_chart_payload_for_group('year', flock_id),
+                'daily': cls._build_dashboard_chart_payload_for_group('day', flock_id, start, end, all_active),
+                'weekly': cls._build_dashboard_chart_payload_for_group('week', flock_id, start, end, all_active),
+                'monthly': cls._build_dashboard_chart_payload_for_group('month', flock_id, start, end, all_active),
+                'yearly': cls._build_dashboard_chart_payload_for_group('year', flock_id, start, end, all_active),
             },
         }
 
     @classmethod
-    def _build_dashboard_chart_payload_for_group(cls, granularity, flock_id=None):
+    def _build_dashboard_chart_payload_for_group(cls, granularity, flock_id=None, start=None, end=None, all_active=False):
         logs = ProductionLog.objects.filter(flock__status='active')
-        sales_items = SalesItem.objects.all()
-        if flock_id:
+        sales_items = SalesItem.objects.filter(transaction__flock__status='active')
+        if start:
+            logs = logs.filter(log_date__gte=start)
+            sales_items = sales_items.filter(transaction__sale_date__gte=start)
+        if end:
+            logs = logs.filter(log_date__lte=end)
+            sales_items = sales_items.filter(transaction__sale_date__lte=end)
+        if flock_id and not all_active:
             logs = logs.filter(flock_id=flock_id)
             sales_items = sales_items.filter(transaction__flock_id=flock_id)
+        active_flocks = list(cls.dashboard_flocks())
+        if flock_id and not all_active:
+            active_flocks = [flock for flock in active_flocks if str(flock.id) == str(flock_id)]
+        flock_lookup = {flock.id: flock for flock in active_flocks}
+        palette = ['#3360cf', '#ca8a04', '#12a150', '#7c3aed', '#d92d20', '#0891b2', '#db2777', '#64748b']
+
+        def flock_label(flock):
+            return f'House {flock.house_no} - {flock.breed_strain}'
+
+        def flock_color(index, fallback):
+            return palette[index % len(palette)] if all_active else fallback
+
         if granularity == 'week':
             production_rows = (
                 logs.annotate(period_date=TruncWeek('log_date'))
-                .values('period_date')
+                .values('period_date', 'flock_id')
                 .annotate(
                     eggs=models.Sum('eggs_total'),
                     hen_housed=models.Avg('pct_hen_housed'),
@@ -834,7 +858,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .annotate(period_date=TruncWeek('transaction__sale_date'))
-                .values('period_date')
+                .values('period_date', 'transaction__flock_id')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -846,7 +870,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         elif granularity == 'month':
             production_rows = (
                 logs.annotate(period_date=TruncMonth('log_date'))
-                .values('period_date')
+                .values('period_date', 'flock_id')
                 .annotate(
                     eggs=models.Sum('eggs_total'),
                     hen_housed=models.Avg('pct_hen_housed'),
@@ -859,7 +883,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .annotate(period_date=TruncMonth('transaction__sale_date'))
-                .values('period_date')
+                .values('period_date', 'transaction__flock_id')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -871,7 +895,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         elif granularity == 'year':
             production_rows = (
                 logs.annotate(period_date=TruncYear('log_date'))
-                .values('period_date')
+                .values('period_date', 'flock_id')
                 .annotate(
                     eggs=models.Sum('eggs_total'),
                     hen_housed=models.Avg('pct_hen_housed'),
@@ -884,7 +908,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .annotate(period_date=TruncYear('transaction__sale_date'))
-                .values('period_date')
+                .values('period_date', 'transaction__flock_id')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -896,6 +920,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         else:
             production_rows = (
                 logs.values(period_date=models.F('log_date'))
+                .values('period_date', 'flock_id')
                 .annotate(
                     eggs=models.Sum('eggs_total'),
                     hen_housed=models.Avg('pct_hen_housed'),
@@ -908,6 +933,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .values(period_date=models.F('transaction__sale_date'))
+                .values('period_date', 'transaction__flock_id')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -921,32 +947,85 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             return value.date() if hasattr(value, 'date') else value
 
         production_by_period = {
-            normalize_period_date(row['period_date']): row
+            (normalize_period_date(row['period_date']), row['flock_id']): row
             for row in production_rows
             if row['period_date']
         }
         sales_by_period = {
-            normalize_period_date(row['period_date']): row
+            (normalize_period_date(row['period_date']), row['transaction__flock_id']): row
             for row in sales_rows
             if row['period_date']
         }
-        period_dates = sorted(set(production_by_period) | set(sales_by_period))
+        period_dates = sorted(
+            {period_date for period_date, _flock_id in production_by_period}
+            | {period_date for period_date, _flock_id in sales_by_period}
+        )
         labels = [period_date.strftime(label_format) for period_date in period_dates]
         iso_labels = [
             period_date.strftime(date_format) if date_format else period_date.isoformat()
             for period_date in period_dates
         ]
+        if not active_flocks:
+            active_flocks = [
+                flock for flock in Flock.objects.filter(
+                    id__in={
+                        flock_id for _period, flock_id in production_by_period
+                    } | {
+                        flock_id for _period, flock_id in sales_by_period
+                    }
+                ).order_by('house_no', '-date_started', 'id')
+            ]
+            flock_lookup = {flock.id: flock for flock in active_flocks}
 
         def production_values(field):
-            return [
-                float((production_by_period.get(period_date) or {}).get(field) or 0)
-                for period_date in period_dates
-            ]
+            values = []
+            for period_date in period_dates:
+                period_values = [
+                    float((production_by_period.get((period_date, flock.id)) or {}).get(field) or 0)
+                    for flock in active_flocks
+                    if (production_by_period.get((period_date, flock.id)) or {}).get(field) is not None
+                ]
+                if field in {'hen_housed', 'hen_day'}:
+                    values.append(sum(period_values) / len(period_values) if period_values else 0)
+                else:
+                    values.append(sum(period_values))
+            return values
 
         sales_values = [
-            float((sales_by_period.get(period_date) or {}).get('sales') or 0)
+            float(sum(
+                (sales_by_period.get((period_date, flock.id)) or {}).get('sales') or 0
+                for flock in active_flocks
+            ))
             for period_date in period_dates
         ]
+
+        def production_series(field, default_color):
+            return [
+                {
+                    'name': flock_label(flock_lookup[flock.id]),
+                    'color': flock_color(index, default_color),
+                    'values': [
+                        float((production_by_period.get((period_date, flock.id)) or {}).get(field) or 0)
+                        for period_date in period_dates
+                    ],
+                }
+                for index, flock in enumerate(active_flocks)
+                if flock.id in flock_lookup
+            ]
+
+        def sales_series(default_color):
+            return [
+                {
+                    'name': flock_label(flock_lookup[flock.id]),
+                    'color': flock_color(index, default_color),
+                    'values': [
+                        float((sales_by_period.get((period_date, flock.id)) or {}).get('sales') or 0)
+                        for period_date in period_dates
+                    ],
+                }
+                for index, flock in enumerate(active_flocks)
+                if flock.id in flock_lookup
+            ]
 
         return {
             'label': label,
@@ -961,6 +1040,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'unit': 'eggs',
                     'color': '#3360cf',
                     'values': production_values('eggs'),
+                    'series': production_series('eggs', '#3360cf'),
                 },
                 'hen_housed': {
                     'title': f'{label} Hen Housed Performance',
@@ -968,6 +1048,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'unit': '%',
                     'color': '#12a150',
                     'values': production_values('hen_housed'),
+                    'series': production_series('hen_housed', '#12a150'),
                     'threshold': [60 for _period in period_dates],
                     'threshold_label': '60% threshold',
                 },
@@ -977,6 +1058,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'unit': '%',
                     'color': '#7c3aed',
                     'values': production_values('hen_day'),
+                    'series': production_series('hen_day', '#7c3aed'),
                     'threshold': [60 for _period in period_dates],
                     'threshold_label': '60% threshold',
                 },
@@ -986,6 +1068,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'unit': 'bags',
                     'color': '#e88411',
                     'values': production_values('feed'),
+                    'series': production_series('feed', '#e88411'),
                 },
                 'losses': {
                     'title': f'{label} Mortality and Cull Trend',
@@ -993,6 +1076,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'unit': 'hens',
                     'color': '#d92d20',
                     'values': production_values('losses'),
+                    'series': production_series('losses', '#d92d20'),
                 },
                 'sales': {
                     'title': f'{label} Sales Trend',
@@ -1000,6 +1084,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     'unit': 'peso',
                     'color': '#ca8a04',
                     'values': sales_values,
+                    'series': sales_series('#ca8a04'),
                 },
             },
         }
@@ -1056,22 +1141,28 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             last_30_days = today - timedelta(days=30)
             last_60_days = today - timedelta(days=60)
             selected_flock = self.get_selected_flock()
+            all_active_scope = self.is_all_active_scope()
             selected_flock_id = selected_flock.id if selected_flock else None
-            production_logs = (
-                ProductionLog.objects.filter(flock=selected_flock)
-                if selected_flock
-                else ProductionLog.objects.none()
-            )
-            sales_items = (
-                SalesItem.objects.filter(transaction__flock=selected_flock)
-                if selected_flock
-                else SalesItem.objects.none()
-            )
-            grading_log_records = (
-                GradingLog.objects.filter(flock=selected_flock)
-                if selected_flock
-                else GradingLog.objects.none()
-            )
+            if all_active_scope:
+                production_logs = ProductionLog.objects.filter(flock__status='active')
+                sales_items = SalesItem.objects.filter(transaction__flock__status='active')
+                grading_log_records = GradingLog.objects.filter(flock__status='active')
+            else:
+                production_logs = (
+                    ProductionLog.objects.filter(flock=selected_flock)
+                    if selected_flock
+                    else ProductionLog.objects.none()
+                )
+                sales_items = (
+                    SalesItem.objects.filter(transaction__flock=selected_flock)
+                    if selected_flock
+                    else SalesItem.objects.none()
+                )
+                grading_log_records = (
+                    GradingLog.objects.filter(flock=selected_flock)
+                    if selected_flock
+                    else GradingLog.objects.none()
+                )
             period, date_from, date_to, period_label = self.get_period_bounds(selected_flock_id)
             period_logs = self.filter_by_date(production_logs, 'log_date', date_from, date_to)
             period_sales_items = self.filter_by_date(sales_items, 'transaction__sale_date', date_from, date_to)
@@ -1109,7 +1200,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             period_revenue_change = self.percent_change(period_revenue, previous_revenue)
             period_feed_change = self.percent_change(period_feed_total, previous_feed_total)
             period_loss_change = self.percent_change(period_losses, previous_losses)
-            total_hens = selected_flock.initial_hen_count if selected_flock else 0
+            total_hens = (
+                Flock.objects.filter(status='active').aggregate(total=models.Sum('initial_hen_count'))['total'] or 0
+                if all_active_scope
+                else selected_flock.initial_hen_count if selected_flock else 0
+            )
             weekly_revenue = sales_items.filter(
                 transaction__sale_date__gte=last_7_days
             ).aggregate(total=models.Sum('amount'))['total'] or 0
@@ -1135,21 +1230,35 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             recent_losses_60d = production_logs.filter(log_date__gte=last_60_days).aggregate(
                 lost=models.Sum(models.F('dead_count') + models.F('culled_count'))
             )['lost'] or 0
-            dashboard_chart_payload = self.build_dashboard_chart_payload(selected_flock_id)
-            monthly_payload = self.build_monthly_payload(selected_flock_id)
+            dashboard_chart_payload = self.build_dashboard_chart_payload(
+                selected_flock_id,
+                start=date_from,
+                end=date_to,
+                all_active=all_active_scope,
+            )
+            monthly_payload = self.build_monthly_payload(None if all_active_scope else selected_flock_id)
             monthly_summary = self.build_monthly_summary(monthly_payload)
             month_value = self.request.GET.get('month_value') or self.default_month_value(selected_flock_id)
+            selected_scope_label = (
+                'All Active Flocks'
+                if all_active_scope
+                else f'House {selected_flock.house_no}' if selected_flock else 'No active flock'
+            )
 
             context.update({
                 'today': today,
                 'dashboard_period': period,
                 'dashboard_date_from': date_from,
                 'dashboard_date_to': date_to,
+                'dashboard_date_from_value': date_from.isoformat() if date_from else '',
+                'dashboard_date_to_value': date_to.isoformat() if date_to else '',
                 'dashboard_month_value': month_value,
                 'dashboard_period_label': period_label,
                 'dashboard_flocks': self.dashboard_flocks(),
                 'selected_dashboard_flock': selected_flock,
-                'selected_dashboard_flock_id': str(selected_flock_id) if selected_flock_id else '',
+                'selected_dashboard_flock_id': 'all' if all_active_scope else str(selected_flock_id) if selected_flock_id else '',
+                'selected_dashboard_scope_label': selected_scope_label,
+                'dashboard_all_active_scope': all_active_scope,
                 'active_flocks': active_flocks,
                 'today_production': today_production,
                 'period_egg_total': period_egg_total,
@@ -1192,6 +1301,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'dashboard_flocks': self.dashboard_flocks(),
                 'selected_dashboard_flock': None,
                 'selected_dashboard_flock_id': '',
+                'selected_dashboard_scope_label': 'No active flock',
+                'dashboard_all_active_scope': False,
+                'dashboard_date_from_value': '',
+                'dashboard_date_to_value': '',
                 'active_flocks': 0,
                 'today_production': 0,
                 'period_egg_total': 0,

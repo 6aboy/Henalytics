@@ -23,6 +23,7 @@
     <div class="dashboard-flock-picker">
         <label for="dashboardFlockValue">Flock</label>
         <select name="flock_id" id="dashboardFlockValue" class="form-control">
+            <option value="all" {% if selected_dashboard_flock_id == 'all' %}selected{% endif %}>All Active Flocks</option>
             {% for flock in dashboard_flocks %}
                 <option value="{{ flock.id }}" {% if flock.id|stringformat:"s" == selected_dashboard_flock_id %}selected{% endif %}>
                     House {{ flock.house_no }} - {{ flock.breed_strain }}
@@ -32,8 +33,16 @@
             {% endfor %}
         </select>
     </div>
+    <div class="dashboard-date-picker">
+        <label for="dashboardDateFrom">Start</label>
+        <input type="date" name="date_from" id="dashboardDateFrom" class="form-control" value="{{ dashboard_date_from_value }}">
+    </div>
+    <div class="dashboard-date-picker">
+        <label for="dashboardDateTo">To</label>
+        <input type="date" name="date_to" id="dashboardDateTo" class="form-control" value="{{ dashboard_date_to_value }}">
+    </div>
     <button type="submit" class="btn btn-info">Apply</button>
-    <span class="dashboard-active-period">Showing {{ dashboard_period_label }}{% if selected_dashboard_flock %} · House {{ selected_dashboard_flock.house_no }}{% endif %}</span>
+    <span class="dashboard-active-period">Showing {{ dashboard_period_label }} · {{ selected_dashboard_scope_label }}</span>
 </form>
 
 <section class="dashboard-section">
@@ -42,7 +51,7 @@
             <h2>Overview Cards</h2>
             <p>Main totals for the selected period.</p>
         </div>
-        <span>{{ dashboard_period_label }}</span>
+        <span>{{ dashboard_period_label }} · {{ selected_dashboard_scope_label }}</span>
     </div>
     <div class="dashboard-grid">
         <article class="metric-card featured">
@@ -102,7 +111,7 @@
             <h2>Efficiency Indicators</h2>
             <p>Operational averages for the selected period.</p>
         </div>
-        <span>{{ dashboard_period_label }}</span>
+        <span>{{ dashboard_period_label }} · {{ selected_dashboard_scope_label }}</span>
     </div>
     <div class="dashboard-grid dashboard-grid-secondary">
         <article class="metric-card compact">
@@ -167,9 +176,9 @@
     <div class="section-heading">
         <div>
             <h2>Main Trends</h2>
-            <p>Switch the chart by time and metric.</p>
+            <p>Compare selected flock records or all active flocks within the chosen range.</p>
         </div>
-        <span>Database records</span>
+        <span>{{ selected_dashboard_scope_label }}</span>
     </div>
     <article class="dashboard-notebook-card">
         <div class="notebook-paper">
@@ -179,6 +188,7 @@
                     <p id="dashboardNotebookDescription">Daily total eggs recorded in the database.</p>
                 </div>
                 <div class="notebook-heading-actions">
+                    <button type="button" class="btn btn-secondary btn-sm dashboard-chart-download" data-chart-download="dashboardNotebookChart">Download Chart</button>
                     <div class="chart-granularity-controls" aria-label="Dashboard chart data grouping">
                         <button type="button" class="chart-granularity-button active" data-granularity="daily">Day</button>
                         <button type="button" class="chart-granularity-button" data-granularity="weekly">Week</button>
@@ -225,6 +235,8 @@
         const periodInput = document.getElementById('dashboardPeriodInput');
         const monthInput = document.getElementById('dashboardMonthValue');
         const flockInput = document.getElementById('dashboardFlockValue');
+        const dateFromInput = document.getElementById('dashboardDateFrom');
+        const dateToInput = document.getElementById('dashboardDateTo');
         const filterButtons = document.querySelectorAll('[data-dashboard-period]');
 
         filterButtons.forEach((button) => {
@@ -248,6 +260,14 @@
                 filterForm.requestSubmit();
             });
         }
+
+        [dateFromInput, dateToInput].forEach((input) => {
+            if (!input) return;
+            input.addEventListener('change', () => {
+                periodInput.value = 'custom';
+                filterForm.requestSubmit();
+            });
+        });
 
         const unitLabel = (unit) => unit === '%' ? 'Percent' : unit.charAt(0).toUpperCase() + unit.slice(1);
         const valueSuffix = (unit) => unit === '%' ? '%' : unit === 'peso' ? '' : ` ${unit}`;
@@ -304,19 +324,21 @@
                 const prefix = valuePrefix(selected.unit);
                 const hoverFormat = currentPayload.hover_format || config.dateFormat;
                 const tickFormat = currentPayload.tick_format || config.tickFormat;
-                const mainTrace = {
+                const series = selected.series?.length
+                    ? selected.series
+                    : [{ name: selected.title, values: selected.values, color: selected.color }];
+                const traces = series.map((item) => ({
                     x: labels,
-                    y: selected.values,
-                    name: selected.title,
+                    y: item.values,
+                    name: item.name || selected.title,
                     type: 'scatter',
                     mode: labels.length > 120 ? 'lines' : 'lines+markers',
-                    line: { color: selected.color, width: 3, shape: 'spline' },
-                    marker: { color: selected.color, size: 5 },
-                    fill: key === 'eggs' ? 'tozeroy' : 'none',
+                    line: { color: item.color || selected.color, width: 3, shape: 'spline' },
+                    marker: { color: item.color || selected.color, size: 5 },
+                    fill: series.length === 1 && key === 'eggs' ? 'tozeroy' : 'none',
                     fillcolor: 'rgba(51, 96, 207, 0.10)',
-                    hovertemplate: `<b>%{x|${hoverFormat}}</b><br>${selected.title}: ${prefix}%{y:,.2f}${suffix}<extra></extra>`
-                };
-                const traces = [mainTrace];
+                    hovertemplate: `<b>%{x|${hoverFormat}}</b><br>${item.name || selected.title}: ${prefix}%{y:,.2f}${suffix}<extra></extra>`
+                }));
 
                 if (selected.threshold) {
                     traces.push({
@@ -379,6 +401,13 @@
                     responsive: true,
                     displaylogo: false,
                     scrollZoom: true,
+                    toImageButtonOptions: {
+                        format: 'png',
+                        filename: `henalytics-${key}-${activeGranularity}`,
+                        height: 900,
+                        width: 1600,
+                        scale: 2
+                    },
                     modeBarButtonsToRemove: ['select2d', 'lasso2d']
                 });
             };
@@ -402,6 +431,20 @@
             });
 
             plotChart(activeKey);
+
+            document.querySelectorAll('[data-chart-download]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const target = document.getElementById(button.dataset.chartDownload);
+                    if (!target) return;
+                    Plotly.downloadImage(target, {
+                        format: 'png',
+                        filename: `henalytics-${activeKey}-${activeGranularity}`,
+                        height: 900,
+                        width: 1600,
+                        scale: 2
+                    });
+                });
+            });
         };
 
         createNotebookChart({

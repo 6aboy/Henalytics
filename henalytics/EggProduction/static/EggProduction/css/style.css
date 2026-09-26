@@ -676,7 +676,8 @@ a {
     background: var(--hen-blue);
 }
 
-.dashboard-month-picker {
+.dashboard-month-picker,
+.dashboard-date-picker {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -689,12 +690,14 @@ a {
 }
 
 .dashboard-month-picker label,
+.dashboard-date-picker label,
 .dashboard-flock-picker label {
     color: #344054;
     font-size: 0.86rem;
     font-weight: 800;
 }
 
+.dashboard-date-picker input,
 .dashboard-month-picker input {
     min-width: 170px;
 }
@@ -1596,6 +1599,7 @@ input[readonly].readonly-metric {
 
     .dashboard-filter-main,
     .dashboard-month-picker,
+    .dashboard-date-picker,
     .dashboard-flock-picker {
         width: 100%;
         align-items: stretch;
@@ -1614,6 +1618,7 @@ input[readonly].readonly-metric {
     }
 
     .dashboard-month-picker input,
+    .dashboard-date-picker input,
     .dashboard-flock-picker select,
     .dashboard-filter-card .btn,
     .dashboard-active-period {
@@ -2345,6 +2350,13 @@ input[readonly].readonly-metric {
     gap: 8px;
     align-items: center;
     justify-content: flex-end;
+}
+
+.dashboard-chart-download {
+    min-height: 31px;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    font-weight: 800;
 }
 
 .chart-granularity-controls {
