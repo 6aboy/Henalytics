@@ -1433,6 +1433,7 @@ input[readonly].readonly-metric {
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 8px;
+    width: 100%;
 }
 
 .dt-buttons .dt-button {
@@ -1486,6 +1487,7 @@ input[readonly].readonly-metric {
     background: #eef4ff !important;
     border-color: #cddcff !important;
     color: var(--hen-blue) !important;
+    margin-right: auto !important;
     min-width: 120px;
 }
 
@@ -1574,6 +1576,7 @@ input[readonly].readonly-metric {
 
     .dt-buttons .buttons-colvis,
     .dt-buttons .buttons-full-report {
+        margin-right: 0 !important;
         min-width: 100%;
     }
 
