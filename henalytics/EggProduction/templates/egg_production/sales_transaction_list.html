@@ -5,15 +5,6 @@
 {% block page_title %}Manage Sales{% endblock %}
 
 {% block content %}
-<div class="records-toolbar">
-<div class="page-actions record-actions">
-    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
-    <a href="{% url 'eggproduction:sales-import' %}" class="btn btn-secondary">Import</a>
-    <a href="{% url 'eggproduction:sales-transaction-create' %}" class="btn btn-primary">Create</a>
-    {% endif %}
-</div>
-</div>
-
 <form method="get" class="filter-row production-filter record-filter" data-swal-filter
     data-swal-title="Filtering sales records"
     data-swal-text="The sales table will update using your selected filters.">
@@ -51,6 +42,12 @@
         <button type="submit" class="btn btn-info">Filter</button>
         <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary">Reset</a>
     </div>
+    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
+    <div class="record-card-actions record-actions">
+        <a href="{% url 'eggproduction:sales-import' %}" class="btn btn-secondary">Import</a>
+        <a href="{% url 'eggproduction:sales-transaction-create' %}" class="btn btn-primary">Create</a>
+    </div>
+    {% endif %}
 </form>
 
 <div class="table-responsive">

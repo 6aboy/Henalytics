@@ -595,6 +595,7 @@ a {
     justify-content: stretch;
     margin-bottom: 20px;
     padding: 14px;
+    align-items: end;
 }
 
 .record-filter .filter-field {
@@ -612,6 +613,7 @@ a {
 
 .record-filter select,
 .record-filter input[type="date"] {
+    min-height: 46px;
     min-width: 0;
     width: 100%;
 }
@@ -621,6 +623,19 @@ a {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
+}
+
+.record-filter .filter-actions .btn {
+    min-height: 46px;
+}
+
+.record-card-actions {
+    border-top: 1px solid #e4ebfb;
+    display: flex;
+    gap: 8px;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding-top: 12px;
 }
 
 .dashboard-filter-card {
@@ -1561,6 +1576,10 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
         grid-column: 1 / -1;
         justify-content: flex-end;
     }
+
+    .record-card-actions {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (max-width: 576px) {
@@ -1621,14 +1640,6 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
         width: 100%;
     }
 
-    .record-actions {
-        justify-content: stretch;
-    }
-
-    .record-actions .btn {
-        flex: 1;
-    }
-
     .record-filter {
         grid-template-columns: 1fr;
     }
@@ -1638,6 +1649,14 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
     }
 
     .record-filter .filter-actions .btn {
+        flex: 1;
+    }
+
+    .record-card-actions {
+        justify-content: stretch;
+    }
+
+    .record-card-actions .btn {
         flex: 1;
     }
 }
