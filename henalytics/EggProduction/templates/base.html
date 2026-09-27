@@ -444,7 +444,6 @@
                 });
                 var hasColumnTools = hiddenColumns.length > 0;
                 var visibleColumns = ':visible:not(.no-export)';
-                var reportColumns = ':not(.no-export)';
                 var buttons = [];
                 if (hasColumnTools) {
                     buttons.push({
@@ -461,15 +460,6 @@
                     { extend: 'pdfHtml5', text: exportButtonText('pdf', 'PDF'), title: exportTitle, orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: visibleColumns } },
                     { extend: 'print', text: exportButtonText('print', 'Print'), title: exportTitle, exportOptions: { columns: visibleColumns } }
                     );
-                }
-                if (exportEnabled && hasColumnTools) {
-                    buttons.splice(4, 0, {
-                        extend: 'excelHtml5',
-                        className: 'buttons-full-report',
-                        text: exportButtonText('excel', 'Full Excel'),
-                        title: exportTitle + ' Full Report',
-                        exportOptions: { columns: reportColumns }
-                    });
                 }
                 var columnDefs = [
                     { targets: 'no-export', orderable: false, searchable: false }
