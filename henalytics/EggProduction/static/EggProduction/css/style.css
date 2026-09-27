@@ -1480,17 +1480,32 @@ input[readonly].readonly-metric {
     display: inline-block;
 }
 
-.dt-buttons .buttons-colvis {
-    background: #eef4ff !important;
-    border-color: #cddcff !important;
-    color: var(--hen-blue) !important;
+.dt-buttons .dt-button.buttons-colvis,
+div.dt-buttons > .dt-button.buttons-colvis,
+div.dt-buttons > button.dt-button.buttons-colvis {
+    background: #dfe9ff !important;
+    border-color: #b9ccff !important;
+    color: #2149b3 !important;
     margin-right: auto !important;
     min-width: 120px;
+    opacity: 1 !important;
 }
 
-.dt-buttons .buttons-colvis:hover,
-.dt-buttons .buttons-colvis:focus {
-    color: var(--hen-blue) !important;
+.dt-buttons .dt-button.buttons-colvis:hover,
+.dt-buttons .dt-button.buttons-colvis:focus,
+div.dt-buttons > .dt-button.buttons-colvis:hover,
+div.dt-buttons > .dt-button.buttons-colvis:focus,
+div.dt-buttons > button.dt-button.buttons-colvis:hover,
+div.dt-buttons > button.dt-button.buttons-colvis:focus {
+    background: #cfdcff !important;
+    border-color: #9fb8ff !important;
+    color: #173a91 !important;
+}
+
+.dt-buttons .dt-button.buttons-colvis span,
+.dt-buttons .dt-button.buttons-colvis .dt-button-down-arrow {
+    color: inherit !important;
+    opacity: 1 !important;
 }
 
 .dt-button-collection {
