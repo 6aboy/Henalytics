@@ -42,13 +42,16 @@
         <button type="submit" class="btn btn-info">Filter</button>
         <a href="{% url 'eggproduction:production-log-list' %}" class="btn btn-secondary">Reset</a>
     </div>
-    {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
-    <div class="record-card-actions record-actions">
+</form>
+
+{% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
+<div class="records-toolbar records-toolbar-below">
+    <div class="page-actions record-actions">
         <a href="{% url 'eggproduction:production-log-import' %}" class="btn btn-secondary">Import</a>
         <a href="{% url 'eggproduction:production-log-create' %}" class="btn btn-primary">Create</a>
     </div>
-    {% endif %}
-</form>
+</div>
+{% endif %}
 
 <div class="table-responsive">
     <table class="table table-striped table-hover prototype-table production-log-table js-data-table"
