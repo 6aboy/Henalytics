@@ -72,7 +72,7 @@ class Command(BaseCommand):
         sales_file = self._resolve_file(options['sales_file'])
         production_count = self._import_production(egg_file, flock, user)
         grading_count = self._import_classified_eggs(egg_file, flock)
-        transaction_count, item_count = self._import_sales(sales_file, flock, user)
+        transaction_count, item_count = self._import_sales(sales_file, user)
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -90,13 +90,13 @@ class Command(BaseCommand):
         HarvestForecast.objects.filter(flock__in=flocks).delete()
         ProductionLog.objects.filter(flock__in=flocks, remarks__startswith='Imported from').delete()
         GradingLog.objects.filter(flock__in=flocks, eggs_source__startswith='Imported from').delete()
-        SalesTransaction.objects.filter(flock__in=flocks, notes__startswith='Imported from').delete()
+        SalesTransaction.objects.filter(notes__startswith='Imported from').delete()
 
     @staticmethod
     def _delete_imported_rows(flock):
         ProductionLog.objects.filter(flock=flock, remarks__startswith='Imported from').delete()
         GradingLog.objects.filter(flock=flock, eggs_source__startswith='Imported from').delete()
-        SalesTransaction.objects.filter(flock=flock, notes__startswith='Imported from').delete()
+        SalesTransaction.objects.filter(notes__startswith='Imported from').delete()
 
     @staticmethod
     def _resolve_file(file_path):
@@ -239,7 +239,7 @@ class Command(BaseCommand):
 
         return imported
 
-    def _import_sales(self, file_path, flock, user):
+    def _import_sales(self, file_path, user):
         wb = load_workbook(file_path, data_only=True)
         transactions = 0
         items = 0
@@ -262,7 +262,6 @@ class Command(BaseCommand):
                     continue
 
                 transaction = SalesTransaction.objects.create(
-                    flock=flock,
                     sale_date=current_date,
                     or_number=str(int(or_number)) if isinstance(or_number, (int, float)) else str(or_number).strip(),
                     recorded_by=user,

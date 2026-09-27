@@ -10,7 +10,7 @@
     <div class="dashboard-filter-header">
         <div>
             <h2>Dashboard Filters</h2>
-            <p>Cards and charts use the same scope and date range.</p>
+            <p>Production metrics use the selected scope. Sales revenue uses the selected date range.</p>
         </div>
         <span class="dashboard-active-period">Showing {{ dashboard_period_label }} &middot; {{ selected_dashboard_scope_label }}</span>
     </div>
@@ -88,6 +88,7 @@
                     <div class="metric-label">Revenue</div>
                     <div class="metric-value">&#8369; {{ period_revenue|floatformat:0|intcomma }}</div>
                     <div class="metric-meta change-pill {{ period_revenue_change_tone }}">{{ period_revenue_change_label }}</div>
+                    <div class="metric-meta">All sales in period</div>
                 </div>
                 <span class="metric-icon success">
                     <img src="{% static 'EggProduction/img/coins-duotone.svg' %}" alt="" aria-hidden="true">

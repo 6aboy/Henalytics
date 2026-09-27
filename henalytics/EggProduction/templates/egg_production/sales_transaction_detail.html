@@ -9,7 +9,7 @@
     <div class="detail-header">
         <div>
             <h2 class="detail-title">Sales Transaction</h2>
-            <div class="detail-subtitle">House {{ sales_transaction.flock.house_no }} | {{ sales_transaction.sale_date|date:"M d, Y" }}</div>
+            <div class="detail-subtitle">{{ sales_transaction.sale_date|date:"M d, Y" }}</div>
         </div>
         <div class="detail-actions">
             {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
@@ -28,7 +28,6 @@
     <section class="detail-section">
         <h3 class="detail-section-title">Transaction</h3>
         <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Flock</span><span class="detail-value">House {{ sales_transaction.flock.house_no }}</span></div>
             <div class="detail-item"><span class="detail-label">Sale Date</span><span class="detail-value">{{ sales_transaction.sale_date|date:"M d, Y" }}</span></div>
             <div class="detail-item"><span class="detail-label">OR Number</span><span class="detail-value">{{ sales_transaction.or_number|default:"N/A" }}</span></div>
             <div class="detail-item"><span class="detail-label">Total Amount</span><span class="detail-value">₱ {{ total_amount|floatformat:2|intcomma }}</span></div>

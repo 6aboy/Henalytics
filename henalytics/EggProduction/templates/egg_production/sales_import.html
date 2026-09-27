@@ -9,7 +9,7 @@
     <div class="row justify-content-center">
         <div class="col-md-10 action-panel">
             <h1>Import Sales Data</h1>
-            <p class="form-intro">Upload an Excel or CSV file, choose the flock, then review the preview before saving records.</p>
+            <p class="form-intro">Upload an Excel or CSV file, then review the preview before saving sales records.</p>
 
             <form method="post" enctype="multipart/form-data" class="form production-import-form">
                 {% csrf_token %}
@@ -18,13 +18,6 @@
                 <section class="form-section">
                     <h2>File Setup</h2>
                     <div class="production-form-grid production-form-grid-main">
-                        <div class="form-group">
-                            <label for="{{ form.flock.id_for_label }}">Flock</label>
-                            {{ form.flock }}
-                            {% for error in form.flock.errors %}
-                            <small class="form-error">{{ error }}</small>
-                            {% endfor %}
-                        </div>
                         <div class="form-group">
                             <label for="{{ form.data_file.id_for_label }}">Excel or CSV File</label>
                             {{ form.data_file }}
@@ -56,10 +49,6 @@
                     <div>
                         <strong>File</strong>
                         <span>{{ preview.file_name }}</span>
-                    </div>
-                    <div>
-                        <strong>Flock</strong>
-                        <span>{{ preview.flock_label }}</span>
                     </div>
                     <div>
                         <strong>Date Range</strong>

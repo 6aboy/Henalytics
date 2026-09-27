@@ -47,7 +47,7 @@ GRADE_ALIASES = {
 }
 
 
-def build_sales_preview(uploaded_file, flock, date_mode, conflict_strategy):
+def build_sales_preview(uploaded_file, date_mode, conflict_strategy):
     rows = parse_sales_file(uploaded_file, date_mode)
     valid_rows = [row for row in rows if not row['errors']]
     valid_dates = [date.fromisoformat(row['sale_date']) for row in valid_rows]
@@ -57,14 +57,12 @@ def build_sales_preview(uploaded_file, flock, date_mode, conflict_strategy):
     if valid_rows:
         existing_keys = set(
             SalesTransaction.objects.filter(
-                flock=flock,
                 sale_date__in=valid_dates,
                 or_number__in=[row['or_number'] for row in valid_rows],
             ).values_list('sale_date', 'or_number')
         )
         if conflict_strategy == 'replace_range':
             replace_existing_count = SalesTransaction.objects.filter(
-                flock=flock,
                 sale_date__gte=min(valid_dates),
                 sale_date__lte=max(valid_dates),
             ).count()
@@ -95,8 +93,6 @@ def build_sales_preview(uploaded_file, flock, date_mode, conflict_strategy):
     }
     return {
         'file_name': uploaded_file.name,
-        'flock_id': flock.id,
-        'flock_label': str(flock),
         'date_mode': date_mode,
         'conflict_strategy': conflict_strategy,
         'stats': stats,
@@ -109,7 +105,6 @@ def import_sales_preview(preview, user):
     if not rows:
         return {'created': 0, 'updated': 0, 'skipped': 0, 'deleted': 0}
 
-    flock_id = preview['flock_id']
     conflict_strategy = preview['conflict_strategy']
     dates = [date.fromisoformat(row['sale_date']) for row in rows]
     created = 0
@@ -120,7 +115,6 @@ def import_sales_preview(preview, user):
     with transaction.atomic():
         if conflict_strategy == 'replace_range':
             deleted, _ = SalesTransaction.objects.filter(
-                flock_id=flock_id,
                 sale_date__gte=min(dates),
                 sale_date__lte=max(dates),
             ).delete()
@@ -128,7 +122,6 @@ def import_sales_preview(preview, user):
         for row in rows:
             sale_date = date.fromisoformat(row['sale_date'])
             transaction_obj = SalesTransaction.objects.filter(
-                flock_id=flock_id,
                 sale_date=sale_date,
                 or_number=row['or_number'],
             ).first()
@@ -144,7 +137,6 @@ def import_sales_preview(preview, user):
                 updated += 1
             else:
                 transaction_obj = SalesTransaction.objects.create(
-                    flock_id=flock_id,
                     sale_date=sale_date,
                     or_number=row['or_number'],
                     recorded_by=user,

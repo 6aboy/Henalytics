@@ -8,17 +8,6 @@
 <form method="get" class="filter-row production-filter record-filter" data-swal-filter
     data-swal-title="Filtering sales records"
     data-swal-text="The sales table will update using your selected filters.">
-    <div class="filter-field filter-field-wide">
-        <label for="flock_id">Flock</label>
-        <select name="flock_id" id="flock_id" class="form-select">
-            <option value="">All Flocks</option>
-            {% for flock in flocks %}
-            <option value="{{ flock.id }}" {% if selected_flock_id == flock.id|stringformat:"s" %}selected{% endif %}>
-                House {{ flock.house_no }} - {{ flock.breed_strain }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
     <div class="filter-field">
         <label for="period">Date</label>
         <select name="period" id="period" class="form-select">
@@ -66,8 +55,6 @@
                 <th>Pieces</th>
                 <th>Amount</th>
                 <th>Size</th>
-                <th>Flock</th>
-                <th class="optional-column" data-default-visible="false">House No.</th>
                 <th class="optional-column" data-default-visible="false">Unit Prices</th>
                 <th class="optional-column" data-default-visible="false">Recorded By</th>
                 <th class="optional-column" data-default-visible="false">Notes</th>
@@ -90,8 +77,6 @@
                     N/A
                     {% endfor %}
                 </td>
-                <td>House {{ transaction.flock.house_no }}</td>
-                <td>{{ transaction.flock.house_no }}</td>
                 <td>
                     {% for item in transaction.items.all %}
                     {{ item.get_grade_display }}: {{ item.unit_price|floatformat:2 }}{% if not forloop.last %}, {% endif %}

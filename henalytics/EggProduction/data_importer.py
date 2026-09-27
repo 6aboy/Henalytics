@@ -124,9 +124,7 @@ class DataImporter:
 
         for idx, row in df.iterrows():
             try:
-                flock = self._find_flock(row)
                 transaction = SalesTransaction.objects.create(
-                    flock=flock,
                     sale_date=pd.to_datetime(row.get('sale_date')).date(),
                     or_number=str(row.get('or_number', row.get('OR', row.get('or', '')))).strip(),
                     recorded_by=self.user,

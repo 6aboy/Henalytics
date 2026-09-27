@@ -142,11 +142,10 @@ class ProductionLogImportForm(forms.Form):
 class SalesTransactionForm(forms.ModelForm):
     class Meta:
         model = SalesTransaction
-        fields = ['flock', 'sale_date', 'or_number', 'notes']
+        fields = ['sale_date', 'or_number', 'notes']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['flock'].queryset = active_flocks_for_instance(self.instance)
         self.fields['notes'].widget.attrs.update({
             'class': 'form-control compact-note-input',
             'rows': 2,
@@ -164,10 +163,6 @@ class SalesImportForm(forms.Form):
         ('replace_range', 'Replace selected date range'),
     )
 
-    flock = forms.ModelChoiceField(
-        queryset=Flock.objects.none(),
-        empty_label='Choose a Flock',
-    )
     data_file = forms.FileField(
         label='Excel or CSV file',
         help_text='Accepted files: .xlsx, .xlsm, .csv',
@@ -185,10 +180,8 @@ class SalesImportForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['flock'].queryset = active_flocks_for_instance()
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
-        self.fields['flock'].widget.attrs['class'] = 'form-select'
         self.fields['date_mode'].widget.attrs['class'] = 'form-select'
         self.fields['conflict_strategy'].widget.attrs['class'] = 'form-select'
 

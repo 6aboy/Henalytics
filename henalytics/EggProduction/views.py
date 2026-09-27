@@ -689,7 +689,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         grading_logs = GradingLog.objects.all()
         if flock_id:
             production_logs = production_logs.filter(flock_id=flock_id)
-            sales_items = sales_items.filter(transaction__flock_id=flock_id)
             grading_logs = grading_logs.filter(flock_id=flock_id)
 
         production_rows = list(
@@ -820,7 +819,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     @classmethod
     def _build_dashboard_chart_payload_for_group(cls, granularity, flock_id=None, start=None, end=None, all_active=False):
         logs = ProductionLog.objects.filter(flock__status='active')
-        sales_items = SalesItem.objects.filter(transaction__flock__status='active')
+        sales_items = SalesItem.objects.all()
         if start:
             logs = logs.filter(log_date__gte=start)
             sales_items = sales_items.filter(transaction__sale_date__gte=start)
@@ -829,7 +828,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_items = sales_items.filter(transaction__sale_date__lte=end)
         if flock_id and not all_active:
             logs = logs.filter(flock_id=flock_id)
-            sales_items = sales_items.filter(transaction__flock_id=flock_id)
         active_flocks = list(cls.dashboard_flocks())
         if flock_id and not all_active:
             active_flocks = [flock for flock in active_flocks if str(flock.id) == str(flock_id)]
@@ -858,7 +856,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .annotate(period_date=TruncWeek('transaction__sale_date'))
-                .values('period_date', 'transaction__flock_id')
+                .values('period_date')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -883,7 +881,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .annotate(period_date=TruncMonth('transaction__sale_date'))
-                .values('period_date', 'transaction__flock_id')
+                .values('period_date')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -908,7 +906,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .annotate(period_date=TruncYear('transaction__sale_date'))
-                .values('period_date', 'transaction__flock_id')
+                .values('period_date')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -933,7 +931,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             sales_rows = (
                 sales_items
                 .values(period_date=models.F('transaction__sale_date'))
-                .values('period_date', 'transaction__flock_id')
+                .values('period_date')
                 .annotate(sales=models.Sum('amount'))
                 .order_by('period_date')
             )
@@ -952,13 +950,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             if row['period_date']
         }
         sales_by_period = {
-            (normalize_period_date(row['period_date']), row['transaction__flock_id']): row
+            normalize_period_date(row['period_date']): row
             for row in sales_rows
             if row['period_date']
         }
         period_dates = sorted(
             {period_date for period_date, _flock_id in production_by_period}
-            | {period_date for period_date, _flock_id in sales_by_period}
+            | set(sales_by_period)
         )
         labels = [period_date.strftime(label_format) for period_date in period_dates]
         iso_labels = [
@@ -970,8 +968,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 flock for flock in Flock.objects.filter(
                     id__in={
                         flock_id for _period, flock_id in production_by_period
-                    } | {
-                        flock_id for _period, flock_id in sales_by_period
                     }
                 ).order_by('house_no', '-date_started', 'id')
             ]
@@ -992,10 +988,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             return values
 
         sales_values = [
-            float(sum(
-                (sales_by_period.get((period_date, flock.id)) or {}).get('sales') or 0
-                for flock in active_flocks
-            ))
+            float((sales_by_period.get(period_date) or {}).get('sales') or 0)
             for period_date in period_dates
         ]
 
@@ -1014,18 +1007,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             ]
 
         def sales_series(default_color):
-            return [
-                {
-                    'name': flock_label(flock_lookup[flock.id]),
-                    'color': flock_color(index, default_color),
-                    'values': [
-                        float((sales_by_period.get((period_date, flock.id)) or {}).get('sales') or 0)
-                        for period_date in period_dates
-                    ],
-                }
-                for index, flock in enumerate(active_flocks)
-                if flock.id in flock_lookup
-            ]
+            return [{
+                'name': 'Sales',
+                'color': default_color,
+                'values': sales_values,
+            }]
 
         return {
             'label': label,
@@ -1145,7 +1131,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             selected_flock_id = selected_flock.id if selected_flock else None
             if all_active_scope:
                 production_logs = ProductionLog.objects.filter(flock__status='active')
-                sales_items = SalesItem.objects.filter(transaction__flock__status='active')
                 grading_log_records = GradingLog.objects.filter(flock__status='active')
             else:
                 production_logs = (
@@ -1153,16 +1138,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     if selected_flock
                     else ProductionLog.objects.none()
                 )
-                sales_items = (
-                    SalesItem.objects.filter(transaction__flock=selected_flock)
-                    if selected_flock
-                    else SalesItem.objects.none()
-                )
                 grading_log_records = (
                     GradingLog.objects.filter(flock=selected_flock)
                     if selected_flock
                     else GradingLog.objects.none()
                 )
+            sales_items = SalesItem.objects.all()
             period, date_from, date_to, period_label = self.get_period_bounds(selected_flock_id)
             period_logs = self.filter_by_date(production_logs, 'log_date', date_from, date_to)
             period_sales_items = self.filter_by_date(sales_items, 'transaction__sale_date', date_from, date_to)
@@ -1274,7 +1255,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 'period_feed_change_tone': self.change_tone(period_feed_change, inverse=True),
                 'period_loss_change_label': self.format_change(period_loss_change),
                 'period_loss_change_tone': self.change_tone(period_loss_change, inverse=True),
-                'today_sales': SalesTransaction.objects.filter(flock=selected_flock, sale_date=today).count() if selected_flock else 0,
+                'today_sales': SalesTransaction.objects.filter(sale_date=today).count(),
                 'total_revenue': float(weekly_revenue),
                 'total_hens': total_hens,
                 'weekly_revenue': float(weekly_revenue),
@@ -1392,13 +1373,10 @@ class FlockDetailView(LoginRequiredMixin, DetailView):
         flock = self.get_object()
         production_qs = ProductionLog.objects.filter(flock=flock)
         grading_qs = GradingLog.objects.filter(flock=flock)
-        sales_qs = SalesTransaction.objects.filter(flock=flock)
         context['production_logs'] = production_qs.order_by('-log_date')[:5]
         context['grading_logs'] = grading_qs.order_by('-log_date')[:5]
-        context['sales'] = sales_qs.order_by('-sale_date')[:5]
         context['production_log_count'] = production_qs.count()
         context['grading_log_count'] = grading_qs.count()
-        context['sales_count'] = sales_qs.count()
         context['current_hen_count'] = (
             production_qs.order_by('-log_date', '-pk')
             .values_list('hen_count', flat=True)
@@ -1682,15 +1660,12 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
     ordering = ['-sale_date']
     
     def get_queryset(self):
-        qs = super().get_queryset().select_related('flock', 'recorded_by').prefetch_related('items')
-        flock_id = self.request.GET.get('flock_id')
+        qs = super().get_queryset().select_related('recorded_by').prefetch_related('items')
         period = self.request.GET.get('period', 'all')
         today = timezone.localdate()
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
 
-        if flock_id:
-            qs = qs.filter(flock_id=flock_id)
         if period == 'today':
             qs = qs.filter(sale_date=today)
         elif period == 'month':
@@ -1708,8 +1683,6 @@ class SalesTransactionListView(StaffAccessMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['flocks'] = Flock.objects.order_by('house_no', '-date_started')
-        context['selected_flock_id'] = self.request.GET.get('flock_id', '')
         context['selected_period'] = self.request.GET.get('period', 'all')
         context['selected_date_from'] = self.request.GET.get('date_from', '')
         context['selected_date_to'] = self.request.GET.get('date_to', '')
@@ -1792,7 +1765,6 @@ class SalesImportView(StaffInputAccessMixin, View):
         if form.is_valid():
             preview = build_sales_preview(
                 form.cleaned_data['data_file'],
-                form.cleaned_data['flock'],
                 form.cleaned_data['date_mode'],
                 form.cleaned_data['conflict_strategy'],
             )
@@ -1812,7 +1784,7 @@ class SalesTransactionDetailView(StaffAccessMixin, DetailView):
     context_object_name = 'sales_transaction'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('flock', 'recorded_by')
+        return super().get_queryset().select_related('recorded_by')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

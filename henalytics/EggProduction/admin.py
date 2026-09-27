@@ -107,15 +107,15 @@ class SalesItemInline(admin.TabularInline):
 
 @admin.register(SalesTransaction)
 class SalesTransactionAdmin(admin.ModelAdmin):
-    list_display = ('flock', 'sale_date', 'or_number', 'recorded_by', 'created_at')
-    list_filter = ('flock', 'sale_date', 'recorded_by')
-    search_fields = ('flock__house_no', 'notes')
+    list_display = ('sale_date', 'or_number', 'recorded_by', 'created_at')
+    list_filter = ('sale_date', 'recorded_by')
+    search_fields = ('or_number', 'notes')
     date_hierarchy = 'sale_date'
     inlines = [SalesItemInline]
     readonly_fields = ('recorded_by', 'created_at', 'updated_at')
     fieldsets = (
         ('Transaction Information', {
-            'fields': ('flock', 'sale_date', 'or_number')
+            'fields': ('sale_date', 'or_number')
         }),
         ('Notes & User', {
             'fields': ('notes', 'recorded_by', 'created_at', 'updated_at')

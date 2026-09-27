@@ -59,13 +59,12 @@ class SalesItemSerializer(serializers.ModelSerializer):
 
 class SalesTransactionSerializer(serializers.ModelSerializer):
     items = SalesItemSerializer(many=True, read_only=True)
-    flock_detail = FlockSerializer(source='flock', read_only=True)
     recorded_by_username = serializers.CharField(source='recorded_by.username', read_only=True)
     total_amount = serializers.SerializerMethodField()
     
     class Meta:
         model = SalesTransaction
-        fields = ['id', 'flock', 'flock_detail', 'sale_date', 'recorded_by', 
+        fields = ['id', 'sale_date', 'recorded_by',
                  'recorded_by_username', 'or_number', 'notes', 'items', 'total_amount', 'created_at', 'updated_at']
         read_only_fields = ['recorded_by', 'created_at', 'updated_at']
     

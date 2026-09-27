@@ -310,7 +310,13 @@ class GradingLog(models.Model):
 
 # Sales Models (aligned with ERD)
 class SalesTransaction(models.Model):
-    flock = models.ForeignKey(Flock, on_delete=models.CASCADE, related_name='sales_transactions')
+    flock = models.ForeignKey(
+        Flock,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='sales_transactions',
+    )
     sale_date = models.DateField()
     or_number = models.CharField('OR number', max_length=50, blank=True, null=True)
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sales_transactions')
@@ -319,7 +325,7 @@ class SalesTransaction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Sale Transaction - {self.sale_date} - Flock {self.flock.house_no}"
+        return f"Sale Transaction - {self.sale_date}"
 
     @property
     def total_amount(self):

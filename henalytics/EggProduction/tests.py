@@ -219,11 +219,9 @@ class ProductionLogImportTest(TestCase):
 class SalesModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='cashier', password='pass12345')
-        self.flock = create_flock()
 
     def test_sales_item_computes_total_amount(self):
         transaction = SalesTransaction.objects.create(
-            flock=self.flock,
             sale_date=timezone.now().date(),
             recorded_by=self.user,
         )
@@ -318,7 +316,6 @@ class ForecastModelTest(TestCase):
                 eggs_a=700 + day,
             )
             transaction = SalesTransaction.objects.create(
-                flock=flock,
                 sale_date=log_date,
                 recorded_by=user,
             )
@@ -873,11 +870,6 @@ class TemplateRenderTest(TestCase):
             pct_hen_housed=Decimal('55.56'),
             entered_by=self.user,
         )
-        sales_transaction = SalesTransaction.objects.create(
-            flock=inactive_flock,
-            sale_date=timezone.localdate(),
-            recorded_by=self.user,
-        )
         grading_log = GradingLog.objects.create(
             flock=inactive_flock,
             log_date=timezone.localdate(),
@@ -895,9 +887,8 @@ class TemplateRenderTest(TestCase):
         sales_create_form = SalesTransactionForm()
 
         self.assertNotIn(inactive_flock, production_create_form.fields['flock'].queryset)
-        self.assertNotIn(inactive_flock, sales_create_form.fields['flock'].queryset)
+        self.assertNotIn('flock', sales_create_form.fields)
         self.assertIn(inactive_flock, ProductionLogForm(instance=production_log).fields['flock'].queryset)
-        self.assertIn(inactive_flock, SalesTransactionForm(instance=sales_transaction).fields['flock'].queryset)
 
         grading_create_response = self.client.get(reverse('eggproduction:grading-log-create'))
         grading_edit_response = self.client.get(reverse('eggproduction:grading-log-edit', kwargs={'pk': grading_log.pk}))
@@ -1090,7 +1081,6 @@ class TemplateRenderTest(TestCase):
             (timezone.localdate().replace(month=2, day=5), Decimal('7000.00')),
         ]:
             transaction = SalesTransaction.objects.create(
-                flock=self.flock,
                 sale_date=sale_date,
                 recorded_by=self.user,
             )
@@ -1288,7 +1278,6 @@ class TemplateRenderTest(TestCase):
             eggs_small=100,
         )
         transaction = SalesTransaction.objects.create(
-            flock=self.flock,
             sale_date=timezone.now().date(),
             recorded_by=self.user,
         )
@@ -1922,7 +1911,6 @@ class TemplateRenderTest(TestCase):
 
     def test_sales_transaction_list_renders_total_amount(self):
         transaction = SalesTransaction.objects.create(
-            flock=self.flock,
             sale_date=timezone.now().date(),
             recorded_by=self.user,
         )
@@ -1938,12 +1926,10 @@ class TemplateRenderTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '₱ 400.00')
 
-    def test_sales_transaction_list_filters_by_flock_and_custom_date(self):
-        other_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=60))
+    def test_sales_transaction_list_filters_by_custom_date(self):
         selected_date = timezone.localdate()
         outside_date = selected_date - timedelta(days=40)
         selected_transaction = SalesTransaction.objects.create(
-            flock=other_flock,
             sale_date=selected_date,
             recorded_by=self.user,
             or_number='SEL-001',
@@ -1955,7 +1941,6 @@ class TemplateRenderTest(TestCase):
             amount=Decimal('700.00'),
         )
         outside_transaction = SalesTransaction.objects.create(
-            flock=self.flock,
             sale_date=outside_date,
             recorded_by=self.user,
             or_number='OUT-001',
@@ -1968,14 +1953,13 @@ class TemplateRenderTest(TestCase):
         )
 
         response = self.client.get(reverse('eggproduction:sales-transaction-list'), {
-            'flock_id': other_flock.pk,
             'period': 'custom',
             'date_from': selected_date.isoformat(),
             'date_to': selected_date.isoformat(),
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Flock')
+        self.assertNotContains(response, '<label for="flock_id">Flock</label>', html=True)
         self.assertContains(response, 'Start')
         self.assertContains(response, 'To')
         self.assertContains(response, 'SEL-001')
@@ -1984,7 +1968,6 @@ class TemplateRenderTest(TestCase):
 
     def test_sales_transaction_create_saves_item_rows(self):
         response = self.client.post(reverse('eggproduction:sales-transaction-create'), {
-            'flock': self.flock.id,
             'sale_date': timezone.now().date(),
             'notes': 'Counter sale',
             'items-TOTAL_FORMS': '1',
@@ -2021,7 +2004,6 @@ class TemplateRenderTest(TestCase):
 
     def test_sales_transaction_missing_size_shows_red_field_error(self):
         response = self.client.post(reverse('eggproduction:sales-transaction-create'), {
-            'flock': self.flock.id,
             'sale_date': timezone.now().date(),
             'notes': 'Missing size',
             'items-TOTAL_FORMS': '1',
@@ -2045,7 +2027,6 @@ class SerializerTest(TestCase):
         profile = UserProfile.objects.create(user=user, role='admin')
         flock = create_flock()
         transaction = SalesTransaction.objects.create(
-            flock=flock,
             sale_date=timezone.now().date(),
             recorded_by=user,
         )
@@ -2053,3 +2034,4 @@ class SerializerTest(TestCase):
         self.assertEqual(UserProfileSerializer(profile).data['username'], 'serial')
         self.assertEqual(FlockSerializer(flock).data['breed_strain'], 'Lohmann Brown')
         self.assertEqual(SalesTransactionSerializer(transaction).data['total_amount'], 0)
+        self.assertNotIn('flock', SalesTransactionSerializer(transaction).data)
