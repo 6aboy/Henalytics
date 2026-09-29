@@ -624,14 +624,14 @@ a {
 }
 
 .record-filter .filter-actions {
-    align-items: flex-end;
+    align-items: stretch;
     display: flex;
     gap: 8px;
     justify-content: flex-end;
 }
 
 .record-filter .filter-actions .btn {
-    min-height: 46px;
+    height: 46px;
 }
 
 .dashboard-filter-card {
@@ -706,13 +706,14 @@ a {
 }
 
 .dashboard-filter-actions {
+    align-items: stretch;
     display: flex;
     gap: 8px;
     justify-content: flex-end;
 }
 
 .dashboard-filter-actions .btn {
-    min-height: 46px;
+    height: 46px;
     min-width: 86px;
 }
 
@@ -785,10 +786,14 @@ input[readonly].readonly-metric {
 
 .btn,
 .page-link {
-    display: inline-block;
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
     border-radius: 5px;
     font-weight: 700;
+    line-height: 1.2;
     padding: 6px 12px;
+    text-align: center;
     border: 1px solid transparent;
 }
 
@@ -997,6 +1002,12 @@ input[readonly].readonly-metric {
     font-size: 15px;
     font-weight: 900;
     text-transform: uppercase;
+}
+
+.production-detail-panel .detail-section-title {
+    color: var(--hen-blue);
+    font-size: 22px;
+    text-transform: none;
 }
 
 .detail-grid {
@@ -1626,9 +1637,17 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
         grid-column: 1 / -1;
     }
 
-    .dashboard-active-period,
-    .dashboard-filter-actions .btn {
+    .dashboard-active-period {
         width: 100%;
+    }
+
+    .dashboard-filter-actions {
+        justify-content: flex-start;
+    }
+
+    .dashboard-filter-actions .btn {
+        flex: 1 1 0;
+        width: auto;
     }
 
     .record-filter {
@@ -3085,7 +3104,7 @@ select {
     }
 
     .dashboard-filter-actions {
-        flex-direction: column;
+        flex-direction: row;
     }
 
     .detail-header {
