@@ -2,6 +2,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from io import BytesIO
 import json
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -396,6 +397,55 @@ class ForecastModelTest(TestCase):
         self.assertIsNotNone(prepared)
         self.assertEqual(prepared['series'].loc[str(missing_date)], 1050)
         self.assertNotEqual(prepared['series'].loc[str(missing_date)], 0)
+
+    def test_sales_forecast_uses_fallback_when_model_collapses(self):
+        start_date = timezone.now().date() - timedelta(days=20)
+        rows = [
+            {
+                'date': start_date + timedelta(days=day),
+                'value': 5000 + ((day % 7) * 120),
+            }
+            for day in range(14)
+        ]
+        prepared = ForecastingService._prepare_daily_dataset(rows, dataset_kind='sales')
+        model = type('FakeModel', (), {'aic': 10})()
+        candidate = {
+            'name': 'SARIMA',
+            'kind': 'sarima',
+            'spec': {'order': (1, 0, 0), 'seasonal_order': None},
+            'feature_set': 'none',
+            'model': model,
+            'metrics': {
+                'rmse': 500,
+                'mae': 450,
+                'mape': 8,
+                'baseline_rmse': 700,
+                'r_squared': 0.5,
+            },
+        }
+        with patch.object(
+            ForecastingService,
+            '_select_forecast_candidate',
+            return_value={'candidate': candidate, 'comparison_summary': {}},
+        ), patch.object(
+            ForecastingService,
+            '_forecast_values_with_intervals',
+            return_value=(
+                np.array([0.5, 0.5, 0.5], dtype=float),
+                np.array([0, 0, 0], dtype=float),
+                np.array([1, 1, 1], dtype=float),
+            ),
+        ):
+            result = ForecastingService._forecast_series(
+                prepared,
+                periods=3,
+                allow_seasonal=False,
+                compare_models=True,
+            )
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['order'], 'bounded trend guard')
+        self.assertTrue(all(value > 1000 for value in result['forecasted_values']))
 
     def test_egg_training_series_smooths_short_extreme_outliers(self):
         start_date = timezone.now().date() - timedelta(days=20)

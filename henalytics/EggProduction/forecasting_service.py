@@ -292,7 +292,7 @@ class ForecastingService:
             allow_seasonal=allow_seasonal,
             rate_limits=rate_limits,
         )
-        if fallback is not None and (prepared.get('dataset_kind') == 'egg' or not compare_models):
+        if fallback is not None and prepared.get('dataset_kind') in ('egg', 'sales'):
             fallback.setdefault('feature_set', best.get('feature_set', ''))
             fallback.setdefault('selection_metric', 'rolling_mae_mape' if compare_models else 'aic')
             fallback.setdefault('comparison_summary', selection.get('comparison_summary') if selection else {})

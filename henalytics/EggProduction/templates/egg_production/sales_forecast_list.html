@@ -83,7 +83,7 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Forecasted Revenue</div>
-                    <div class="metric-value">â‚± {{ forecast_total|floatformat:2|intcomma }}</div>
+                    <div class="metric-value">&#8369; {{ forecast_total|floatformat:2|intcomma }}</div>
                     <div class="metric-meta">Expected sales amount in {{ selected_range_label }}</div>
                 </div>
                 <span class="metric-icon blue">
@@ -95,7 +95,7 @@
             <div class="metric-card-main">
                 <div>
                     <div class="metric-label">Average / Day</div>
-                    <div class="metric-value">â‚± {{ forecast_daily_average|floatformat:2|intcomma }}</div>
+                    <div class="metric-value">&#8369; {{ forecast_daily_average|floatformat:2|intcomma }}</div>
                     <div class="metric-meta">{{ forecast_daily_points|default:0|intcomma }} forecast day{{ forecast_daily_points|pluralize }}</div>
                 </div>
                 <span class="metric-icon success">
@@ -108,7 +108,7 @@
                 <div>
                     <div class="metric-label">Error Rate</div>
                     <div class="metric-value">{% if latest_model and latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
-                    <div class="metric-meta">{% if latest_model and latest_model.mae %}Typical miss: â‚± {{ latest_model.mae }} / day{% else %}Needs enough history{% endif %}</div>
+                    <div class="metric-meta">{% if latest_model and latest_model.mae %}Typical miss: &#8369; {{ latest_model.mae }} / day{% else %}Needs enough history{% endif %}</div>
                 </div>
                 <span class="metric-icon warning">
                     <img src="{% static 'EggProduction/img/info-duotone.svg' %}" alt="" aria-hidden="true">
@@ -153,7 +153,7 @@
                         <div class="metric-label">Forecast Error Rate</div>
                         <div class="metric-value">{% if latest_model and latest_model.mape %}{{ latest_model.mape }}%{% else %}N/A{% endif %}</div>
                         <div class="metric-meta">
-                            {% if latest_model and latest_model.mae %}Typical miss: about â‚± {{ latest_model.mae }} per day{% else %}Backtest needs enough history{% endif %}
+                            {% if latest_model and latest_model.mae %}Typical miss: about &#8369; {{ latest_model.mae }} per day{% else %}Backtest needs enough history{% endif %}
                         </div>
                     </div>
                     <span class="metric-icon warning">
@@ -317,7 +317,7 @@
             <tr>
                 <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
                 <td><span class="badge bg-info">{{ forecast.get_grade_display }}</span></td>
-                <td><strong>â‚± {{ forecast.predicted_amount|floatformat:2|intcomma }}</strong></td>
+                <td><strong>&#8369; {{ forecast.predicted_amount|floatformat:2|intcomma }}</strong></td>
                 <td>{{ forecast.model_version.get_model_type_display }}</td>
                 <td>{{ forecast.created_at|date:"M d, Y" }}</td>
                 <td class="no-export">
