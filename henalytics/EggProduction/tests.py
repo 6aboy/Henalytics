@@ -29,7 +29,7 @@ from .models import (
     UserProfile,
 )
 from .forecasting_service import ForecastingService
-from .forms import ProductionLogForm, SalesTransactionForm
+from .forms import ProductionLogForm, SalesItemFormSet, SalesTransactionForm
 from .production_importer import parse_production_file
 from .sales_importer import parse_sales_file
 from .serializers import FlockSerializer, SalesTransactionSerializer, UserProfileSerializer
@@ -962,6 +962,13 @@ class TemplateRenderTest(TestCase):
 
         self.assertFalse(future_form.is_valid())
         self.assertIn('Sale date cannot be in the future.', future_form.errors['sale_date'])
+
+    def test_sales_create_formset_starts_with_one_item_row(self):
+        formset = SalesItemFormSet(prefix='items')
+
+        self.assertEqual(len(formset.forms), 1)
+        self.assertEqual(formset.min_num, 1)
+        self.assertTrue(formset.validate_min)
 
     def test_production_log_list_renders_with_filter(self):
         other_flock = create_flock(house_no=2, date_started=timezone.now().date() - timedelta(days=1))

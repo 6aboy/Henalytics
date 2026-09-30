@@ -236,7 +236,7 @@ SalesItemFormSet = inlineformset_factory(
     SalesTransaction,
     SalesItem,
     form=SalesItemForm,
-    extra=1,
+    extra=0,
     min_num=1,
     validate_min=True,
     can_delete=True,
