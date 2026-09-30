@@ -1063,6 +1063,7 @@ input[readonly].readonly-metric {
 }
 
 .production-form-grid-metrics {
+    align-items: start;
     grid-template-columns: repeat(5, minmax(120px, 1fr));
 }
 
