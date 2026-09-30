@@ -820,6 +820,13 @@ input[readonly].readonly-metric {
     padding: 6px 12px;
     text-align: center;
     border: 1px solid transparent;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.btn:hover,
+.btn:focus {
+    box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
+    transform: translateY(-2px);
 }
 
 .btn-primary,
@@ -831,9 +838,21 @@ input[readonly].readonly-metric {
 }
 
 .btn-primary:hover,
-.btn-info:hover {
-    background: var(--hen-blue-dark);
-    border-color: var(--hen-blue-dark);
+.btn-primary:focus,
+.btn-info:hover,
+.btn-info:focus {
+    color: #fff;
+    background: #4c73e6;
+    border-color: #4c73e6;
+    box-shadow: 0 10px 20px rgba(49, 92, 212, 0.2);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    color: #fff;
+    background: #7b8794;
+    border-color: #7b8794;
+    box-shadow: 0 10px 20px rgba(102, 114, 127, 0.18);
 }
 
 .btn-back {
@@ -883,9 +902,25 @@ input[readonly].readonly-metric {
     border-color: #ffd900;
 }
 
+.btn-warning:hover,
+.btn-warning:focus {
+    color: #172033;
+    background: #ffe766;
+    border-color: #ffe766;
+    box-shadow: 0 10px 20px rgba(255, 217, 0, 0.2);
+}
+
 .btn-danger {
     background: #ed0909;
     border-color: #ed0909;
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+    color: #fff;
+    background: #ff2f2f;
+    border-color: #ff2f2f;
+    box-shadow: 0 10px 20px rgba(237, 9, 9, 0.2);
 }
 
 .btn-success,
@@ -893,6 +928,14 @@ input[readonly].readonly-metric {
 .export-excel {
     background: #05853e;
     border-color: #05853e;
+}
+
+.btn-success:hover,
+.btn-success:focus {
+    color: #fff;
+    background: #0aa650;
+    border-color: #0aa650;
+    box-shadow: 0 10px 20px rgba(5, 133, 62, 0.2);
 }
 
 .export-copy,
