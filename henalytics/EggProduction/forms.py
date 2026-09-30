@@ -146,10 +146,21 @@ class SalesTransactionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        today = timezone.localdate()
+        self.fields['sale_date'].initial = self.initial.get('sale_date') or today
+        self.fields['sale_date'].widget.input_type = 'date'
+        self.fields['sale_date'].widget.attrs['max'] = today.isoformat()
         self.fields['notes'].widget.attrs.update({
             'class': 'form-control compact-note-input',
             'rows': 2,
         })
+
+    def clean_sale_date(self):
+        sale_date = self.cleaned_data['sale_date']
+        today = timezone.localdate()
+        if sale_date > today:
+            raise forms.ValidationError('Sale date cannot be in the future.')
+        return sale_date
 
 
 class SalesImportForm(forms.Form):

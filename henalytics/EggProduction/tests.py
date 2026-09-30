@@ -946,6 +946,23 @@ class TemplateRenderTest(TestCase):
         self.assertNotIn(inactive_flock, grading_create_response.context['form'].fields['flock'].queryset)
         self.assertIn(inactive_flock, grading_edit_response.context['form'].fields['flock'].queryset)
 
+    def test_sales_form_defaults_to_today_and_blocks_future_dates(self):
+        today = timezone.localdate()
+        form = SalesTransactionForm()
+
+        self.assertEqual(form.fields['sale_date'].initial, today)
+        self.assertEqual(form.fields['sale_date'].widget.input_type, 'date')
+        self.assertEqual(form.fields['sale_date'].widget.attrs['max'], today.isoformat())
+
+        future_form = SalesTransactionForm(data={
+            'sale_date': today + timedelta(days=1),
+            'or_number': 'FUTURE-001',
+            'notes': '',
+        })
+
+        self.assertFalse(future_form.is_valid())
+        self.assertIn('Sale date cannot be in the future.', future_form.errors['sale_date'])
+
     def test_production_log_list_renders_with_filter(self):
         other_flock = create_flock(house_no=2, date_started=timezone.now().date() - timedelta(days=1))
         ProductionLog.objects.create(
