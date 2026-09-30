@@ -652,9 +652,9 @@ a {
 
 .record-filter .filter-actions .btn-secondary:hover,
 .dashboard-filter-actions .btn-secondary:hover {
-    color: #172033;
+    color: var(--hen-blue);
     background: #f4f6fa;
-    border-color: #f4f6fa;
+    border-color: var(--hen-blue);
     box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
     transform: translateY(-2px);
 }
@@ -849,17 +849,17 @@ input[readonly].readonly-metric {
 
 .btn-secondary:hover,
 .btn-secondary:focus {
-    color: #172033;
+    color: var(--hen-blue);
     background: #f4f6fa;
-    border-color: #f4f6fa;
+    border-color: var(--hen-blue);
     box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
 }
 
 .btn-secondary:not(.btn-cancel),
 .btn-back {
-    color: #172033;
+    color: var(--hen-blue);
     background: #eceff4;
-    border-color: #eceff4;
+    border-color: var(--hen-blue);
     border-radius: 10px;
     box-shadow: none;
     min-width: 88px;
@@ -881,9 +881,9 @@ input[readonly].readonly-metric {
 
 .btn-back:hover,
 .btn-back:focus {
-    color: #172033;
+    color: var(--hen-blue);
     background: #f4f6fa;
-    border-color: #f4f6fa;
+    border-color: var(--hen-blue);
     box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
     transform: translateY(-2px);
 }
