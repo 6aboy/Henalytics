@@ -11,7 +11,7 @@
         data-swal-text="This staff egg production record will be permanently deleted.">
         {% csrf_token %}
         <button class="btn btn-danger" type="submit">Confirm Delete</button>
-        <a href="{% url 'eggproduction:staff-egg-list' %}" class="btn btn-secondary">Cancel</a>
+        <a href="{% url 'eggproduction:staff-egg-list' %}" class="btn btn-secondary btn-cancel">Cancel</a>
     </form>
 </div>
 {% endblock %}

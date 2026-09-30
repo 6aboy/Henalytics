@@ -5,7 +5,7 @@
 {% block page_title %}Sales Details{% endblock %}
 
 {% block content %}
-<div class="action-panel detail-panel">
+<div class="action-panel detail-panel sales-detail-panel">
     <div class="detail-header">
         <div>
             <h2 class="detail-title">Sales Transaction</h2>
@@ -21,7 +21,7 @@
                 <button type="submit" class="btn btn-danger">Delete</button>
             </form>
             {% endif %}
-            <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary">Back</a>
+            <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary btn-back">Back</a>
         </div>
     </div>
 
