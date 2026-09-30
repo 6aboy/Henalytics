@@ -652,10 +652,10 @@ a {
 
 .record-filter .filter-actions .btn-secondary:hover,
 .dashboard-filter-actions .btn-secondary:hover {
-    color: #66727f;
+    color: #172033;
     background: #f4f6fa;
-    border-color: #7b8794;
-    box-shadow: 0 10px 20px rgba(102, 114, 127, 0.18);
+    border-color: #f4f6fa;
+    box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
     transform: translateY(-2px);
 }
 
@@ -849,12 +849,13 @@ input[readonly].readonly-metric {
 
 .btn-secondary:hover,
 .btn-secondary:focus {
-    color: #66727f;
+    color: #172033;
     background: #f4f6fa;
-    border-color: #7b8794;
-    box-shadow: 0 10px 20px rgba(102, 114, 127, 0.18);
+    border-color: #f4f6fa;
+    box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
 }
 
+.btn-secondary:not(.btn-cancel),
 .btn-back {
     color: #172033;
     background: #eceff4;
