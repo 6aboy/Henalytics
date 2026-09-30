@@ -889,8 +889,8 @@ input[readonly].readonly-metric {
 
 .btn-cancel:hover,
 .btn-cancel:focus {
-    color: #fff;
-    background: #4c73e6;
+    color: var(--hen-blue);
+    background: #f4f7ff;
     border-color: #4c73e6;
     box-shadow: 0 10px 20px rgba(49, 92, 212, 0.2);
     transform: translateY(-2px);
