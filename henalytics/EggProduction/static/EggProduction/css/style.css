@@ -904,7 +904,7 @@ input[readonly].readonly-metric {
 
 .btn-warning:hover,
 .btn-warning:focus {
-    color: #172033;
+    color: #fff;
     background: #ffe766;
     border-color: #ffe766;
     box-shadow: 0 10px 20px rgba(255, 217, 0, 0.2);
