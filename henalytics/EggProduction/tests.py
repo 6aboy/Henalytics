@@ -1166,6 +1166,31 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'All Active Flocks')
         self.assertContains(response, 'Download Chart')
 
+    def test_dashboard_reset_defaults_to_all_active_flocks(self):
+        today = timezone.localdate()
+        second_flock = create_flock(house_no=2, date_started=today - timedelta(days=90))
+        for flock, eggs_total in ((self.flock, 600), (second_flock, 900)):
+            ProductionLog.objects.create(
+                flock=flock,
+                log_date=today,
+                age_weeks=30,
+                age_days=210,
+                hen_count=1780,
+                feed_bags=12,
+                eggs_total=eggs_total,
+                pct_hen_day=Decimal('70.00'),
+                pct_hen_housed=Decimal('65.00'),
+                entered_by=self.user,
+            )
+
+        response = self.client.get(reverse('eggproduction:dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['dashboard_all_active_scope'])
+        self.assertEqual(response.context['selected_dashboard_flock_id'], 'all')
+        self.assertEqual(response.context['selected_dashboard_scope_label'], 'All Active Flocks')
+        self.assertEqual(response.context['period_egg_total'], 1500)
+
     def test_dashboard_specific_month_filter_uses_calendar_month(self):
         selected_month_date = timezone.localdate().replace(day=10)
         previous_month_date = (selected_month_date.replace(day=1) - timedelta(days=1)).replace(day=10)

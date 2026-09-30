@@ -568,11 +568,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return Flock.objects.filter(status='active').order_by('house_no', '-date_started', 'id')
 
     def is_all_active_scope(self):
-        return self.request.GET.get('flock_id') == 'all'
+        return self.request.GET.get('flock_id', 'all') == 'all'
 
     def get_selected_flock(self):
         flocks = self.dashboard_flocks()
-        requested_flock_id = self.request.GET.get('flock_id')
+        requested_flock_id = self.request.GET.get('flock_id', 'all')
         if requested_flock_id == 'all':
             return None
         if requested_flock_id:
