@@ -583,7 +583,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_period_bounds(self, flock_id=None):
         today = timezone.localdate()
-        period = self.request.GET.get('period', 'specific_month')
+        period = self.request.GET.get('period', 'all')
         start = None
         end = today
         selected_month = self.request.GET.get('month_value') or self.default_month_value(flock_id)

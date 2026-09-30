@@ -1009,7 +1009,7 @@ class TemplateRenderTest(TestCase):
         self.assertIn('dashboard_charts_payload_json', response.context)
         self.assertNotIn('monthly_dashboard_payload_json', response.context)
 
-    def test_dashboard_defaults_to_one_flock_and_filters_by_selected_flock(self):
+    def test_dashboard_defaults_to_all_active_and_filters_by_selected_flock(self):
         selected_month_date = timezone.localdate().replace(day=10)
         second_flock = create_flock(house_no=2, date_started=timezone.localdate() - timedelta(days=90))
         ProductionLog.objects.create(
@@ -1049,8 +1049,10 @@ class TemplateRenderTest(TestCase):
         selected_payload = json.loads(selected_response.context['dashboard_charts_payload_json'])
 
         self.assertEqual(default_response.status_code, 200)
-        self.assertEqual(default_response.context['selected_dashboard_flock'], self.flock)
-        self.assertEqual(default_response.context['period_egg_total'], 500)
+        self.assertIsNone(default_response.context['selected_dashboard_flock'])
+        self.assertTrue(default_response.context['dashboard_all_active_scope'])
+        self.assertEqual(default_response.context['selected_dashboard_flock_id'], 'all')
+        self.assertEqual(default_response.context['period_egg_total'], 1400)
         self.assertEqual(selected_response.status_code, 200)
         self.assertEqual(selected_response.context['selected_dashboard_flock'], second_flock)
         self.assertEqual(selected_response.context['period_egg_total'], 900)
@@ -1166,13 +1168,17 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'All Active Flocks')
         self.assertContains(response, 'Download Chart')
 
-    def test_dashboard_reset_defaults_to_all_active_flocks(self):
+    def test_dashboard_reset_defaults_to_all_active_flocks_and_all_records(self):
         today = timezone.localdate()
         second_flock = create_flock(house_no=2, date_started=today - timedelta(days=90))
-        for flock, eggs_total in ((self.flock, 600), (second_flock, 900)):
+        for flock, log_date, eggs_total in (
+            (self.flock, today - timedelta(days=45), 400),
+            (self.flock, today, 600),
+            (second_flock, today, 900),
+        ):
             ProductionLog.objects.create(
                 flock=flock,
-                log_date=today,
+                log_date=log_date,
                 age_weeks=30,
                 age_days=210,
                 hen_count=1780,
@@ -1189,7 +1195,11 @@ class TemplateRenderTest(TestCase):
         self.assertTrue(response.context['dashboard_all_active_scope'])
         self.assertEqual(response.context['selected_dashboard_flock_id'], 'all')
         self.assertEqual(response.context['selected_dashboard_scope_label'], 'All Active Flocks')
-        self.assertEqual(response.context['period_egg_total'], 1500)
+        self.assertEqual(response.context['dashboard_period'], 'all')
+        self.assertEqual(response.context['dashboard_period_label'], 'All Records')
+        self.assertIsNone(response.context['dashboard_date_from'])
+        self.assertIsNone(response.context['dashboard_date_to'])
+        self.assertEqual(response.context['period_egg_total'], 1900)
 
     def test_dashboard_specific_month_filter_uses_calendar_month(self):
         selected_month_date = timezone.localdate().replace(day=10)
@@ -1272,9 +1282,9 @@ class TemplateRenderTest(TestCase):
         response = self.client.get(reverse('eggproduction:dashboard'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['dashboard_period'], 'specific_month')
-        self.assertEqual(response.context['dashboard_period_label'], today.strftime('%B %Y'))
-        self.assertEqual(response.context['period_egg_total'], 2000)
+        self.assertEqual(response.context['dashboard_period'], 'all')
+        self.assertEqual(response.context['dashboard_period_label'], 'All Records')
+        self.assertEqual(response.context['period_egg_total'], 3000)
         self.assertEqual(response.context['recent_losses_7d'], 1)
         self.assertEqual(response.context['recent_losses_30d'], 3)
         self.assertEqual(response.context['recent_losses_60d'], 6)
