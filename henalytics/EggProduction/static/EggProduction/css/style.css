@@ -1190,12 +1190,9 @@ input[readonly].readonly-metric {
 }
 
 .sales-meta-grid {
-    display: grid;
-    grid-template-columns: minmax(220px, 1.15fr) minmax(260px, 1.2fr) minmax(180px, 0.85fr);
-    gap: 22px;
-    align-items: start;
-    padding-bottom: 28px;
-    border-bottom: 2px solid #eef4ff;
+    grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+    gap: 18px;
+    align-items: end;
 }
 
 .sales-meta-grid .form-group {
@@ -1222,42 +1219,58 @@ input[readonly].readonly-metric {
     justify-content: space-between;
     gap: 16px;
     align-items: center;
-    margin: 22px 0 12px;
+    margin: 0 0 14px;
 }
 
 .sales-items-header h2 {
     margin: 0;
     color: var(--hen-blue);
-    font-size: 22px;
-    font-weight: 900;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.sales-item-list {
+    display: grid;
+    gap: 12px;
 }
 
 .sales-item-row {
     display: grid;
-    grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(110px, 0.7fr) auto;
-    gap: 10px;
+    grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 0.8fr) auto;
+    gap: 14px;
     align-items: end;
-    margin-bottom: 10px;
-    padding: 12px;
+    margin-bottom: 0;
+    padding: 16px;
     border: 1px solid #dbe6ff;
+    border-radius: 6px;
     background: #f8fbff;
 }
 
 .sales-item-field label,
 .sales-item-delete span {
     display: block;
-    margin-bottom: 5px;
-    color: #68758c;
-    font-size: 12px;
-    font-weight: 900;
-    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: #000;
+    font-size: 0.95rem;
+    font-weight: 800;
+    text-transform: none;
+}
+
+.sales-item-field input,
+.sales-item-field select {
+    width: 100%;
+    min-height: 46px;
 }
 
 .sales-item-total {
-    min-height: 38px;
+    min-height: 46px;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid #cfd8e6;
+    border-radius: 5px;
+    background: #eaf1ff;
 }
 
 .sales-item-total span,
@@ -1289,7 +1302,7 @@ input[readonly].readonly-metric {
     justify-content: flex-end;
     align-items: baseline;
     gap: 12px;
-    margin: 14px 0 22px;
+    margin: 12px 0 0;
     padding: 12px;
     background: #eef4ff;
     border-left: 4px solid var(--hen-blue);
