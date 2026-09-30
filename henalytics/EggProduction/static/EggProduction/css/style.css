@@ -1618,9 +1618,10 @@ input[readonly].readonly-metric {
 .dt-buttons .dt-button.buttons-colvis,
 div.dt-buttons > .dt-button.buttons-colvis,
 div.dt-buttons > button.dt-button.buttons-colvis {
-    background: #dfe9ff !important;
-    border-color: #b9ccff !important;
-    color: #2149b3 !important;
+    background: #eceff4 !important;
+    border-color: var(--hen-blue) !important;
+    border-radius: 10px !important;
+    color: var(--hen-blue) !important;
     margin-right: auto !important;
     min-width: 120px;
     opacity: 1 !important;
@@ -1632,9 +1633,12 @@ div.dt-buttons > .dt-button.buttons-colvis:hover,
 div.dt-buttons > .dt-button.buttons-colvis:focus,
 div.dt-buttons > button.dt-button.buttons-colvis:hover,
 div.dt-buttons > button.dt-button.buttons-colvis:focus {
-    background: #cfdcff !important;
-    border-color: #9fb8ff !important;
-    color: #173a91 !important;
+    background: #f4f6fa !important;
+    border-color: var(--hen-blue) !important;
+    color: var(--hen-blue) !important;
+    box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14) !important;
+    filter: none;
+    transform: translateY(-2px);
 }
 
 .dt-buttons .dt-button.buttons-colvis span,
