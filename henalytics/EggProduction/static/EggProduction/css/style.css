@@ -1050,6 +1050,14 @@ input[readonly].readonly-metric {
     grid-template-columns: minmax(260px, 1.1fr) minmax(280px, 1fr);
 }
 
+.production-form-grid-two {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.production-form-grid-three {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
 .production-form-grid-inputs {
     grid-template-columns: repeat(4, minmax(140px, 1fr));
 }
@@ -3077,6 +3085,8 @@ select {
     }
 
     .production-form-grid-main,
+    .production-form-grid-two,
+    .production-form-grid-three,
     .production-form-grid-inputs,
     .production-form-grid-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3246,6 +3256,8 @@ select {
     }
 
     .production-form-grid-main,
+    .production-form-grid-two,
+    .production-form-grid-three,
     .production-form-grid-inputs,
     .production-form-grid-metrics {
         grid-template-columns: 1fr;

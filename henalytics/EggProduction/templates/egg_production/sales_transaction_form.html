@@ -9,15 +9,18 @@
     <div class="row justify-content-center">
         <div class="col-md-10 action-panel">
             <h1>{% if form.instance.pk %}Edit Sales Transaction{% else %}New Sales Transaction{% endif %}</h1>
+            <p class="form-intro">Record a sales transaction, add egg-size line items, and review the computed transaction total before saving.</p>
 
-            <form method="post" class="form mt-4" id="sales-transaction-form" data-swal-loading
+            <form method="post" class="form production-form" id="sales-transaction-form" data-swal-loading
                 data-swal-title="{% if form.instance.pk %}Updating sales transaction{% else %}Saving sales transaction{% endif %}"
                 data-swal-text="Please wait while the sales transaction is being saved.">
                 {% csrf_token %}
 
                 {% include 'egg_production/includes/form_errors.html' %}
 
-                <div class="sales-meta-grid">
+                <section class="form-section">
+                    <h2>Transaction Info</h2>
+                <div class="production-form-grid production-form-grid-main sales-meta-grid">
                     <div class="form-group">
                         <label for="{{ form.sale_date.id_for_label }}">Sale Date</label>
                         <div class="date-input-action">
@@ -36,7 +39,9 @@
                         {% endfor %}
                     </div>
                 </div>
+                </section>
 
+                <section class="form-section">
                 <div class="sales-items-header">
                     <h2>Sales Items</h2>
                     <button type="button" class="btn btn-info" id="add-sales-item">Add Item</button>
@@ -131,13 +136,18 @@
                     <strong id="sales-grand-total">₱ 0.00</strong>
                 </div>
 
+                </section>
+
+                <section class="form-section">
+                    <h2>Notes</h2>
                 <div class="form-group sales-notes note-field">
-                    <label for="{{ form.notes.id_for_label }}">Notes</label>
+                    <label class="visually-hidden" for="{{ form.notes.id_for_label }}">Notes</label>
                     {{ form.notes }}
                     {% for error in form.notes.errors %}
                     <small class="form-error">{{ error }}</small>
                     {% endfor %}
                 </div>
+                </section>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
                     <a href="{% url 'eggproduction:sales-transaction-list' %}" class="btn btn-secondary btn-cancel">Cancel</a>

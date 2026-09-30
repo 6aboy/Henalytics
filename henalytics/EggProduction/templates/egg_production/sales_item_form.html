@@ -8,15 +8,19 @@
     <div class="row justify-content-center">
         <div class="col-md-6 action-panel">
             <h1>{% if form.instance.pk %}Edit Sales Item{% else %}Add Sales Item{% endif %}</h1>
+            <p class="form-intro">Add or update one egg-size line item for this sales transaction.</p>
 
-            <div class="alert alert-info mb-4">
+            <div class="alert alert-info">
                 <strong>Transaction:</strong> {{ transaction.sale_date|date:"M d, Y" }}
             </div>
 
-            <form method="post" class="form">
+            <form method="post" class="form production-form">
                 {% csrf_token %}
                 {% include 'egg_production/includes/form_errors.html' %}
-                <div class="form-group mb-3">
+                <section class="form-section">
+                    <h2>Item Info</h2>
+                    <div class="production-form-grid production-form-grid-three">
+                <div class="form-group">
                     <label for="{{ form.grade.id_for_label }}">Size</label>
                     {{ form.grade }}
                     {% for error in form.grade.errors %}
@@ -24,7 +28,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="form-group mb-3">
+                <div class="form-group">
                     <label for="{{ form.quantity_pieces.id_for_label }}">Quantity (pcs)</label>
                     {{ form.quantity_pieces }}
                     {% for error in form.quantity_pieces.errors %}
@@ -32,7 +36,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="form-group mb-3">
+                <div class="form-group">
                     <label for="{{ form.price_per_piece.id_for_label }}">Price per Piece</label>
                     {{ form.price_per_piece }}
                     {% for error in form.price_per_piece.errors %}
@@ -40,10 +44,12 @@
                     {% endfor %}
                 </div>
 
+                    </div>
                 <div class="sales-grand-total">
                     <span>Total Amount</span>
                     <strong id="sales-item-total">₱ 0.00</strong>
                 </div>
+                </section>
 
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
                     <a href="{% url 'eggproduction:sales-transaction-detail' transaction.pk %}"
