@@ -46,11 +46,11 @@
         </div>
         <div class="dashboard-range-fields {% if dashboard_period == 'custom' %}active{% endif %}" data-period-control="custom">
             <div class="dashboard-filter-field dashboard-date-picker">
-                <label for="dashboardDateFrom">Start</label>
+                <label for="dashboardDateFrom">Start (MM/DD/YYYY)</label>
                 <input type="date" name="date_from" id="dashboardDateFrom" class="form-control" value="{{ dashboard_date_from_value }}">
             </div>
             <div class="dashboard-filter-field dashboard-date-picker">
-                <label for="dashboardDateTo">To</label>
+                <label for="dashboardDateTo">To (MM/DD/YYYY)</label>
                 <input type="date" name="date_to" id="dashboardDateTo" class="form-control" value="{{ dashboard_date_to_value }}">
             </div>
         </div>
