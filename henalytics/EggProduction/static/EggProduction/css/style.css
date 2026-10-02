@@ -626,17 +626,31 @@ a {
 .record-filter .filter-actions {
     align-items: stretch;
     display: flex;
-    gap: 8px;
+    gap: 12px;
     justify-content: flex-end;
 }
 
 .record-filter .filter-actions .btn {
-    height: 46px;
+    height: 50px;
 }
 
 .record-filter .filter-actions .btn,
 .dashboard-filter-actions .btn {
+    border-radius: 16px;
+    font-size: 1rem;
+    min-width: 112px;
+    padding: 0 26px;
     transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.record-filter .filter-actions .btn-secondary,
+.record-filter .filter-actions .btn-secondary:focus,
+.dashboard-filter-actions .btn-secondary,
+.dashboard-filter-actions .btn-secondary:focus {
+    color: var(--hen-blue);
+    background: #fff;
+    border-color: var(--hen-blue);
+    box-shadow: none;
 }
 
 .record-filter .filter-actions .btn-info:hover,
@@ -651,11 +665,13 @@ a {
 }
 
 .record-filter .filter-actions .btn-secondary:hover,
-.dashboard-filter-actions .btn-secondary:hover {
+.record-filter .filter-actions .btn-secondary:focus:hover,
+.dashboard-filter-actions .btn-secondary:hover,
+.dashboard-filter-actions .btn-secondary:focus:hover {
     color: var(--hen-blue);
-    background: #f4f6fa;
+    background: #f8fbff;
     border-color: var(--hen-blue);
-    box-shadow: 0 10px 20px rgba(23, 32, 51, 0.14);
+    box-shadow: 0 10px 20px rgba(49, 92, 212, 0.16);
     transform: translateY(-2px);
 }
 
@@ -733,13 +749,12 @@ a {
 .dashboard-filter-actions {
     align-items: stretch;
     display: flex;
-    gap: 8px;
+    gap: 12px;
     justify-content: flex-end;
 }
 
 .dashboard-filter-actions .btn {
-    height: 46px;
-    min-width: 86px;
+    height: 50px;
 }
 
 .dashboard-active-period {
