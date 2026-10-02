@@ -1161,9 +1161,67 @@ input[readonly].readonly-metric {
 
 .detail-actions {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 12px;
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.detail-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.detail-actions .btn {
+    min-width: 88px;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    box-shadow: none;
+}
+
+.detail-actions .btn-warning {
+    color: #fff;
+    background: #ffd900;
+    border-color: #ffd900;
+}
+
+.detail-actions .btn-warning:hover,
+.detail-actions .btn-warning:focus {
+    color: #fff;
+    background: #ffe55c;
+    border-color: #ffe55c;
+    box-shadow: 0 10px 20px rgba(255, 217, 0, 0.22);
+}
+
+.detail-actions .btn-danger {
+    color: #fff;
+    background: #ed0909;
+    border-color: #ed0909;
+}
+
+.detail-actions .btn-danger:hover,
+.detail-actions .btn-danger:focus {
+    color: #fff;
+    background: #ff3030;
+    border-color: #ff3030;
+    box-shadow: 0 10px 20px rgba(237, 9, 9, 0.22);
+}
+
+.detail-actions .btn-back {
+    color: #fff;
+    background: #5385ff;
+    border-color: #5385ff;
+}
+
+.detail-actions .btn-back:hover,
+.detail-actions .btn-back:focus {
+    color: #fff;
+    background: #6f9aff;
+    border-color: #6f9aff;
+    box-shadow: 0 10px 20px rgba(83, 133, 255, 0.24);
 }
 
 .detail-section {
