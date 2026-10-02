@@ -5,7 +5,7 @@
 {% block page_title %}Flock Management{% endblock %}
 
 {% block content %}
-<div class="page-actions">
+<div class="page-actions record-actions">
     {% if user.userprofile.role == 'staff' or user.is_staff and not user.is_superuser %}
     <a href="{% url 'eggproduction:flock-create' %}" class="btn btn-primary">Create</a>
     {% endif %}
