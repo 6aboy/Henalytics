@@ -114,12 +114,13 @@ class ProductionLogImportForm(forms.Form):
         choices=DATE_MODE_CHOICES,
         initial='clsu_markers',
         label='Date reading',
-        help_text='Use CLSU month markers when dates like 1/6/2026 mean June 1, 2026.',
+        help_text='Use File Dates keeps each row date exactly as written in the file. Use CLSU month markers when dates like 1/6/2026 mean June 1, 2026.',
     )
     conflict_strategy = forms.ChoiceField(
         choices=CONFLICT_STRATEGY_CHOICES,
         initial='update',
         label='Existing records',
+        help_text='Choose how the import handles records that already exist for the same flock and date.',
     )
 
     def __init__(self, *args, **kwargs):
@@ -182,11 +183,13 @@ class SalesImportForm(forms.Form):
         choices=DATE_MODE_CHOICES,
         initial='stored',
         label='Date reading',
+        help_text='Use File Dates keeps each row date exactly as written in the file. Use CLSU month markers only when the file uses month-marker dates.',
     )
     conflict_strategy = forms.ChoiceField(
         choices=CONFLICT_STRATEGY_CHOICES,
         initial='update',
         label='Existing records',
+        help_text='Choose how the import handles sales records that already exist for the same sale date or OR number.',
     )
 
     def __init__(self, *args, **kwargs):

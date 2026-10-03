@@ -18,20 +18,22 @@
                 <section class="form-section">
                     <h2>File Setup</h2>
                     <div class="production-form-grid production-form-grid-main">
-                        <div class="form-group">
+                        <div class="form-group import-file-field">
                             <label for="{{ form.data_file.id_for_label }}">Excel or CSV File</label>
                             {{ form.data_file }}
                             {% for error in form.data_file.errors %}
                             <small class="form-error">{{ error }}</small>
                             {% endfor %}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group import-option-field">
                             <label for="{{ form.date_mode.id_for_label }}">Date Reading</label>
                             {{ form.date_mode }}
+                            <small class="form-help">{{ form.date_mode.help_text }}</small>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group import-option-field">
                             <label for="{{ form.conflict_strategy.id_for_label }}">Existing Records</label>
                             {{ form.conflict_strategy }}
+                            <small class="form-help">{{ form.conflict_strategy.help_text }}</small>
                         </div>
                     </div>
                 </section>
