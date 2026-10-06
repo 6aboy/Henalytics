@@ -1,19 +1,19 @@
 :root {
-    --brand-primary: #1e6031;
-    --brand-primary-dark: #174c27;
-    --brand-primary-strong: #10391d;
+    --brand-primary: #009639;
+    --brand-primary-dark: #007a2e;
+    --brand-primary-strong: #006b2d;
     --brand-yellow: #ffd700;
-    --brand-success: #1e6031;
+    --brand-success: #009639;
     --brand-grid: #bfd8c5;
     --hen-bg: #f0f3f1;
     --hen-text: #18231c;
     --hen-muted: #69756d;
     --hen-shadow: 0 2px 9px rgba(0, 0, 0, 0.22);
     --hen-number-font: "Acumin Pro", "Segoe UI", Roboto, Arial, sans-serif;
-    --bs-primary: #1e6031;
+    --bs-primary: #009639;
     --bs-primary-rgb: 0, 150, 57;
-    --bs-link-color: #10391d;
-    --bs-link-hover-color: #0b2a15;
+    --bs-link-color: #006b2d;
+    --bs-link-hover-color: #005723;
 }
 
 @font-face {
@@ -129,7 +129,7 @@ a {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background: #1e6031;
     box-shadow: 2px 0 14px rgba(15, 23, 42, 0.12);
     z-index: 4;
 }
@@ -150,9 +150,9 @@ a {
     display: block;
     width: 100%;
     padding: 14px 16px 12px;
-    border: 1px solid #cfe5d4;
+    border: 1px solid rgba(255, 255, 255, 0.26);
     border-radius: 10px;
-    background: #f7fbf8;
+    background: rgba(255, 255, 255, 0.08);
     text-align: center;
 }
 
@@ -170,7 +170,7 @@ a {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: var(--brand-primary);
+    color: #fff;
     font-size: 1.4rem;
     font-weight: 700;
     line-height: 1;
@@ -192,7 +192,7 @@ a {
 .brand-subtitle {
     display: block;
     margin-top: 6px;
-    color: #7a8699;
+    color: rgba(255, 255, 255, 0.76);
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -207,7 +207,7 @@ a {
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.08em;
-    color: #7a8494;
+    color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase;
 }
 
@@ -222,7 +222,7 @@ a {
     margin-bottom: 6px;
     padding: 0 12px 0 8px;
     border-radius: 7px;
-    color: #253044;
+    color: rgba(255, 255, 255, 0.9);
     font-size: 0.96rem;
     font-weight: 500;
     line-height: 1.2;
@@ -235,7 +235,7 @@ a {
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    background: var(--brand-primary-dark);
+    background: var(--brand-yellow);
     opacity: 0;
     transform: scaleX(0.12);
     transform-origin: 24px center;
@@ -251,8 +251,8 @@ a {
     width: 32px;
     height: 32px;
     border-radius: 9px;
-    background: var(--brand-primary-dark);
-    box-shadow: 0 6px 14px rgba(30, 96, 49, 0.18);
+    background: var(--brand-primary);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
     transform: translateY(-50%);
     transition: background 0.22s ease, box-shadow 0.22s ease;
 }
@@ -264,8 +264,8 @@ a {
 
 .side-link:hover,
 .side-link.active {
-    color: #fff;
-    box-shadow: inset 3px 0 var(--brand-yellow), 0 8px 16px rgba(30, 96, 49, 0.18);
+    color: #18231c;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .side-link:hover::before,
@@ -312,9 +312,9 @@ a {
     position: relative;
     margin-top: auto;
     padding: 12px;
-    border-top: 1px solid #e6e8ee;
-    background: #fff;
-    box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    background: #1e6031;
+    box-shadow: none;
 }
 
 .account-summary {
@@ -343,7 +343,7 @@ a {
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    background: var(--brand-primary-dark);
+    background: var(--brand-primary);
     opacity: 0;
     transform: scaleX(0.12);
     transform-origin: 22px center;
@@ -359,8 +359,8 @@ a {
     width: 34px;
     height: 34px;
     border-radius: 9px;
-    background: var(--brand-primary-dark);
-    box-shadow: 0 6px 14px rgba(30, 96, 49, 0.18);
+    background: var(--brand-primary);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
     transform: translateY(-50%);
     transition: background 0.22s ease, box-shadow 0.22s ease;
 }
@@ -369,7 +369,7 @@ a {
 .account-summary:focus-within {
     color: #fff;
     border-color: transparent;
-    box-shadow: 0 8px 16px rgba(30, 96, 49, 0.16);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 }
 
 .account-summary:hover::before,
@@ -387,10 +387,10 @@ a {
 .account-avatar {
     width: 34px;
     height: 34px;
-    border: 1px solid rgba(30, 96, 49, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.45);
     border-radius: 50%;
     position: relative;
-    background: #edf6ef;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .account-avatar::before {
@@ -439,7 +439,7 @@ a {
 .account-name {
     display: block;
     overflow: hidden;
-    color: #182234;
+    color: #fff;
     font-size: 0.88rem;
     font-weight: 600;
     line-height: 1.15;
@@ -450,7 +450,7 @@ a {
 .account-role {
     display: block;
     overflow: hidden;
-    color: var(--brand-primary);
+    color: rgba(255, 255, 255, 0.74);
     font-size: 0.76rem;
     font-weight: 500;
     line-height: 1.2;

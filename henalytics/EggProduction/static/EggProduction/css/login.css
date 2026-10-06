@@ -29,7 +29,7 @@
     align-items: center;
     padding: 40px 46px;
     color: #fff;
-    background: #1e6031;
+    background: #009639;
     overflow: hidden;
 }
 
@@ -48,21 +48,23 @@
     display: flex;
     align-items: center;
     gap: 14px;
+    min-height: 72px;
     margin-bottom: 28px;
 }
 
 .login-clsu-logo {
     flex: 0 0 auto;
-    width: 58px;
-    height: 58px;
+    width: 94px;
+    height: 94px;
     object-fit: contain;
 }
 
 .login-info-logo {
     display: block;
-    width: min(238px, calc(100% - 72px));
-    height: auto;
-    max-height: 82px;
+    width: auto;
+    max-width: calc(100% - 108px);
+    height: 72px;
+    max-height: none;
     object-fit: contain;
     object-position: left center;
 }
@@ -113,7 +115,7 @@
 
 .login-form-heading h2 {
     margin: 0 0 8px;
-    color: #10391d;
+    color: #006b2d;
     font-size: 1.8rem;
     font-weight: 800;
 }
@@ -147,8 +149,8 @@
 }
 
 .login-card .form-control:focus {
-    border-color: #1e6031;
-    box-shadow: 0 0 0 0.2rem rgba(30, 96, 49, 0.14);
+    border-color: #009639;
+    box-shadow: 0 0 0 0.2rem rgba(0, 150, 57, 0.14);
 }
 
 .password-field {
@@ -177,7 +179,7 @@
 
 .password-toggle:hover,
 .password-toggle:focus {
-    color: #10391d;
+    color: #006b2d;
     background: #eef7f0;
     outline: none;
 }
@@ -210,13 +212,13 @@
     color: #fff;
     font-size: 1rem;
     font-weight: 700;
-    background: #1e6031;
-    box-shadow: 0 10px 22px rgba(30, 96, 49, 0.2);
+    background: #009639;
+    box-shadow: 0 10px 22px rgba(0, 150, 57, 0.2);
 }
 
 .login-card .btn:hover,
 .login-card .btn:focus {
-    background: #174c27;
+    background: #007a2e;
 }
 
 .login-card .alert {
@@ -246,16 +248,19 @@
 
     .login-brand {
         gap: 10px;
+        min-height: 58px;
         margin-bottom: 22px;
     }
 
     .login-clsu-logo {
-        width: 48px;
-        height: 48px;
+        width: 74px;
+        height: 74px;
     }
 
     .login-info-logo {
-        width: min(210px, calc(100% - 58px));
+        width: auto;
+        max-width: calc(100% - 84px);
+        height: 58px;
     }
 
     .login-info-panel h1 {
