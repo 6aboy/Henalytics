@@ -268,6 +268,15 @@ a {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
+.side-link.active {
+    color: #fff;
+    box-shadow: inset 3px 0 var(--brand-yellow), 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.side-link.active::before {
+    background: #1e6031;
+}
+
 .side-link:hover::before,
 .side-link.active::before {
     opacity: 1;
