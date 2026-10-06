@@ -327,7 +327,6 @@
         <thead class="table-dark">
             <tr>
                 <th>Forecast Date</th>
-                <th>Flock</th>
                 <th>Predicted Qty</th>
                 <th>Lower Range</th>
                 <th>Upper Range</th>
@@ -343,7 +342,6 @@
             {% for forecast in table_forecasts %}
             <tr>
                 <td>{{ forecast.forecast_date|date:"M d, Y" }}</td>
-                <td><a href="{% url 'eggproduction:flock-detail' forecast.flock.pk %}">House {{ forecast.flock.house_no }}</a></td>
                 <td><strong>{{ forecast.predicted_qty|intcomma }}</strong></td>
                 <td>{{ forecast.lower_qty|default:"N/A"|intcomma }}</td>
                 <td>{{ forecast.upper_qty|default:"N/A"|intcomma }}</td>
