@@ -351,7 +351,7 @@ a {
     inset: 0;
     z-index: -1;
     border-radius: inherit;
-    background: var(--brand-primary);
+    background: var(--brand-primary-dark);
     opacity: 0;
     transform: scaleX(0.12);
     transform-origin: 22px center;
@@ -727,8 +727,12 @@ a {
 
 .record-filter .filter-actions .btn-info:hover,
 .record-filter .filter-actions .btn-primary:hover,
+.record-filter .filter-actions .btn-info:active,
+.record-filter .filter-actions .btn-primary:active,
 .dashboard-filter-actions .btn-info:hover,
-.dashboard-filter-actions .btn-primary:hover {
+.dashboard-filter-actions .btn-primary:hover,
+.dashboard-filter-actions .btn-info:active,
+.dashboard-filter-actions .btn-primary:active {
     color: #fff;
     background: var(--brand-primary-strong);
     border-color: var(--brand-primary-strong);
@@ -934,6 +938,15 @@ input[readonly].readonly-metric {
 .btn-primary,
 .btn-info,
 .page-item.active .page-link {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--brand-primary);
+    --bs-btn-border-color: var(--brand-primary);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--brand-primary-strong);
+    --bs-btn-hover-border-color: var(--brand-primary-strong);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--brand-primary-strong);
+    --bs-btn-active-border-color: var(--brand-primary-strong);
     color: #fff;
     background: var(--brand-primary);
     border-color: var(--brand-primary);
@@ -941,8 +954,10 @@ input[readonly].readonly-metric {
 
 .btn-primary:hover,
 .btn-primary:focus,
+.btn-primary:active,
 .btn-info:hover,
-.btn-info:focus {
+.btn-info:focus,
+.btn-info:active {
     color: #fff;
     background: var(--brand-primary-strong);
     border-color: var(--brand-primary-strong);
@@ -1009,14 +1024,24 @@ input[readonly].readonly-metric {
 }
 
 .record-actions .btn-secondary:not(.btn-cancel) {
-    color: #18231c;
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--brand-yellow);
+    --bs-btn-border-color: var(--brand-yellow);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #ffe766;
+    --bs-btn-hover-border-color: #ffe766;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #ffe766;
+    --bs-btn-active-border-color: #ffe766;
+    color: #fff;
     background: var(--brand-yellow);
     border-color: var(--brand-yellow);
 }
 
 .record-actions .btn-secondary:not(.btn-cancel):hover,
-.record-actions .btn-secondary:not(.btn-cancel):focus {
-    color: #18231c;
+.record-actions .btn-secondary:not(.btn-cancel):focus,
+.record-actions .btn-secondary:not(.btn-cancel):active {
+    color: #fff;
     background: #ffe766;
     border-color: #ffe766;
     box-shadow: 0 10px 20px rgba(255, 215, 0, 0.22);
@@ -1029,7 +1054,8 @@ input[readonly].readonly-metric {
 }
 
 .record-actions .btn-primary:hover,
-.record-actions .btn-primary:focus {
+.record-actions .btn-primary:focus,
+.record-actions .btn-primary:active {
     color: #fff;
     background: var(--brand-primary-strong);
     border-color: var(--brand-primary-strong);
@@ -1037,14 +1063,24 @@ input[readonly].readonly-metric {
 }
 
 .btn-warning {
-    color: #18231c;
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #ffd700;
+    --bs-btn-border-color: #ffd700;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #ffe766;
+    --bs-btn-hover-border-color: #ffe766;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #ffe766;
+    --bs-btn-active-border-color: #ffe766;
+    color: #fff;
     background: #ffd700;
     border-color: #ffd700;
 }
 
 .btn-warning:hover,
-.btn-warning:focus {
-    color: #18231c;
+.btn-warning:focus,
+.btn-warning:active {
+    color: #fff;
     background: #ffe766;
     border-color: #ffe766;
     box-shadow: 0 10px 20px rgba(255, 217, 0, 0.2);
@@ -1277,14 +1313,15 @@ input[readonly].readonly-metric {
 }
 
 .detail-actions .btn-warning {
-    color: #18231c;
+    color: #fff;
     background: #ffd700;
     border-color: #ffd700;
 }
 
 .detail-actions .btn-warning:hover,
-.detail-actions .btn-warning:focus {
-    color: #18231c;
+.detail-actions .btn-warning:focus,
+.detail-actions .btn-warning:active {
+    color: #fff;
     background: #ffe766;
     border-color: #ffe766;
     box-shadow: 0 10px 20px rgba(255, 217, 0, 0.22);
