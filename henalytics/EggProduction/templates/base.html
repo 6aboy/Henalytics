@@ -222,7 +222,7 @@
                     text: alert.textContent.trim(),
                     icon: icon,
                     confirmButtonText: 'OK',
-                    confirmButtonColor: '#1E6031',
+                    confirmButtonColor: '#009639',
                     timer: icon === 'success' || icon === 'info' ? 1600 : undefined,
                     timerProgressBar: icon === 'success' || icon === 'info'
                 });
@@ -312,7 +312,7 @@
                     text: form.dataset.swalText || 'The records will update using your selected filters.',
                     icon: 'info',
                     confirmButtonText: form.dataset.swalConfirmText || 'Continue',
-                    confirmButtonColor: '#1E6031',
+                    confirmButtonColor: '#009639',
                     timer: Number(form.dataset.swalTimer || 900),
                     timerProgressBar: true
                 }).then(function () {
@@ -350,7 +350,7 @@
                     confirmButtonText: form.dataset.swalConfirmText || 'Sign out',
                     cancelButtonText: form.dataset.swalCancelText || 'Cancel',
                     confirmButtonColor: '#ed0909',
-                    cancelButtonColor: '#1E6031'
+                    cancelButtonColor: '#009639'
                 }).then(function (result) {
                     if (result.isConfirmed) {
                         form.dataset.swalSubmitting = 'true';
