@@ -1,19 +1,19 @@
 :root {
-    --brand-primary: #009639;
-    --brand-primary-dark: #007a2e;
-    --brand-primary-strong: #006b2d;
+    --brand-primary: #1e6031;
+    --brand-primary-dark: #174c27;
+    --brand-primary-strong: #10391d;
     --brand-yellow: #ffd700;
-    --brand-success: #009639;
+    --brand-success: #1e6031;
     --brand-grid: #bfd8c5;
     --hen-bg: #f0f3f1;
     --hen-text: #18231c;
     --hen-muted: #69756d;
     --hen-shadow: 0 2px 9px rgba(0, 0, 0, 0.22);
     --hen-number-font: "Acumin Pro", "Segoe UI", Roboto, Arial, sans-serif;
-    --bs-primary: #009639;
+    --bs-primary: #1e6031;
     --bs-primary-rgb: 0, 150, 57;
-    --bs-link-color: #006b2d;
-    --bs-link-hover-color: #005421;
+    --bs-link-color: #10391d;
+    --bs-link-hover-color: #0b2a15;
 }
 
 @font-face {
@@ -252,7 +252,7 @@ a {
     height: 32px;
     border-radius: 9px;
     background: var(--brand-primary-dark);
-    box-shadow: 0 6px 14px rgba(0, 150, 57, 0.18);
+    box-shadow: 0 6px 14px rgba(30, 96, 49, 0.18);
     transform: translateY(-50%);
     transition: background 0.22s ease, box-shadow 0.22s ease;
 }
@@ -265,7 +265,7 @@ a {
 .side-link:hover,
 .side-link.active {
     color: #fff;
-    box-shadow: inset 3px 0 var(--brand-yellow), 0 8px 16px rgba(0, 150, 57, 0.18);
+    box-shadow: inset 3px 0 var(--brand-yellow), 0 8px 16px rgba(30, 96, 49, 0.18);
 }
 
 .side-link:hover::before,
@@ -360,7 +360,7 @@ a {
     height: 34px;
     border-radius: 9px;
     background: var(--brand-primary-dark);
-    box-shadow: 0 6px 14px rgba(0, 150, 57, 0.18);
+    box-shadow: 0 6px 14px rgba(30, 96, 49, 0.18);
     transform: translateY(-50%);
     transition: background 0.22s ease, box-shadow 0.22s ease;
 }
@@ -369,7 +369,7 @@ a {
 .account-summary:focus-within {
     color: #fff;
     border-color: transparent;
-    box-shadow: 0 8px 16px rgba(0, 150, 57, 0.16);
+    box-shadow: 0 8px 16px rgba(30, 96, 49, 0.16);
 }
 
 .account-summary:hover::before,
@@ -387,7 +387,7 @@ a {
 .account-avatar {
     width: 34px;
     height: 34px;
-    border: 1px solid rgba(0, 150, 57, 0.22);
+    border: 1px solid rgba(30, 96, 49, 0.22);
     border-radius: 50%;
     position: relative;
     background: #edf6ef;
@@ -840,7 +840,7 @@ a {
     padding: 8px 11px;
     border: 1px solid #d3e6d8;
     border-radius: 6px;
-    color: #006b2d;
+    color: #10391d;
     background: #eef3ff;
     font-size: 0.82rem;
     font-weight: 800;
@@ -1001,17 +1001,17 @@ input[readonly].readonly-metric {
 }
 
 .record-actions .btn-secondary:not(.btn-cancel) {
-    color: #fff;
-    background: var(--brand-primary-strong);
-    border-color: var(--brand-primary-strong);
+    color: #18231c;
+    background: var(--brand-yellow);
+    border-color: var(--brand-yellow);
 }
 
 .record-actions .btn-secondary:not(.btn-cancel):hover,
 .record-actions .btn-secondary:not(.btn-cancel):focus {
-    color: #fff;
-    background: #005421;
-    border-color: #005421;
-    box-shadow: 0 10px 20px rgba(0, 84, 33, 0.22);
+    color: #18231c;
+    background: #ffe766;
+    border-color: #ffe766;
+    box-shadow: 0 10px 20px rgba(255, 215, 0, 0.22);
 }
 
 .record-actions .btn-primary {
@@ -1305,8 +1305,8 @@ input[readonly].readonly-metric {
 .detail-actions .btn-back:hover,
 .detail-actions .btn-back:focus {
     color: #fff;
-    background: #007a2e;
-    border-color: #007a2e;
+    background: #174c27;
+    border-color: #174c27;
     box-shadow: 0 10px 20px rgba(83, 133, 255, 0.24);
 }
 
@@ -2379,7 +2379,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
 .section-heading > span {
     flex: 0 0 auto;
     padding: 6px 10px;
-    color: #006b2d;
+    color: #10391d;
     background: #eef3ff;
     border: 1px solid #d3e6d8;
     border-radius: 6px;
@@ -2646,7 +2646,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
     border: 1px solid #dfe7f5;
     border-radius: 8px;
     background:
-        linear-gradient(90deg, rgba(0, 150, 57, 0.10), transparent 32px),
+        linear-gradient(90deg, rgba(30, 96, 49, 0.10), transparent 32px),
         #f5f8ff;
     box-shadow: var(--hen-shadow);
 }
@@ -2659,7 +2659,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
     border-radius: 7px;
     background:
         linear-gradient(#fff 0 0) padding-box,
-        repeating-linear-gradient(to bottom, transparent 0 37px, rgba(0, 150, 57, 0.08) 38px 39px);
+        repeating-linear-gradient(to bottom, transparent 0 37px, rgba(30, 96, 49, 0.08) 38px 39px);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
@@ -2680,7 +2680,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
     align-items: flex-start;
     margin-bottom: 12px;
     padding: 0 0 12px 16px;
-    border-bottom: 1px solid rgba(0, 150, 57, 0.12);
+    border-bottom: 1px solid rgba(30, 96, 49, 0.12);
 }
 
 .notebook-chart-heading h3 {
@@ -2700,7 +2700,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
 .notebook-chart-meta {
     flex: 0 0 auto;
     padding: 6px 10px;
-    color: #006b2d;
+    color: #10391d;
     background: #eef3ff;
     border: 1px solid #d3e6d8;
     border-radius: 6px;
@@ -2737,7 +2737,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
     padding: 6px 10px;
     border: 0;
     border-right: 1px solid #d3e6d8;
-    color: #006b2d;
+    color: #10391d;
     background: transparent;
     font-size: 0.76rem;
     font-weight: 800;
@@ -2960,7 +2960,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
     color: #fff;
     background: var(--brand-primary-dark);
     border-radius: 12px;
-    box-shadow: 0 8px 18px rgba(0, 150, 57, 0.24);
+    box-shadow: 0 8px 18px rgba(30, 96, 49, 0.24);
 }
 
 .metric-icon img,
@@ -3004,7 +3004,7 @@ div.dt-buttons > button.dt-button.buttons-colvis:focus {
 .metric-icon.blue {
     color: #fff;
     background: var(--brand-primary-dark);
-    box-shadow: 0 8px 18px rgba(0, 150, 57, 0.24);
+    box-shadow: 0 8px 18px rgba(30, 96, 49, 0.24);
 }
 
 .metric-card.compact .metric-icon {

@@ -29,7 +29,7 @@
     align-items: center;
     padding: 40px 46px;
     color: #fff;
-    background: #007a2e;
+    background: #1e6031;
     overflow: hidden;
 }
 
@@ -47,24 +47,24 @@
 .login-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 28px;
-    color: #fff;
-    font-size: 2rem;
-    font-weight: 700;
 }
 
-.login-brand-mark {
-    display: inline-flex;
-    width: 54px;
-    height: 54px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    color: #18231c;
-    background: #ffd700;
-    font-size: 2.2rem;
-    font-weight: 700;
+.login-clsu-logo {
+    flex: 0 0 auto;
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+}
+
+.login-info-logo {
+    display: block;
+    width: min(238px, calc(100% - 72px));
+    height: auto;
+    max-height: 82px;
+    object-fit: contain;
+    object-position: left center;
 }
 
 .login-eyebrow {
@@ -113,7 +113,7 @@
 
 .login-form-heading h2 {
     margin: 0 0 8px;
-    color: #006b2d;
+    color: #10391d;
     font-size: 1.8rem;
     font-weight: 800;
 }
@@ -147,8 +147,8 @@
 }
 
 .login-card .form-control:focus {
-    border-color: #009639;
-    box-shadow: 0 0 0 0.2rem rgba(0, 150, 57, 0.14);
+    border-color: #1e6031;
+    box-shadow: 0 0 0 0.2rem rgba(30, 96, 49, 0.14);
 }
 
 .password-field {
@@ -177,7 +177,7 @@
 
 .password-toggle:hover,
 .password-toggle:focus {
-    color: #006b2d;
+    color: #10391d;
     background: #eef7f0;
     outline: none;
 }
@@ -210,13 +210,13 @@
     color: #fff;
     font-size: 1rem;
     font-weight: 700;
-    background: #007a2e;
-    box-shadow: 0 10px 22px rgba(0, 150, 57, 0.2);
+    background: #1e6031;
+    box-shadow: 0 10px 22px rgba(30, 96, 49, 0.2);
 }
 
 .login-card .btn:hover,
 .login-card .btn:focus {
-    background: #006b2d;
+    background: #174c27;
 }
 
 .login-card .alert {
@@ -245,8 +245,17 @@
     }
 
     .login-brand {
-        font-size: 1.7rem;
+        gap: 10px;
         margin-bottom: 22px;
+    }
+
+    .login-clsu-logo {
+        width: 48px;
+        height: 48px;
+    }
+
+    .login-info-logo {
+        width: min(210px, calc(100% - 58px));
     }
 
     .login-info-panel h1 {
