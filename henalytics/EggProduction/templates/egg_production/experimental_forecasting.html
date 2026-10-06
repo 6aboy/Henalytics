@@ -235,7 +235,7 @@
             name: 'Upper Range',
             type: 'scatter',
             mode: 'lines',
-            line: { color: 'rgba(51, 96, 207, 0)', width: 0 },
+            line: { color: 'rgba(0, 150, 57, 0)', width: 0 },
             hoverinfo: 'skip',
             showlegend: false
         };
@@ -245,9 +245,9 @@
             name: 'Expected Range',
             type: 'scatter',
             mode: 'lines',
-            line: { color: 'rgba(51, 96, 207, 0)', width: 0 },
+            line: { color: 'rgba(0, 150, 57, 0)', width: 0 },
             fill: 'tonexty',
-            fillcolor: 'rgba(51, 96, 207, 0.14)',
+            fillcolor: 'rgba(0, 150, 57, 0.14)',
             hoverinfo: 'skip'
         };
         const actualTrace = {
@@ -267,8 +267,8 @@
             name: 'Forecast Eggs',
             type: 'scatter',
             mode: payload.labels.length > 120 ? 'lines' : 'lines+markers',
-            line: { color: '#3360cf', width: 3, dash: 'dash', shape: 'spline' },
-            marker: { color: '#3360cf', size: 5 },
+            line: { color: '#009639', width: 3, dash: 'dash', shape: 'spline' },
+            marker: { color: '#009639', size: 5 },
             connectgaps: false,
             hovertemplate: '<b>%{x|%b %d, %Y}</b><br>Forecast: %{y:,.0f} eggs<extra></extra>'
         };

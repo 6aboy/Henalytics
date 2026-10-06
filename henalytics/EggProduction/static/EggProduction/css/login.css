@@ -1,13 +1,7 @@
 .auth-body {
     min-height: 100vh;
     min-height: 100svh;
-    background:
-        radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.82) 0 1px, transparent 1.6px),
-        radial-gradient(circle at 70% 42%, rgba(91, 104, 124, 0.10) 0 1px, transparent 1.7px),
-        radial-gradient(circle at 38% 76%, rgba(51, 96, 207, 0.07) 0 1px, transparent 1.8px),
-        linear-gradient(135deg, rgba(51, 96, 207, 0.08), transparent 32%),
-        linear-gradient(180deg, #f5f6f8 0%, #eef1f5 48%, #f9fafb 100%);
-    background-size: 18px 18px, 22px 22px, 26px 26px, auto, auto;
+    background: #f0f3f1;
 }
 
 .login-bg {
@@ -26,7 +20,7 @@
     border-radius: 12px;
     overflow: hidden;
     background: #fff;
-    box-shadow: 0 24px 60px rgba(35, 62, 123, 0.18);
+    box-shadow: 0 24px 60px rgba(24, 35, 28, 0.16);
 }
 
 .login-info-panel {
@@ -35,31 +29,13 @@
     align-items: center;
     padding: 40px 46px;
     color: #fff;
-    background:
-        linear-gradient(135deg, rgba(46, 216, 120, 0.18), transparent 34%),
-        linear-gradient(160deg, #173c86 0%, #15346f 54%, #102452 100%);
+    background: #007a2e;
     overflow: hidden;
 }
 
 .login-info-panel::before,
 .login-info-panel::after {
-    content: "";
-    position: absolute;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-}
-
-.login-info-panel::before {
-    inset: -70px auto auto -90px;
-    width: 260px;
-    height: 260px;
-}
-
-.login-info-panel::after {
-    right: -120px;
-    bottom: -100px;
-    width: 300px;
-    height: 300px;
+    display: none;
 }
 
 .login-info-content {
@@ -68,17 +44,32 @@
     min-width: 0;
 }
 
-.login-info-logo {
-    display: block;
-    width: min(235px, 84%);
-    max-height: 96px;
-    object-fit: contain;
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 28px;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.login-brand-mark {
+    display: inline-flex;
+    width: 54px;
+    height: 54px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: #18231c;
+    background: #ffd700;
+    font-size: 2.2rem;
+    font-weight: 700;
 }
 
 .login-eyebrow {
     margin: 0 0 12px;
-    color: #5af08d;
+    color: #fff;
     font-size: 0.82rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -122,7 +113,7 @@
 
 .login-form-heading h2 {
     margin: 0 0 8px;
-    color: #102452;
+    color: #006b2d;
     font-size: 1.8rem;
     font-weight: 800;
 }
@@ -148,7 +139,7 @@
 
 .login-card .form-control {
     min-height: 46px;
-    border: 1px solid #d8e1f4;
+    border: 1px solid #d4e4d8;
     border-radius: 8px;
     color: #1d2939;
     font-size: 0.98rem;
@@ -156,8 +147,8 @@
 }
 
 .login-card .form-control:focus {
-    border-color: #3360cf;
-    box-shadow: 0 0 0 0.2rem rgba(51, 96, 207, 0.14);
+    border-color: #009639;
+    box-shadow: 0 0 0 0.2rem rgba(0, 150, 57, 0.14);
 }
 
 .password-field {
@@ -186,8 +177,8 @@
 
 .password-toggle:hover,
 .password-toggle:focus {
-    color: #3360cf;
-    background: #eef4ff;
+    color: #006b2d;
+    background: #eef7f0;
     outline: none;
 }
 
@@ -219,13 +210,13 @@
     color: #fff;
     font-size: 1rem;
     font-weight: 700;
-    background: #3360cf;
-    box-shadow: 0 10px 22px rgba(51, 96, 207, 0.24);
+    background: #007a2e;
+    box-shadow: 0 10px 22px rgba(0, 150, 57, 0.2);
 }
 
 .login-card .btn:hover,
 .login-card .btn:focus {
-    background: #284ead;
+    background: #006b2d;
 }
 
 .login-card .alert {
@@ -253,8 +244,8 @@
         padding: 28px 22px;
     }
 
-    .login-info-logo {
-        width: min(210px, 82%);
+    .login-brand {
+        font-size: 1.7rem;
         margin-bottom: 22px;
     }
 
