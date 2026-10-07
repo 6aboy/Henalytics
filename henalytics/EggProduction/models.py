@@ -96,7 +96,7 @@ class ModelVersion(models.Model):
     model_type = models.CharField(max_length=20, choices=MODEL_TYPE_CHOICES)
     trained_at = models.DateTimeField(auto_now_add=True)
     triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    r2_score = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True)
+    r2_score = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
     rmse = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     mae = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     mape = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
@@ -400,4 +400,3 @@ class SalesForecast(models.Model):
     class Meta:
         ordering = ['-forecast_date']
         unique_together = ('model_version', 'forecast_date', 'grade')
-

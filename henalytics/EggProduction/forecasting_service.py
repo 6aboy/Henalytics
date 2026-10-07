@@ -208,7 +208,7 @@ class ForecastingService:
                 model_version = ModelVersion.objects.create(
                     model_type='arima',
                     triggered_by=user,
-                    r2_score=cls._decimal_or_none(result['r_squared'], 4, min_value=-9.9999, max_value=9.9999),
+                    r2_score=cls._decimal_or_none(result['r_squared'], 4),
                     rmse=cls._decimal_or_none(result['rmse'], 2),
                     mae=cls._decimal_or_none(result.get('mae'), 2),
                     mape=cls._decimal_or_none(result.get('mape'), 2),

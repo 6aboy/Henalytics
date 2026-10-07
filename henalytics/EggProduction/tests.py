@@ -290,6 +290,44 @@ class ForecastModelTest(TestCase):
         self.assertEqual(harvest.predicted_qty, 1500)
         self.assertEqual(sales.predicted_trays, 50)
 
+    def test_forecast_saves_r2_scores_below_negative_ten(self):
+        flock = create_flock()
+        user = User.objects.create_user(username='r2forecaster', password='pass12345')
+        prepared = {
+            'series': pd.Series(range(ForecastingService.MIN_POINTS)),
+            'dataset_kind': 'egg',
+        }
+        result = {
+            'success': True,
+            'r_squared': -25.0,
+            'rmse': 100.0,
+            'mae': 80.0,
+            'mape': 5.0,
+            'baseline_rmse': 90.0,
+            'aic_score': 10.0,
+            'order': 'ARIMA',
+            'forecasted_values': [100, 101, 102],
+            'lower_values': [90, 91, 92],
+            'upper_values': [110, 111, 112],
+            'start_date': timezone.localdate() + timedelta(days=1),
+        }
+
+        with patch.object(ForecastingService, '_prepare_daily_dataset', return_value=prepared), patch.object(
+            ForecastingService,
+            '_forecast_series',
+            return_value=result,
+        ):
+            generated = ForecastingService._generate_series_forecasts(
+                {'overall': []},
+                periods=3,
+                user=user,
+                model_kind='egg',
+                flock=flock,
+            )
+
+        model_version = ModelVersion.objects.get(pk=generated['model_version_ids'][0])
+        self.assertEqual(model_version.r2_score, Decimal('-25.0000'))
+
     def test_arima_service_generates_database_forecasts(self):
         flock = create_flock(date_started=timezone.now().date() - timedelta(days=20))
         user = User.objects.create_user(username='forecaster', password='pass12345')
