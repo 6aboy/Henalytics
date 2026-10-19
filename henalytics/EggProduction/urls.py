@@ -20,6 +20,7 @@ urlpatterns = [
     # Dashboard and Auth
     path('', views.DashboardView.as_view(), name='dashboard'),
     path('login/', views.CustomLoginView.as_view(template_name='login.html'), name='login'),
+    path('support/', views.AccountSupportView.as_view(), name='account-support'),
     
     # Flock Management
     path('flocks/', views.FlockListView.as_view(), name='flock-list'),

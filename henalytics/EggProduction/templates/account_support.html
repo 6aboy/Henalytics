@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Account Support | Henalytics{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'EggProduction/css/login.css' %}">
+
+<main class="account-support-page">
+    <section class="account-support-card" aria-labelledby="account-support-title">
+        <img src="{% static 'EggProduction/img/whiteeeee.png' %}" alt="Henalytics" class="account-support-logo">
+        <p class="account-support-eyebrow">Account Recovery</p>
+        <h1 id="account-support-title">Need help signing in?</h1>
+        {% if submitted %}
+        <div class="account-support-confirmation" role="status">
+            <h2>Request received</h2>
+            <p>
+                Your password-reset request has been submitted for administrator review. We will verify your identity
+                using the contact details you provided before resetting any account.
+            </p>
+        </div>
+        {% else %}
+        <p class="account-support-intro">
+            Submit a request and the authorized Henalytics system administrator will verify your identity before
+            resetting your password.
+        </p>
+
+        <form method="post" class="account-support-form">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="account-support-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}
+                <small class="form-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="account-support-contact">Submit Reset Request</button>
+        </form>
+
+        {% if support_email %}
+        <p class="account-support-note">
+            Prefer email? You can also contact <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+        </p>
+        {% endif %}
+        {% endif %}
+
+        <a class="account-support-back" href="{% url 'login' %}">Back to Log In</a>
+    </section>
+</main>
+{% endblock %}

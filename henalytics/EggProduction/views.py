@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse
 from django.http import QueryDict
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView, View
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView, View, FormView
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -34,6 +34,7 @@ from .forms import (
     SalesItemForm,
     SalesItemFormSet,
     SalesTransactionForm,
+    PasswordResetRequestForm,
     active_flocks_for_instance,
 )
 from .forecasting_service import ForecastingService
@@ -485,6 +486,25 @@ class CustomLoginView(LoginView):
             return reverse_lazy('eggproduction:dashboard')
 
         return super().get_success_url()
+
+
+class AccountSupportView(FormView):
+    """Show the verified, administrator-managed account recovery process."""
+    template_name = 'account_support.html'
+    form_class = PasswordResetRequestForm
+
+    def get_success_url(self):
+        return f'{reverse_lazy("eggproduction:account-support")}?submitted=1'
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['support_email'] = getattr(settings, 'HENALYTICS_SUPPORT_EMAIL', '')
+        context['submitted'] = self.request.GET.get('submitted') == '1'
+        return context
 
 
 # Mixins for access control

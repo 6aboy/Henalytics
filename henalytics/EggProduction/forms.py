@@ -3,7 +3,7 @@ from django.forms import inlineformset_factory
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import Flock, ProductionLog, SalesItem, SalesTransaction
+from .models import Flock, PasswordResetRequest, ProductionLog, SalesItem, SalesTransaction
 
 
 def active_flocks_for_instance(instance=None):
@@ -12,6 +12,31 @@ def active_flocks_for_instance(instance=None):
     if flock_id:
         queryset = Flock.objects.filter(Q(status='active') | Q(pk=flock_id))
     return queryset.order_by('house_no', '-date_started', 'id')
+
+
+class PasswordResetRequestForm(forms.ModelForm):
+    class Meta:
+        model = PasswordResetRequest
+        fields = ('full_name', 'username', 'contact_details', 'request_note')
+        widgets = {
+            'full_name': forms.TextInput(attrs={'autocomplete': 'name'}),
+            'username': forms.TextInput(attrs={'autocomplete': 'username'}),
+            'contact_details': forms.TextInput(
+                attrs={'autocomplete': 'email', 'placeholder': 'Email address or mobile number'}
+            ),
+            'request_note': forms.Textarea(
+                attrs={
+                    'rows': 3,
+                    'placeholder': 'Optional: briefly describe the sign-in issue.',
+                }
+            ),
+        }
+        labels = {
+            'full_name': 'Full name',
+            'username': 'Assigned username',
+            'contact_details': 'Email address or mobile number',
+            'request_note': 'Request details',
+        }
 
 
 class ProductionLogForm(forms.ModelForm):

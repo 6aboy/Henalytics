@@ -46,6 +46,39 @@ class UserProfile(models.Model):
         verbose_name_plural = "User Profiles"
 
 
+class PasswordResetRequest(models.Model):
+    STATUS_CHOICES = (
+        ('new', 'New'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    )
+
+    full_name = models.CharField(max_length=150)
+    username = models.CharField(max_length=150)
+    contact_details = models.CharField(max_length=254)
+    request_note = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    admin_note = models.TextField(blank=True)
+    handled_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='handled_password_reset_requests',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Password reset request: {self.username} ({self.get_status_display()})'
+
+    class Meta:
+        ordering = ['status', '-created_at']
+        verbose_name = 'Password reset request'
+        verbose_name_plural = 'Password reset requests'
+
+
 # Flock Management Model (aligned with ERD)
 class Flock(models.Model):
     STATUS_CHOICES = (

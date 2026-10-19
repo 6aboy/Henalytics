@@ -221,6 +221,194 @@
     background: #007a2e;
 }
 
+.account-support-link {
+    display: block;
+    width: fit-content;
+    margin: 18px auto 0;
+    color: #006b2d;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.account-support-link:hover,
+.account-support-link:focus {
+    color: #009639;
+    text-decoration: underline;
+}
+
+.account-support-page {
+    display: grid;
+    min-height: 100vh;
+    min-height: 100svh;
+    place-items: center;
+    padding: 24px;
+    background: #f0f3f1;
+}
+
+.account-support-card {
+    width: min(100%, 620px);
+    padding: 44px 48px;
+    border: 1px solid #d4e4d8;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(24, 35, 28, 0.14);
+    text-align: center;
+}
+
+.account-support-logo {
+    width: min(220px, 76%);
+    height: 68px;
+    margin-bottom: 28px;
+    object-fit: contain;
+    object-position: center;
+    filter: brightness(0) saturate(100%) invert(29%) sepia(85%) saturate(896%) hue-rotate(105deg) brightness(91%) contrast(103%);
+}
+
+.account-support-eyebrow {
+    margin: 0 0 8px;
+    color: #006b2d;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.account-support-card h1 {
+    margin: 0 0 12px;
+    color: #006b2d;
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.account-support-intro {
+    margin: 0 auto 24px;
+    color: #475467;
+    line-height: 1.6;
+}
+
+.account-support-form {
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+.account-support-field {
+    margin-bottom: 14px;
+}
+
+.account-support-field label {
+    display: block;
+    margin-bottom: 6px;
+    color: #344054;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.account-support-field input,
+.account-support-field textarea {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d4e4d8;
+    border-radius: 8px;
+    color: #1d2939;
+    background: #fbfdff;
+}
+
+.account-support-field input:focus,
+.account-support-field textarea:focus {
+    border-color: #009639;
+    box-shadow: 0 0 0 0.2rem rgba(0, 150, 57, 0.14);
+    outline: 0;
+}
+
+.account-support-steps {
+    margin: 0 0 24px;
+    padding: 22px 24px 22px 42px;
+    border: 1px solid #d4e4d8;
+    border-radius: 8px;
+    background: #f7fbf8;
+    color: #344054;
+    line-height: 1.55;
+    text-align: left;
+}
+
+.account-support-steps li + li {
+    margin-top: 10px;
+}
+
+.account-support-contact,
+.account-support-back {
+    display: inline-flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.account-support-contact {
+    width: 100%;
+    color: #fff;
+    background: #009639;
+    box-shadow: 0 10px 22px rgba(0, 150, 57, 0.2);
+}
+
+.account-support-contact:hover,
+.account-support-contact:focus {
+    color: #fff;
+    background: #007a2e;
+}
+
+.account-support-note {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid #d4e4d8;
+    border-radius: 8px;
+    color: #475467;
+    background: #f7fbf8;
+    font-size: 0.94rem;
+    line-height: 1.5;
+}
+
+.account-support-note a {
+    color: #006b2d;
+    font-weight: 700;
+}
+
+.account-support-confirmation {
+    margin-bottom: 8px;
+    padding: 22px;
+    border: 1px solid #a8d5b5;
+    border-radius: 8px;
+    background: #f2fbf4;
+    color: #344054;
+}
+
+.account-support-confirmation h2 {
+    margin: 0 0 8px;
+    color: #006b2d;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.account-support-confirmation p {
+    margin: 0;
+    line-height: 1.55;
+}
+
+.account-support-back {
+    margin-top: 18px;
+    color: #006b2d;
+}
+
+.account-support-back:hover,
+.account-support-back:focus {
+    color: #009639;
+    text-decoration: underline;
+}
+
 .login-card .alert {
     border-radius: 8px;
     font-size: 0.9rem;
@@ -269,6 +457,10 @@
 
     .login-shell .login-card {
         padding: 28px 22px 26px;
+    }
+
+    .account-support-card {
+        padding: 32px 24px;
     }
 }
 

@@ -22,6 +22,7 @@ from .models import (
     GradingLog,
     HarvestForecast,
     ModelVersion,
+    PasswordResetRequest,
     ProductionLog,
     SalesForecast,
     SalesItem,
@@ -1595,6 +1596,36 @@ class TemplateRenderTest(TestCase):
         self.assertContains(response, 'aria-label="Show password"')
         self.assertNotContains(response, 'name="remember_me"')
         self.assertNotContains(response, 'Remember me')
+
+    def test_account_support_page_explains_verified_admin_reset(self):
+        self.client.logout()
+
+        response = self.client.get(reverse('eggproduction:account-support'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Need help signing in?')
+        self.assertContains(response, 'authorized Henalytics system administrator')
+        self.assertContains(response, 'Back to Log In')
+
+    def test_account_support_request_is_saved_for_admin_review(self):
+        response = self.client.post(
+            reverse('eggproduction:account-support'),
+            {
+                'full_name': 'Test Requester',
+                'username': 'testrequester',
+                'contact_details': 'requester@example.com',
+                'request_note': 'I cannot access my account.',
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f'{reverse("eggproduction:account-support")}?submitted=1',
+            fetch_redirect_response=False,
+        )
+        request = PasswordResetRequest.objects.get(username='testrequester')
+        self.assertEqual(request.full_name, 'Test Requester')
+        self.assertEqual(request.status, 'new')
 
     def test_authenticated_user_is_redirected_from_login_page(self):
         response = self.client.get(reverse('login'))

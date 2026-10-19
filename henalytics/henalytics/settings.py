@@ -36,6 +36,9 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# Contact address displayed on the public account-support page. Deployments can override it.
+HENALYTICS_SUPPORT_EMAIL = os.getenv('HENALYTICS_SUPPORT_EMAIL', 'quinolgabriel@gmail.com')
+
 
 # Application definition
 

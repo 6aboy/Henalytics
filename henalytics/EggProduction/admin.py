@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     UserProfile, Flock, ProductionLog, GradingLog,
-    SalesTransaction, SalesItem, ModelVersion, HarvestForecast, SalesForecast
+    SalesTransaction, SalesItem, ModelVersion, HarvestForecast, PasswordResetRequest, SalesForecast
 )
 
 
@@ -10,6 +10,25 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'assigned_house', 'created_at')
     list_filter = ('role', 'created_at')
     search_fields = ('user__username', 'user__email')
+
+
+@admin.register(PasswordResetRequest)
+class PasswordResetRequestAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'username', 'contact_details', 'status', 'created_at', 'handled_by')
+    list_filter = ('status', 'created_at')
+    search_fields = ('full_name', 'username', 'contact_details')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('Requester Information', {
+            'fields': ('full_name', 'username', 'contact_details', 'request_note')
+        }),
+        ('Resolution', {
+            'fields': ('status', 'handled_by', 'admin_note')
+        }),
+        ('Audit Information', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
 
 
 @admin.register(Flock)
